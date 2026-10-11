@@ -3,7 +3,7 @@
 Дата: 2026-10-06. Владелец #60, контракт `2026-10-06-m06a-support-v1`.
 [Спецификация](../superpowers/specs/2026-10-06-m06a-support-design.md) ·
 [Native-план](../superpowers/plans/2026-10-06-m06a-support.md) ·
-[Общее решение и зависимости](https://github.com/ekho/3xui-shop/issues/60#issuecomment-6008661999).
+[Общее решение и зависимости](/../../issues/60#issuecomment-6008661999).
 
 ## Ревизия и результат
 
@@ -15,10 +15,10 @@ boundary/API/all15migration/dependency/diff checks, проверил все22 re
 полный matrix не повторял. PR #67 доставлен: source3067bf3413f44b03ed96b918d352722c577a0eaf,
 exact-source CI37410504689/37410504557 SUCCESS, manual merge6cc8d031ea9185bdbfc25affd00c9fc2f873e42e
 с родителями b5d8eb3/3067bf3 и source-equal tree. Preview37411579517 SUCCESS,
-[2.0.0-dev.23](https://github.com/ekho/3xui-shop/releases/tag/2.0.0-dev.23): tag peeled
+[2.0.0-dev.23](/../../releases/tag/2.0.0-dev.23): tag peeled
 к merge, prerelease/not draft, три GHCR indexes и оба linux/amd64,linux/arm64 у
 каждого с правильными revision/version/source labels проверены.
-[Delivery checkpoint](https://github.com/ekho/3xui-shop/issues/60#issuecomment-6009093651).
+[Delivery checkpoint](/../../issues/60#issuecomment-6009093651).
 #60 остаётся OPEN/In progress до notifications,
 audit и удаления общего platform.Service/store с собственной приёмкой M06.
 

@@ -154,7 +154,7 @@ backend suite после изменения: 923 PASS/0 FAIL, 13 packages PASS, 
 Повторного review нет. Deferred minors: нет.
 
 8. Finalization ruling: enabled TradeOS 2.0.0 GitLab registry не поддерживает
-   ekho/3xui-shop. Используются live GitHub exact-source CI/shared contract/
+   этого GitHub-репозитория. Используются live GitHub exact-source CI/shared contract/
    dependency/target/parents/tree и ручной SHA guard.
    Цена: нет cooperative ownership ref для посторонних GitHub writers;
    неожиданное target/parent движение требует отдельной диагностики.

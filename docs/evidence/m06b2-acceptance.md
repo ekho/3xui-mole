@@ -1,23 +1,23 @@
 # М06b2 — локальная приёмка email delivery
 
-Дата: 2026-10-06. Владелец [#60](https://github.com/ekho/3xui-shop/issues/60),
+Дата: 2026-10-06. Владелец [#60](/../../issues/60),
 контракт `2026-10-06-m06b2-email-delivery-v1`.
 [Спецификация](../superpowers/specs/2026-10-06-m06b-email-delivery-design.md) ·
 [Native-план](../superpowers/plans/2026-10-06-m06b-email-delivery.md) ·
-[Общее решение](https://github.com/ekho/3xui-shop/issues/60#issuecomment-6009603617).
+[Общее решение](/../../issues/60#issuecomment-6009603617).
 
 ## Ревизия и результат
 
 Product revision `1989231289a231dabf9eaa2ec41362b5cfb17c11`. После единственного review fix pass полная
 матрица **22/22 PASS**, 417.546s. Fresh Astra/high review на d57dc8f: 1 Important I1,
 0 Critical/Minor; I1 закрыт real-PG RED→GREEN и новой полной матрицей.
-Delivery завершён [PR #69](https://github.com/ekho/3xui-shop/pull/69): exact-source
+Delivery завершён [PR #69](/../../pull/69): exact-source
 Platform37420656059/PR images37420656171 SUCCESS на b1a0b21f2fa7a092604ff0af9705c2b3f857a911.
 Manual merge d23c848354ac663b953d9faa9b49b09d93e04303 имеет target729eea5/sourceb1a0b21
 родителей и source-equal tree3a3d7c1e048f139d5f24217f9d281f66c73324f5.
-Preview37421862377/all4jobs SUCCESS; [dev.27](https://github.com/ekho/3xui-shop/releases/tag/2.0.0-dev.27)
+Preview37421862377/all4jobs SUCCESS; [dev.27](/../../releases/tag/2.0.0-dev.27)
 prerelease/non-draft, peeled tag ровно merge; три GHCR index/оба linux architectures
-и revision/version/source labels проверены. [Shared checkpoint](https://github.com/ekho/3xui-shop/issues/60#issuecomment-6010525855).
+и revision/version/source labels проверены. [Shared checkpoint](/../../issues/60#issuecomment-6010525855).
 #60 остаётся OPEN/In progress до audit М06c → удаления shared platform/store
 М06d и собственной архитектурной приёмки всего М06.
 

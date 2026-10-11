@@ -2,7 +2,7 @@
 
 Дата: 2026-10-06. Контракт `2026-10-06-m06b1-telegram-delivery-v1`, владелец #60.
 Основание: [принятая архитектура](2026-10-05-modular-monolith-design.md),
-[M06](https://github.com/ekho/3xui-shop/issues/60), автономные документы/Native/
+[M06](/../../issues/60), автономные документы/Native/
 последовательные ручные merges в v2 и preview images/prerelease разрешены пользователем.
 
 ## Результат и порядок

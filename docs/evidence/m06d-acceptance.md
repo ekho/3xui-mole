@@ -1,12 +1,12 @@
 # М06d — приёмка сборки модульного монолита
 
-Дата: 2026-10-06. Владелец [#60](https://github.com/ekho/3xui-shop/issues/60), контракт `2026-10-06-m06d-composition-v1`.
-[Спецификация](../superpowers/specs/2026-10-06-m06d-composition-design.md) · [Native-план](../superpowers/plans/2026-10-06-m06d-composition.md) · [Общий контракт](https://github.com/ekho/3xui-shop/issues/60#issuecomment-6011584601).
+Дата: 2026-10-06. Владелец [#60](/../../issues/60), контракт `2026-10-06-m06d-composition-v1`.
+[Спецификация](../superpowers/specs/2026-10-06-m06d-composition-design.md) · [Native-план](../superpowers/plans/2026-10-06-m06d-composition.md) · [Общий контракт](/../../issues/60#issuecomment-6011584601).
 
 ## Ревизия и результат
 
 Product revision `f051f1225c4292911b43146a7ff9be1fda4ff418`. Полная матрица **22/22 PASS**, 518.386s на одной committed revision: Go **13 пакетов PASS** с race/connected consumers, Python **105/105**, Playwright **127/127**. Все **154/154** перенесённых регрессий сохранены и прошли собственный Task2 и полный прогон. Собственный native stack остановлен; API, все15 миграций и зависимости не изменены, генерация стабильна.
-Единственный fresh whole-branch review Astra/high на d796e3a..81592a8: Critical0/Important0/Minor0, Ready from code review; fix pass/re-review не требуются. Exact-source CI и ручная доставка завершены: [PR #71](https://github.com/ekho/3xui-shop/pull/71), source fc437cfea19fc5418582dacecbfc3c56c1c58c47 → merge c9c075e40f822fbe4f7d058d292f2a14ad07cc3f, actual parents/source-equal tree проверены. [Preview2.0.0-dev.31](https://github.com/ekho/3xui-shop/releases/tag/2.0.0-dev.31), peeled tag и3public multiarch indexes/6config labels проверены. D08 завершён, #60 CLOSED/Project Done; [канонический отчёт доставки](https://github.com/ekho/3xui-shop/issues/60#issuecomment-6013023863). Production не входит в эту приёмку.
+Единственный fresh whole-branch review Astra/high на d796e3a..81592a8: Critical0/Important0/Minor0, Ready from code review; fix pass/re-review не требуются. Exact-source CI и ручная доставка завершены: [PR #71](/../../pull/71), source fc437cfea19fc5418582dacecbfc3c56c1c58c47 → merge c9c075e40f822fbe4f7d058d292f2a14ad07cc3f, actual parents/source-equal tree проверены. [Preview2.0.0-dev.31](/../../releases/tag/2.0.0-dev.31), peeled tag и3public multiarch indexes/6config labels проверены. D08 завершён, #60 CLOSED/Project Done; [канонический отчёт доставки](/../../issues/60#issuecomment-6013023863). Production не входит в эту приёмку.
 
 | Этап | Seconds | Result |
 | --- | ---: | --- |

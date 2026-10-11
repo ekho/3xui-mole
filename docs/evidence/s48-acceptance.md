@@ -14,12 +14,14 @@ Rollback tags: `cabinet-s48-backend:rollback-208f3e4` и
 на эти вызовы, а каждый отдельный JSONL record содержит прямую команду,
 ожидание, факт, verdict и непустой путь к артефакту.
 
+Корень исторического worktree обозначен как `$PWD`.
+
 ```text
-I = node /Users/ekho/.codex/plugins/cache/tradeos/tradeos-ai-engineering-kit/2.0.0/scripts/run-check.mjs --cwd /Users/ekho/.codex/worktrees/web-trial-s01/3xui-shop --timeout-seconds 420 --lines 12 -- python3 deploy/s48/local.py import-acceptance
-B = node /Users/ekho/.codex/plugins/cache/tradeos/tradeos-ai-engineering-kit/2.0.0/scripts/run-check.mjs --cwd /Users/ekho/.codex/worktrees/web-trial-s01/3xui-shop --timeout-seconds 360 --lines 12 -- node deploy/s48/browser.mjs
-P = node /Users/ekho/.codex/plugins/cache/tradeos/tradeos-ai-engineering-kit/2.0.0/scripts/run-check.mjs --cwd /Users/ekho/.codex/worktrees/web-trial-s01/3xui-shop --timeout-seconds 90 --lines 10 -- python3 deploy/s48/local.py native-probe
-F = node /Users/ekho/.codex/plugins/cache/tradeos/tradeos-ai-engineering-kit/2.0.0/scripts/run-check.mjs --cwd /Users/ekho/.codex/worktrees/web-trial-s01/3xui-shop --timeout-seconds 180 --lines 12 -- python3 deploy/s48/local.py focused-invariants
-R = node /Users/ekho/.codex/plugins/cache/tradeos/tradeos-ai-engineering-kit/2.0.0/scripts/run-check.mjs --cwd /Users/ekho/.codex/worktrees/web-trial-s01/3xui-shop --timeout-seconds 90 --lines 12 -- python3 deploy/s48/local.py registration-probe
+I = node /Users/ekho/.codex/plugins/cache/tradeos/tradeos-ai-engineering-kit/2.0.0/scripts/run-check.mjs --cwd "$PWD" --timeout-seconds 420 --lines 12 -- python3 deploy/s48/local.py import-acceptance
+B = node /Users/ekho/.codex/plugins/cache/tradeos/tradeos-ai-engineering-kit/2.0.0/scripts/run-check.mjs --cwd "$PWD" --timeout-seconds 360 --lines 12 -- node deploy/s48/browser.mjs
+P = node /Users/ekho/.codex/plugins/cache/tradeos/tradeos-ai-engineering-kit/2.0.0/scripts/run-check.mjs --cwd "$PWD" --timeout-seconds 90 --lines 10 -- python3 deploy/s48/local.py native-probe
+F = node /Users/ekho/.codex/plugins/cache/tradeos/tradeos-ai-engineering-kit/2.0.0/scripts/run-check.mjs --cwd "$PWD" --timeout-seconds 180 --lines 12 -- python3 deploy/s48/local.py focused-invariants
+R = node /Users/ekho/.codex/plugins/cache/tradeos/tradeos-ai-engineering-kit/2.0.0/scripts/run-check.mjs --cwd "$PWD" --timeout-seconds 90 --lines 12 -- python3 deploy/s48/local.py registration-probe
 ```
 
 `I` exit 0, **10/10 PASS** ([rows](../../.superpowers/sdd/2026-10-02-s48-account-restrictions/e2e/import.jsonl));

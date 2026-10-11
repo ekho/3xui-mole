@@ -1,6 +1,6 @@
 # С43 — локальная приёмка backup/restore
 
-Задача: [#45](https://github.com/ekho/3xui-shop/issues/45). Проверка 2026-10-09–10,
+Задача: [#45](/../../issues/45). Проверка 2026-10-09–10,
 исходная `origin/v2` — `9305fa5b6a5dec44648aa9a57bb1501164e455f6`.
 Это приёмка synthetic данных и работающей CLI; С43 ещё не слита, production не выполнен.
 
@@ -122,12 +122,12 @@ reviewer самостоятельно сверил connected и guard race logs.
 между этими review не менялся. Проверки CI этим review не подтверждаются.
 
 Общий Docker Hub anonymous HTTP 429 имел owner
-[#98](https://github.com/ekho/3xui-shop/issues/98). На прежнем checkpoint
-[PR #99](https://github.com/ekho/3xui-shop/pull/99) был draft с failed Image jobs;
+[#98](/../../issues/98). На прежнем checkpoint
+[PR #99](/../../pull/99) был draft с failed Image jobs;
 повторы без owning fix не запускались. Recovery теперь подтверждён live:
 проверенный source `b320f8eef415bb48e4c1cebdb12409b143eb9501` merged как
 `376df1eeaa0ea825f85e24d776aa46aee132e576`; его
-[post-merge preview](https://github.com/ekho/3xui-shop/actions/runs/38005580860)
+[post-merge preview](/../../actions/runs/38005580860)
 завершился SUCCESS. Это подтверждает owning fix, но не CI будущего HEAD #45.
 Новый мандат разрешает этой сессии push/PR, собственный ручной merge в `v2`,
 закрытие issue и Project Done после gates. Preview GHCR/prerelease разрешён,
@@ -138,14 +138,14 @@ scopes и добавлен отдельный backup rehearsal с always-cleanup
 Интеграция общего restore fixture с #44 принадлежит этой сессии #45.
 Прочитаны минимальный `1b2e4105615a39850d137a206de48e50335db20f` и actual
 `7e7cf856a274d99c5f23433c0c662feb4d26a731` source #44. До изменения записан
-[совместимый контракт](https://github.com/ekho/3xui-shop/issues/45#issuecomment-6091389100)
+[совместимый контракт](/../../issues/45#issuecomment-6091389100)
 `2026-10-10-owned-postgres-restore-v1`, связанный с #44. Один helper сохраняет
 существующие private metadata и optional Compose inputs с общими ownership,
 identity и точными loopback/port guards. Все restore assertions сохраняются;
 запрет downgrade проверяется `DownTo(ctx, 34)`. Технический порядок:
 #42 → #44 → #45 → #47; полная несмерженная ветка #44 в #45 не переносится.
 До дальнейшей правки записано
-[дополнение v2](https://github.com/ekho/3xui-shop/issues/45#issuecomment-6091458915):
+[дополнение v2](/../../issues/45#issuecomment-6091458915):
 backup constructor теперь `operations.NewBackup`, чтобы совместиться с
 `operations.New` maintenance #44 без изменения его callers или поведения.
 Текущий собственный fixture использует private canonical 0600 files
@@ -260,7 +260,7 @@ Go/web/Python scopes повторно не запускались: оконча�
 ## Operations image в контейнерном BuildKit
 
 CI source `900a7be53405226dfa8cc0e5aca5fc4967d95d2c`,
-[run 38008342103](https://github.com/ekho/3xui-shop/actions/runs/38008342103),
+[run 38008342103](/../../actions/runs/38008342103),
 прошёл static/generated, connected consumers, container readiness и native
 acceptance. Backup rehearsal остановился на первом `docker run` с exit 125;
 сама backup-проверка ещё не началась. Все три независимых cleanup прошли.

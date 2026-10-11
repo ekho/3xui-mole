@@ -1,6 +1,6 @@
 # С33.Р7 — локальная приёмка реферального триала
 
-Дата 2026-10-10, owner [#52](https://github.com/ekho/3xui-shop/issues/52).
+Дата 2026-10-10, owner [#52](/../../issues/52).
 Контракт `2026-10-10-referred-telegram-trial-v1`, ветка
 `feature/s33-referral-trial`, base `a42fc062a52df25d03dff0bd9ae0a71729d565a2`.
 **No DDL**, последняя миграция **00042**. [Спецификация](../superpowers/specs/2026-10-10-s33-referral-trial-design.md),

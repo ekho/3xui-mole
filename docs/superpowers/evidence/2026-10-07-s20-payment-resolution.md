@@ -1,6 +1,6 @@
 # С20 — Локальная приёмка разбора оплаты и возврата
 
-Владелец [#27](https://github.com/ekho/3xui-shop/issues/27), контракт
+Владелец [#27](/../../issues/27), контракт
 `2026-10-07-s20-v1`. [Спецификация](../specs/2026-10-07-s20-payment-resolution-design.md),
 [Native-план](../plans/2026-10-07-s20-payment-resolution.md).
 База `origin/v2`: `76bfe63fbebd8fa3b2b49a5280dfe7ac83c41894`.

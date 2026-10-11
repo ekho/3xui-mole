@@ -8,7 +8,7 @@
 
 **Tech Stack:** Go/pgx/Echo/oapi-codegen/sqlc, PostgreSQL, React/TypeScript/Playwright, Python stdlib SQLite exporter. Новых dependencies нет.
 
-**Spec:** [2026-10-07-s18-payment-history-design.md](../specs/2026-10-07-s18-payment-history-design.md), [#25 canonical v1](https://github.com/ekho/3xui-shop/issues/25#issuecomment-6029754500).
+**Spec:** [2026-10-07-s18-payment-history-design.md](../specs/2026-10-07-s18-payment-history-design.md), [#25 canonical v1](/../../issues/25#issuecomment-6029754500).
 
 ## Global Constraints
 

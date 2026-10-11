@@ -1,6 +1,6 @@
 # С17 — локальная приёмка смены тарифа
 
-Владелец [#24](https://github.com/ekho/3xui-shop/issues/24), контракт
+Владелец [#24](/../../issues/24), контракт
 `2026-10-07-s17-plan-change-v1`; [спецификация](../superpowers/specs/2026-10-07-s17-plan-change-design.md),
 [план Native](../superpowers/plans/2026-10-07-s17-plan-change.md).
 Backend checkpoint `28fa6e2`, исходный web `e30089b`, свежий обзор `1461fab`.

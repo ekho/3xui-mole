@@ -1,6 +1,6 @@
 # М03 — владелец каталога тарифов
 
-Дата: 2026-10-06. Задача: [М03 #57](https://github.com/ekho/3xui-shop/issues/57).
+Дата: 2026-10-06. Задача: [М03 #57](/../../issues/57).
 Решение: `2026-10-06-m03-catalogue-v1`, в границах принятого
 [модульного монолита](2026-10-05-modular-monolith-design.md).
 Документы и реализация ведутся автономно по разрешению владельца, Native.
@@ -81,10 +81,10 @@ optimistic revision, транзакционный replay и rollback import.
 
 ## Зависимые задачи
 
-[М04 #58](https://github.com/ekho/3xui-shop/issues/58) использует эти ports при
-выделении subscriptions/vpn. [С10 #17](https://github.com/ekho/3xui-shop/issues/17)
-и [М05 #59](https://github.com/ekho/3xui-shop/issues/59) при интеграции
-[PR #5](https://github.com/ekho/3xui-shop/pull/5) заменяют raw catalogue SQL
+[М04 #58](/../../issues/58) использует эти ports при
+выделении subscriptions/vpn. [С10 #17](/../../issues/17)
+и [М05 #59](/../../issues/59) при интеграции
+[PR #5](/../../pull/5) заменяют raw catalogue SQL
 на `LockCurrentPlan`, сохраняя money/quote/job atomicity.
 PR #5 остаётся на `afaeacf652964453ddd61883aa6da6a0d285783c`; его ранняя
 приёмка не доказывает совместимость с новой module boundary.

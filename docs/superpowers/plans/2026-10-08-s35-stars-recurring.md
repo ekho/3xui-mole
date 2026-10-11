@@ -9,7 +9,7 @@
 **Tech Stack:** Go, PostgreSQL/goose/pgx, Redis, River, Echo, React/React-admin, существующие Playwright/oapi-codegen/sqlc; 3X-UI3.7.0.
 
 **Spec:** `docs/superpowers/specs/2026-10-08-s35-stars-recurring-design.md`.
-Owner [#33/6051821522](https://github.com/ekho/3xui-shop/issues/33#issuecomment-6051821522), version `2026-10-08-s35-stars-recurring-v1`.
+Owner [#33/6051821522](/../../issues/33#issuecomment-6051821522), version `2026-10-08-s35-stars-recurring-v1`.
 Base `27ae2dec9aadfe03bada575a416d1f1afdf3c383`; branch `feature/s35-stars-recurring`; PR → `v2`.
 Native, документы, PR/manual merge и предварительный релиз разрешены автономным мандатом6004574101.
 

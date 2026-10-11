@@ -1,6 +1,6 @@
 # С42 — Обслуживание общего backend
 
-Дата: 2026-10-09. Owner: `operations`. Задача: [#44](https://github.com/ekho/3xui-shop/issues/44).
+Дата: 2026-10-09. Owner: `operations`. Задача: [#44](/../../issues/44).
 Основание: `2026-10-05-modular-monolith-v1` / #55. Мандат этой сессии:
 реализация, локальная приёмка, review и готовый PR в `v2`; merge/закрытие/Done
 выполняет головная сессия. Production, downtime, release и deploy исключены.

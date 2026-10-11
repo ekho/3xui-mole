@@ -1,10 +1,10 @@
 # М06c — существующий журнал действий в audit_reports
 
-Дата: 2026-10-06. Контракт `2026-10-06-m06c-audit-v1`, владелец [#60](https://github.com/ekho/3xui-shop/issues/60).
+Дата: 2026-10-06. Контракт `2026-10-06-m06c-audit-v1`, владелец [#60](/../../issues/60).
 Спецификация принята в рамках разрешённого автономного ведения документов и Native.
 Fresh base origin/v2 `d23c848354ac663b953d9faa9b49b09d93e04303`, ветка `feature/m06c-audit`.
-М06b2 полностью доставлен [PR #69](https://github.com/ekho/3xui-shop/pull/69)/[dev.27](https://github.com/ekho/3xui-shop/releases/tag/2.0.0-dev.27):
-[checkpoint](https://github.com/ekho/3xui-shop/issues/60#issuecomment-6010525855).
+М06b2 полностью доставлен [PR #69](/../../pull/69)/[dev.27](/../../releases/tag/2.0.0-dev.27):
+[checkpoint](/../../issues/60#issuecomment-6010525855).
 
 ## Результат и граница
 

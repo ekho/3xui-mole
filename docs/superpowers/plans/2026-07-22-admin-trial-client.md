@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- Work in `/Users/ekho/d/tools/3xui-shop/.worktrees/create-trial-client` on `codex/create-trial-client`.
+- Work in `.worktrees/create-trial-client` on `codex/create-trial-client`.
 - Preserve the dirty primary checkout.
 - Reuse `SubscriptionService.gift_trial`; do not make a second 3x-ui payload path.
 - User fields: UUID `vpn_id`, `generate_sub_id()`, `DEFAULT_LANGUAGE`, `ApprovalStatus.APPROVED`.

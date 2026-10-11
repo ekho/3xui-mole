@@ -1,6 +1,6 @@
 # С45: локальная приёмка конфигурации продукта
 
-Дата: 2026-10-10. Задача: [#47](https://github.com/ekho/3xui-shop/issues/47).
+Дата: 2026-10-10. Задача: [#47](/../../issues/47).
 База `ad66cfeb8bf89d8259f88ff0a8f80d0011c022b0`, ветка
 `feature/s45-product-config`, контракт `2026-10-10-s45-product-config-v1`.
 [Spec](../superpowers/specs/2026-10-10-s45-product-config-design.md),

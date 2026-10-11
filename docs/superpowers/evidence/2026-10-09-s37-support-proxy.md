@@ -1,6 +1,6 @@
 # С37 — локальная приёмка Telegram support-прокси
 
-Дата: 2026-10-09. Issue [#40](https://github.com/ekho/3xui-shop/issues/40).
+Дата: 2026-10-09. Issue [#40](/../../issues/40).
 Решение `2026-10-09-s37-support-proxy-v1`; база
 `e28ab778c3031f69a520ce5d08c4b572fd3bb08e`, PR target `v2`.
 Native execution; единственное независимое финальное ревью после локальных проверок.

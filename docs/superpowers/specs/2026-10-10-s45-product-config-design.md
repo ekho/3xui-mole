@@ -1,6 +1,6 @@
 # С45 — конфигурация продукта при deployment
 
-Issue: [#47](https://github.com/ekho/3xui-shop/issues/47). Owner: `operations`.
+Issue: [#47](/../../issues/47). Owner: `operations`.
 Контракт: `2026-10-05-modular-monolith-v1`; база `ad66cfeb` (`origin/v2`).
 Предшественники #6/#60/#44/#45/#46 закрыты и входят в эту базу.
 

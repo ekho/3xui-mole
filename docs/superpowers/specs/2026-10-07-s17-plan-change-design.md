@@ -1,8 +1,8 @@
 # С17 — клиент меняет тариф
 
-Дата: 2026-10-07. Владелец сценария [#24](https://github.com/ekho/3xui-shop/issues/24).
+Дата: 2026-10-07. Владелец сценария [#24](/../../issues/24).
 Автономные документы, Native и последовательное выполнение/слияние разрешены
-владельцем. [Общий контракт](https://github.com/ekho/3xui-shop/issues/24#issuecomment-6027840665):
+владельцем. [Общий контракт](/../../issues/24#issuecomment-6027840665):
 `2026-10-07-s17-plan-change-v1`. База — свежая origin/v2 после С16/PR77.
 
 ## Результат и правила
@@ -16,7 +16,7 @@
 назначенный сервер сохраняются; трафик сбрасывается один раз.
 
 Alignment — [роадмап](../../roadmaps/2026-10-01-platform-roadmap.md),
-[#24](https://github.com/ekho/3xui-shop/issues/24),
+[#24](/../../issues/24),
 [архитектура v1](2026-10-05-modular-monolith-design.md),
 [С09](2026-10-02-s09-catalogue-design.md),
 [С16 v2](2026-10-07-s16-renewal-design.md): confirmed.

@@ -4,7 +4,7 @@
 База `a42fc062a52df25d03dff0bd9ae0a71729d565a2`; prerequisites #31/#51
 доставлены в PR85/107. Совместим с `2026-10-08-s33-telegram-trial-v1`,
 `2026-10-10-referrals-v1` и `2026-10-10-referral-rewards-v1`.
-Canonical decision: https://github.com/ekho/3xui-shop/issues/52#issuecomment-6096597477.
+Canonical decision: [запись GitHub](/../../issues/52#issuecomment-6096597477).
 
 ## Поведение
 

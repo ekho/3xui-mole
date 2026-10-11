@@ -8,7 +8,7 @@
 
 **Tech Stack:** Go stdlib, существующие pgx/sqlc/goose/River/Redis, Echo/OpenAPI, React/React-admin/Playwright, PostgreSQL и локальный Docker.
 
-**Spec:** [2026-10-09-s37-support-proxy-design.md](../specs/2026-10-09-s37-support-proxy-design.md), версия `2026-10-09-s37-support-proxy-v1`, owner [#40](https://github.com/ekho/3xui-shop/issues/40).
+**Spec:** [2026-10-09-s37-support-proxy-design.md](../specs/2026-10-09-s37-support-proxy-design.md), версия `2026-10-09-s37-support-proxy-v1`, owner [#40](/../../issues/40).
 
 ## Global Constraints
 

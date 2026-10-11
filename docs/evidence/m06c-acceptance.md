@@ -1,13 +1,13 @@
 # М06c — локальная приёмка audit owner
 
-Дата: 2026-10-06. Владелец [#60](https://github.com/ekho/3xui-shop/issues/60), контракт `2026-10-06-m06c-audit-v1`.
-[Спецификация](../superpowers/specs/2026-10-06-m06c-audit-design.md) · [Native-план](../superpowers/plans/2026-10-06-m06c-audit.md) · [Общее решение](https://github.com/ekho/3xui-shop/issues/60#issuecomment-6010685854).
+Дата: 2026-10-06. Владелец [#60](/../../issues/60), контракт `2026-10-06-m06c-audit-v1`.
+[Спецификация](../superpowers/specs/2026-10-06-m06c-audit-design.md) · [Native-план](../superpowers/plans/2026-10-06-m06c-audit.md) · [Общее решение](/../../issues/60#issuecomment-6010685854).
 
 ## Ревизия и результат
 
 Product revision `73668ab42d95c782a3d04fd8d7098381c3f219ba`.
 Полная матрица **22/22 PASS**,441.224s на одной committed product revision. Go **14 пакетов PASS** с `RUN_BROWSER_TESTS=1 go -C backend test -race ./... -count=1` (platform208.700s, connected consumers102.927s); Python **105/105**, Playwright **127/127**. Собственный native stack остановлен; API/all15 migrations/dependencies/generation сохранены.
-Единственный fresh whole-branch review Astra/high на d23c848..9411983 завершён: Critical0/Important0/Minor0, Ready to merge после обязательных проверок доставки. Exact-source Platform checks push37427279222/PR37427329921 и images37427329731 SUCCESS. PR70 вручную слит: source d4f9e599e4a8990b1409a018e6de39371c45306c, base d23c848354ac663b953d9faa9b49b09d93e04303, merge d796e3a076785ce0f5b933fcd2a22c0f4baf4e26; actual parents совпали, tree source=merge c0f286ee27bb8d6da3995056554432bb31180b04. Preview37428455436 все4 jobs SUCCESS, [2.0.0-dev.29](https://github.com/ekho/3xui-shop/releases/tag/2.0.0-dev.29) prerelease/non-draft, peeled tag exact merge. Bot/backend/web public indexes и6linux amd64/arm64 configs/revision/version/source labels проверены. [Общее завершение](https://github.com/ekho/3xui-shop/issues/60#issuecomment-6011429496).
+Единственный fresh whole-branch review Astra/high на d23c848..9411983 завершён: Critical0/Important0/Minor0, Ready to merge после обязательных проверок доставки. Exact-source Platform checks push37427279222/PR37427329921 и images37427329731 SUCCESS. PR70 вручную слит: source d4f9e599e4a8990b1409a018e6de39371c45306c, base d23c848354ac663b953d9faa9b49b09d93e04303, merge d796e3a076785ce0f5b933fcd2a22c0f4baf4e26; actual parents совпали, tree source=merge c0f286ee27bb8d6da3995056554432bb31180b04. Preview37428455436 все4 jobs SUCCESS, [2.0.0-dev.29](/../../releases/tag/2.0.0-dev.29) prerelease/non-draft, peeled tag exact merge. Bot/backend/web public indexes и6linux amd64/arm64 configs/revision/version/source labels проверены. [Общее завершение](/../../issues/60#issuecomment-6011429496).
 #60 OPEN/In progress до удаления shared platform/store М06d и собственной архитектурной приёмки всего М06.
 
 | Этап | Seconds | Result |
@@ -47,7 +47,7 @@ Task-done выполнил широкую focused real PG/Redis race на commit
 
 ## Границы
 
-М06b2 [PR69/dev27](https://github.com/ekho/3xui-shop/pull/69) доставлен и является fresh base. М06d удаляет transitional platform.Service/store; М06 пока не завершён. C26/#36 reports, C29/#39 retention/history/mirror остаются OPEN. Python retirement — С47. Production, реальные provider/Telegram, установленный Happ/VPN/macOS trust исключены. Локальный TLS SMTP не подтверждает внешнюю доставляемость; inherited uncertain-send retry остаётся. Browser interception и real connected/native evidence разделены; новый полный browser-to-real-backend trial/support proof не заявлен.
+М06b2 [PR69/dev27](/../../pull/69) доставлен и является fresh base. М06d удаляет transitional platform.Service/store; М06 пока не завершён. C26/#36 reports, C29/#39 retention/history/mirror остаются OPEN. Python retirement — С47. Production, реальные provider/Telegram, установленный Happ/VPN/macOS trust исключены. Локальный TLS SMTP не подтверждает внешнюю доставляемость; inherited uncertain-send retry остаётся. Browser interception и real connected/native evidence разделены; новый полный browser-to-real-backend trial/support proof не заявлен.
 
 ## Native rulings
 

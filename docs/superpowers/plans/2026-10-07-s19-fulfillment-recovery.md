@@ -8,7 +8,7 @@
 
 **Tech Stack:** Go/pgx/River/PostgreSQL, React/TypeScript/Playwright, Python stdlib и Docker Compose. Новых dependencies нет.
 
-**Spec:** [2026-10-07-s19-fulfillment-recovery-design.md](../specs/2026-10-07-s19-fulfillment-recovery-design.md); canonical `2026-10-07-s19-fulfillment-recovery-v1`, owner [#26](https://github.com/ekho/3xui-shop/issues/26).
+**Spec:** [2026-10-07-s19-fulfillment-recovery-design.md](../specs/2026-10-07-s19-fulfillment-recovery-design.md); canonical `2026-10-07-s19-fulfillment-recovery-v1`, owner [#26](/../../issues/26).
 
 ## Global Constraints
 

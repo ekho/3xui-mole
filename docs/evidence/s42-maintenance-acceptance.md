@@ -1,6 +1,6 @@
 # С42 — локальная приёмка обслуживания
 
-Дата: 2026-10-10. Задача: [#44](https://github.com/ekho/3xui-shop/issues/44).
+Дата: 2026-10-10. Задача: [#44](/../../issues/44).
 Контракт: `2026-10-05-modular-monolith-v1`, владелец `operations`.
 [Спецификация](../superpowers/specs/2026-10-09-s42-maintenance-design.md) ·
 [План](../superpowers/plans/2026-10-09-s42-maintenance.md) ·
@@ -90,7 +90,7 @@ Redis56344 и browser41744; отдельные UUID базы и Redis namespaces
 `cabinet-native`, чужие worktrees и данные не менялись. Python3.13, Node24,
 Go1.27; новые зависимости не добавлялись.
 
-На первом checkpoint локальной приёмки доставка была заблокирована внешней задачей [#98](https://github.com/ekho/3xui-shop/issues/98): Docker Hub429; owning cache-fix [PR99](https://github.com/ekho/3xui-shop/pull/99) ещё не подтвердил recovery. Этот неуспешный CI не повторяли. Следующий этап интеграции и его результаты записаны ниже. Готовность PR требует всех обязательных checks на его окончательном HEAD; merge и закрытие #44 остаются у родительского координатора.
+На первом checkpoint локальной приёмки доставка была заблокирована внешней задачей [#98](/../../issues/98): Docker Hub429; owning cache-fix [PR99](/../../pull/99) ещё не подтвердил recovery. Этот неуспешный CI не повторяли. Следующий этап интеграции и его результаты записаны ниже. Готовность PR требует всех обязательных checks на его окончательном HEAD; merge и закрытие #44 остаются у родительского координатора.
 Миграция `00038_maintenance.sql` сохраняет номер; родительский координатор
 интегрирует/применяет `00037_server_management.sql` из PR96/#42 перед38.
 Проверка чистой базы в этой ветке не подтверждает upgrade с38 до позднее
@@ -123,8 +123,8 @@ re-entry при удерживаемом AccessOwner. Эта независим�
 
 По указанию координатора в существующую ветку объединён owning fix
 `b320f8eef415bb48e4c1cebdb12409b143eb9501` из PR99. SHA проверен после SSH fetch.
-Его полный [push Platform run 38001638382](https://github.com/ekho/3xui-shop/actions/runs/38001638382)
-и все три [Image jobs 38001644520](https://github.com/ekho/3xui-shop/actions/runs/38001644520)
+Его полный [push Platform run 38001638382](/../../actions/runs/38001638382)
+и все три [Image jobs 38001644520](/../../actions/runs/38001644520)
 имеют SUCCESS на этом source. Это основание возобновить CI нашей ветки,
 а не подтверждение её собственного окончательного CI или merge PR99.
 
@@ -164,12 +164,12 @@ Restore-test overlap с #45 (`web_trial_integration_test.go` и его отде�
 `83d1f6d23eb560feaeb2b6bfb356db08b645d089`. Проверены GitHub state/checks,
 SSH ref и наличие `00037_server_management.sql`. Миграция37 получена из
 уже слитой целевой ветки; наша `00038_maintenance.sql` не переименована.
-Нативные gates source83 прошли; [handoff #42](https://github.com/ekho/3xui-shop/issues/42#issuecomment-6091858817).
+Нативные gates source83 прошли; [handoff #42](/../../issues/42#issuecomment-6091858817).
 
 До этой интеграции полный exact-source CI S42 на `7e7cf856a274d99c5f23433c0c662feb4d26a731`
-завершился SUCCESS: [Platform push](https://github.com/ekho/3xui-shop/actions/runs/38005769710),
-[Platform PR](https://github.com/ekho/3xui-shop/actions/runs/38005816632),
-[три image jobs](https://github.com/ekho/3xui-shop/actions/runs/38005816723).
+завершился SUCCESS: [Platform push](/../../actions/runs/38005769710),
+[Platform PR](/../../actions/runs/38005816632),
+[три image jobs](/../../actions/runs/38005816723).
 Это отдельный green CI; исходный локальный полный Go RED остаётся в истории.
 
 Слияние обнаружило семь реальных content conflicts. Объединены maintenance и VPN
@@ -205,8 +205,8 @@ Production не входит в полномочие.
 
 ## Исправление rollback fixture после миграции38 — 10 октября 2026
 
-Полные [Platform push38013255530](https://github.com/ekho/3xui-shop/actions/runs/38013255530)
-и [Platform PR38013259624](https://github.com/ekho/3xui-shop/actions/runs/38013259624)
+Полные [Platform push38013255530](/../../actions/runs/38013255530)
+и [Platform PR38013259624](/../../actions/runs/38013259624)
 на source `47a0e59fda8fb59b0bd7464c1bb0463104f70591` завершились RED.
 Оба показали одну причину: `TestServerManagementMigrationEmptyRollbackAndHistoryGuard`
 из #42 падал в subcases `role` и `action` с `retained ... downgraded: <nil>`.

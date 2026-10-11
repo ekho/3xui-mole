@@ -1,6 +1,6 @@
 # М02: локальная приёмка accounts
 
-Дата: 2026-10-05. Задача: [М02 #56](https://github.com/ekho/3xui-shop/issues/56).
+Дата: 2026-10-05. Задача: [М02 #56](/../../issues/56).
 Ветка: `feature/m02-accounts`, baseline `896a883c96bf662dc568372046fca75ae0753d33`
 (`v2`). Проверенная реализация: `856b4eab34b2aa7785de7d373bd6e5ed75c5e640`.
 Решение: `2026-10-05-m02-accounts-v1`; выполнение Native.
@@ -66,11 +66,11 @@
 | Не распространять local acceptance на production/Happ/real providers/внешний SMTP/benchmark | Ревьюер не оценивал их; они исключены принятой границей и текущим разрешением. | Непроверенные условия развёртывания или внешних сервисов могут потребовать исправлений до production. |
 | Сохранить запрет повторного uncertain panel create | Ревьюер не оценивал все 3X-UI failures; native readback и прежние fault tests покрывают локальный сценарий. | Новая vendor failure потребует отдельной диагностики; нельзя автоматически дублировать клиента. |
 
-М01: [PR #61](https://github.com/ekho/3xui-shop/pull/61) слит в baseline;
-[2.0.0-dev.7](https://github.com/ekho/3xui-shop/releases/tag/2.0.0-dev.7)
+М01: [PR #61](/../../pull/61) слит в baseline;
+[2.0.0-dev.7](/../../releases/tag/2.0.0-dev.7)
 опубликован. Версионные/source manifests всех трёх образов совпадают и содержат
 linux/amd64 и linux/arm64. Workflow
-[37363120914](https://github.com/ekho/3xui-shop/actions/runs/37363120914)
+[37363120914](/../../actions/runs/37363120914)
 остался failure из-за непредоставленного runner; CLI recovery не делает этот run зелёным.
 #55 закрыт только в принятой локальной границе; весь v2 и production остаются открытыми.
 
@@ -97,5 +97,5 @@ Review Focus разобраны. Между проверенной реализ�
 каждого пункта Declined to judge; они полностью перечислены в таблице решений.
 
 PR, финальная ревизия и exact-head CI фиксируются в
-[М02 #56](https://github.com/ekho/3xui-shop/issues/56).
+[М02 #56](/../../issues/56).
 Слияние М02 и production отдельно. Следующий этап — М03/#57 (catalogue).

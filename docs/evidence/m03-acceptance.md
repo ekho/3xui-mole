@@ -1,6 +1,6 @@
 # М03: локальная приёмка catalogue
 
-Дата: 2026-10-06. Задача: [М03 #57](https://github.com/ekho/3xui-shop/issues/57).
+Дата: 2026-10-06. Задача: [М03 #57](/../../issues/57).
 Ветка `feature/m03-catalogue`, baseline `c780927659f66b6ec8ae741cdddf310a7e464953`
 (`v2`). Проверенная реализация: `ed52c2b1f2a07eec0a14ab5c39277c7b9fd34b34`.
 Контракт: `2026-10-06-m03-catalogue-v1`; выполнение Native.
@@ -69,28 +69,28 @@ Native ledger: исправлялись тестовые consent/sub_id seeds, �
 ## Доставка и границы
 
 Локальная реализация, приёмка и свежий whole-branch review выполнены.
-[PR #63](https://github.com/ekho/3xui-shop/pull/63) слит в `v2` 2026-10-06
+[PR #63](/../../pull/63) слит в `v2` 2026-10-06
 по поручению последовательно выполнять и сливать задачи.
-[Первый PR CI](https://github.com/ekho/3xui-shop/actions/runs/37379195997)
+[Первый PR CI](/../../actions/runs/37379195997)
 выявил описанную гонку теста; три image builds прошли. CI после исправления
 завершён: exact-source `db42e1a2df84850261363279c295a318054f7790`,
-[Platform](https://github.com/ekho/3xui-shop/actions/runs/37381199274) и
-[image builds](https://github.com/ekho/3xui-shop/actions/runs/37381199289) SUCCESS.
+[Platform](/../../actions/runs/37381199274) и
+[image builds](/../../actions/runs/37381199289) SUCCESS.
 Whole-branch review предшествовал этой test-only правке; покрывающий
 тест и полный Playwright прогон прошли, повторный review не выполнялся.
 Merge `1a24150726f6ba46a4724649f208ab6c3b362357`; фактические родители —
 `c780927659f66b6ec8ae741cdddf310a7e464953` и проверенный source `db42e1a2`.
 Дерево `8653326356402862b11329e348fe30d9c86b9812` совпадает с source.
-[V2 publication](https://github.com/ekho/3xui-shop/actions/runs/37383524637)
-SUCCESS, [2.0.0-dev.13](https://github.com/ekho/3xui-shop/releases/tag/2.0.0-dev.13)
+[V2 publication](/../../actions/runs/37383524637)
+SUCCESS, [2.0.0-dev.13](/../../releases/tag/2.0.0-dev.13)
 опубликован на точный merge. Все три образа проверены для linux/amd64 и
 linux/arm64, manifests version/source tags совпадают. #57 Closed / Project Done;
 parent отсутствует. Production не менялся.
-М02 отдельно доставлен через [PR #62](https://github.com/ekho/3xui-shop/pull/62);
-[2.0.0-dev.9](https://github.com/ekho/3xui-shop/releases/tag/2.0.0-dev.9)
+М02 отдельно доставлен через [PR #62](/../../pull/62);
+[2.0.0-dev.9](/../../releases/tag/2.0.0-dev.9)
 опубликован с проверенными source/version manifests amd64/arm64.
 
-[PR #5](https://github.com/ekho/3xui-shop/pull/5) остаётся на
+[PR #5](/../../pull/5) остаётся на
 `afaeacf652964453ddd61883aa6da6a0d285783c`: адаптация accounts/catalogue ports
 и повторная проверка покупки выполняются при интеграции С10 после М04.
 Полный перенос subscriptions/vpn, payments и notifications — М04–М06;

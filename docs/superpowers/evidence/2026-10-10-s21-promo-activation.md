@@ -2,7 +2,7 @@
 
 Issue: #49. Base: `f64c13ce9fbc3b2dfccc6ec67d0558987f0c0fd4`.
 Contract: `2026-10-10-promocode-activation-v1`,
-[canonical decision](https://github.com/ekho/3xui-shop/issues/49#issuecomment-6095033564).
+[canonical decision](/../../issues/49#issuecomment-6095033564).
 No own DDL; existing 00040/code history and persistent access operations are reused.
 Integrated delivered target `f75dbb72c65c40dce099e2919e8809ee947951ea`
 (#50/PR105, migration 00041) after actual shared-file conflicts were confirmed.

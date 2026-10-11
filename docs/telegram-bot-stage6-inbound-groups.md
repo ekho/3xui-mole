@@ -21,8 +21,8 @@
 >   banned/regular/unlimited). МУТИРУЮЩАЯ проба сохранена в scratchpad
 >   (`probe_stage6_mutating.py`) — запуск требует отмашки (пишет в боевую панель);
 >   ретег-проба отложена по той же причине (рестарт xray);
-> - валидация: compileall, msgfmt, импорт-граф и все 14 миграций с нуля — в docker-образе
->   `ghcr.io/ekho/3xui-shop:latest`; юнит-прогон чистой логики (parse/base_tag/diff) зелёный.
+> - валидация: compileall, msgfmt, импорт-граф и все 14 миграций с нуля — в историческом Docker-образе
+>   Python-бота (тег `latest`); юнит-прогон чистой логики (parse/base_tag/diff) зелёный.
 
 ## Цель
 

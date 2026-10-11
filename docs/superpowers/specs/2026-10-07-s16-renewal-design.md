@@ -3,10 +3,10 @@
 Дата: 2026-10-07. Автономная спецификация по разрешению владельца
 «остальные документы и реализацию вести автономно», затем
 «По очереди выполняй задачи и мёржи их MR». Исполнение Native сохраняется.
-Владелец сценария: [#23](https://github.com/ekho/3xui-shop/issues/23),
+Владелец сценария: [#23](/../../issues/23),
 `subscriptions`; деньги принадлежат `payments`, панельные записи — `vpn`.
 Версия общего решения: `2026-10-07-s16-renewal-v2`;
-[совместимое исправление после ревью](https://github.com/ekho/3xui-shop/issues/23#issuecomment-6026884166).
+[совместимое исправление после ревью](/../../issues/23#issuecomment-6026884166).
 
 ## Результат и выбранный подход
 
@@ -22,7 +22,7 @@ action различает purchase и renew; физическая операци
 обобщённый движок операций также не требуется.
 
 Alignment — [роадмап](../../roadmaps/2026-10-01-platform-roadmap.md),
-[#23](https://github.com/ekho/3xui-shop/issues/23),
+[#23](/../../issues/23),
 [архитектура v1](2026-10-05-modular-monolith-design.md),
 [С09](2026-10-02-s09-catalogue-design.md): confirmed; противоречий нет.
 `app/bot/services/vpn.py:extend_client/update_client` подтверждает расчёт

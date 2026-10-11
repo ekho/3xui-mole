@@ -3,7 +3,7 @@
 Source base: `e7a46c338420cb459cbf86fdae3bae9254ab9f86`, `origin/v2`.
 Проверены изменения реализации, включённые в commit с этим документом.
 Итоговый source SHA, результаты проверок этого SHA, CI и merge фиксируются
-в [#48](https://github.com/ekho/3xui-shop/issues/48) и связанном PR.
+в [#48](/../../issues/48) и связанном PR.
 
 Собственный Compose project с PostgreSQL/Redis, отдельные случайные test DB,
 loopback ports и synthetic accounts. URL/session/CSRF находятся только в
@@ -25,7 +25,7 @@ private temporary files. Ни production, ни общие fixtures не испо
 Исправлена именно модель тестовой активации: обратный порядок promo → account
 вызывал подтверждённый FK-deadlock при self-activation. Native owner уже берёт
 account первым. Требование записано для #49 в canonical #48 comment
-[2026-10-10-promocodes-lock-order-v1](https://github.com/ekho/3xui-shop/issues/48#issuecomment-6094624527).
+[2026-10-10-promocodes-lock-order-v1](/../../issues/48#issuecomment-6094624527).
 
 ## Ограничения
 

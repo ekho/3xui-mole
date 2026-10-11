@@ -1,7 +1,7 @@
 # С12 — локальная приёмка YooKassa
 
-Дата: 2026-10-06. Владелец [#20](https://github.com/ekho/3xui-shop/issues/20),
-контракт [2026-10-06-s12-yookassa-v1](https://github.com/ekho/3xui-shop/issues/20#issuecomment-6016738246).
+Дата: 2026-10-06. Владелец [#20](/../../issues/20),
+контракт [2026-10-06-s12-yookassa-v1](/../../issues/20#issuecomment-6016738246).
 [Спецификация](../superpowers/specs/2026-10-06-s12-yookassa-design.md) ·
 [Native-план](../superpowers/plans/2026-10-06-s12-yookassa.md).
 
@@ -119,17 +119,17 @@ promos/referrals — Р7. Закрытие #20 означает собствен
 
 ## Доставка — 2026-10-06
 
-[PR74](https://github.com/ekho/3xui-shop/pull/74) вручную слит в v2 по текущему мандату.
+[PR74](/../../pull/74) вручную слит в v2 по текущему мандату.
 Source `8ddd0646140abf16dcc7dafb6e3f077e527553fc`, merge
 `42a791c6894d58b0e88f16a7fa523eb39b2a8b42`; actual parents
 `d7b69ebd96fe09370c5197d60e1dc6e95324c3e3` и source проверены по Git SSH.
 Source-equal tree `c17449d95d3e233540c9d16b6537da70ed9427e4`.
-Exact-source [Platform push](https://github.com/ekho/3xui-shop/actions/runs/37489153079),
-[Platform PR](https://github.com/ekho/3xui-shop/actions/runs/37489323965) и
-[PR images](https://github.com/ekho/3xui-shop/actions/runs/37489322990) SUCCESS.
+Exact-source [Platform push](/../../actions/runs/37489153079),
+[Platform PR](/../../actions/runs/37489323965) и
+[PR images](/../../actions/runs/37489322990) SUCCESS.
 
-Actual [v2 preview](https://github.com/ekho/3xui-shop/actions/runs/37491911049) SUCCESS;
-[2.0.0-dev.37](https://github.com/ekho/3xui-shop/releases/tag/2.0.0-dev.37) — non-draft
+Actual [v2 preview](/../../actions/runs/37491911049) SUCCESS;
+[2.0.0-dev.37](/../../releases/tag/2.0.0-dev.37) — non-draft
 prerelease, peeled tag равен actual merge. Anonymous OCI verification проверила
 три version/source indexes и шесть amd64/arm64 revision/version/source labels:
 
@@ -137,7 +137,7 @@ prerelease, peeled tag равен actual merge. Anonymous OCI verification пр�
 - backend: `sha256:014d08f0212c80382fe23d802588e08cc95b698d4927981c1b34b8148a6e90e7`
 - web: `sha256:b03725ecea8b45ca5d0e15d4eed41e78a2bae1020eb7f3691504693cceebcbdb`
 
-[#20 CLOSED/Project Done](https://github.com/ekho/3xui-shop/issues/20#issuecomment-6020325245)
+[#20 CLOSED/Project Done](/../../issues/20#issuecomment-6020325245)
 после собственной приёмки; actual parent отсутствует. #55 — завершённый M01,
 источник архитектуры, не общий эпик. Private source/log/publication manifests
 проверены и сохранены; own SDD удалён. cabinet-c12 остановлен, volumes сохранены.

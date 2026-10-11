@@ -1,6 +1,6 @@
 # С36 — локальная приёмка перехода к внешней оплате
 
-Владелец [#34](https://github.com/ekho/3xui-shop/issues/34), решение `2026-10-08-s36-browser-payments-v1` / [comment6056519052](https://github.com/ekho/3xui-shop/issues/34#issuecomment-6056519052).
+Владелец [#34](/../../issues/34), решение `2026-10-08-s36-browser-payments-v1` / [comment6056519052](/../../issues/34#issuecomment-6056519052).
 Ветка `feature/s36-browser-payments`, база свежей `origin/v2` — `0d19b02669a90c335a7ac62d5062de4715687706`.
 Метод Native: один cohesive task, одно fresh Astra/high whole-branch review, один author Critical/Important pass; без повторного ревью.
 

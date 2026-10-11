@@ -1,7 +1,7 @@
 # С13 — локальная приёмка YooMoney
 
 Владелец #18. Контракт `2026-10-06-c13-local-stubs-v2`:
-https://github.com/ekho/3xui-shop/issues/18#issuecomment-6014628265.
+[запись GitHub](/../../issues/18#issuecomment-6014628265).
 Документы и Native выполняются автономно по принятому поручению.
 
 ## Цель и границы

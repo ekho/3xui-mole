@@ -1,7 +1,7 @@
 # С13 — локальная приёмка YooMoney
 
-Дата: 2026-10-06. Владелец [#18](https://github.com/ekho/3xui-shop/issues/18),
-контракт [2026-10-06-c13-local-stubs-v2](https://github.com/ekho/3xui-shop/issues/18#issuecomment-6014628265).
+Дата: 2026-10-06. Владелец [#18](/../../issues/18),
+контракт [2026-10-06-c13-local-stubs-v2](/../../issues/18#issuecomment-6014628265).
 [Спецификация](../superpowers/specs/2026-10-06-s13-yoomoney-local-design.md) ·
 [Native-план](../superpowers/plans/2026-10-06-s13-yoomoney-local.md).
 
@@ -67,9 +67,9 @@ HTTP поведение до этого не проверялось, это не
 - Final: Ruling: Production/Happ/VPN/trust/live Telegram/SMTP/target-host performance remain outside local C13 — no such actions or success claims occurred under this scope — cost if wrong: external performance/delivery readiness remains unverified.
 - Final: Ruling: Own C13 exact-source CI/manual merge/actual preview/tag/images/issue closure remain coordinator gates — C11 dev33 is verified predecessor delivery and does not satisfy them — cost if wrong: unverified C13 artifacts could be called delivered; #18 stays OPEN until actual proofs.
 
-С13 доставлена [PR73](https://github.com/ekho/3xui-shop/pull/73): source `d6087cf8b2559dd2b2041121d4088b340959322a`, merge `d7b69ebd96fe09370c5197d60e1dc6e95324c3e3`, actual parents/base5144fc2 и source d6087cf проверены, дерево совпадает с source. Exact-source Platform/PR37462092944, Platform/push37462051424 и PRimages37462092938 завершились success; jobs/check-runs проверены отдельно. Preview37464031284/run35:4/4 success, [2.0.0-dev.35](https://github.com/ekho/3xui-shop/releases/tag/2.0.0-dev.35) prerelease/non-draft и peeled tag на merge; все три multiarch indexes и шесть image revision/version/source labels проверены. [#18 CLOSED/Project Done](https://github.com/ekho/3xui-shop/issues/18#issuecomment-6016466715), parent=null. Реальные provider delivery и production этим не доказаны. Этот delivery checkpoint добавлен в последующей ветке С12; исторические review/rulings выше сохранены.
-С11 отдельно доставлена [PR72](https://github.com/ekho/3xui-shop/pull/72),
-[2.0.0-dev.33](https://github.com/ekho/3xui-shop/releases/tag/2.0.0-dev.33), #19 CLOSED/Project Done;
+С13 доставлена [PR73](/../../pull/73): source `d6087cf8b2559dd2b2041121d4088b340959322a`, merge `d7b69ebd96fe09370c5197d60e1dc6e95324c3e3`, actual parents/base5144fc2 и source d6087cf проверены, дерево совпадает с source. Exact-source Platform/PR37462092944, Platform/push37462051424 и PRimages37462092938 завершились success; jobs/check-runs проверены отдельно. Preview37464031284/run35:4/4 success, [2.0.0-dev.35](/../../releases/tag/2.0.0-dev.35) prerelease/non-draft и peeled tag на merge; все три multiarch indexes и шесть image revision/version/source labels проверены. [#18 CLOSED/Project Done](/../../issues/18#issuecomment-6016466715), parent=null. Реальные provider delivery и production этим не доказаны. Этот delivery checkpoint добавлен в последующей ветке С12; исторические review/rulings выше сохранены.
+С11 отдельно доставлена [PR72](/../../pull/72),
+[2.0.0-dev.33](/../../releases/tag/2.0.0-dev.33), #19 CLOSED/Project Done;
 эта доставка не подменяет delivery gates С13. Полные обезличенные записи и логи сохранены в собственном private acceptance export.
 
 ## Ограничения

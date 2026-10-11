@@ -1,6 +1,6 @@
 # Deployment inventory 3xui-mole — С45
 
-Владелец [#47](https://github.com/ekho/3xui-shop/issues/47), контракт
+Владелец [#47](/../../issues/47), контракт
 `2026-10-10-s45-product-config-v1`. Это перечень **используемых** настроек,
 не новая платформа настроек. Target — один Go backend HTTP/River/Telegram,
 отдельный frontend/Caddy. С47 (#54) удаляет Python runtime и транспортный адаптер;
@@ -175,7 +175,7 @@ HTTP, Redis или Telegram; importer остаётся защищённой offl
 поздних платежей через проверку operator-role; его вывод хранится приватно.
 Старые provider callback paths сохранены. `/internal/v1` удалён вместе с адаптером.
 
-Исторический перечень Python-настроек доступен в [исходной версии до С47](https://github.com/ekho/3xui-shop/blob/e53746c4a13d4209438012a33390ec84eb38539c/docs/runbooks/s45-product-configuration.md).
+Исторический перечень Python-настроек доступен в [исходной версии до С47](/../e53746c4a13d4209438012a33390ec84eb38539c/docs/runbooks/s45-product-configuration.md).
 Его имена не включают старый runtime и не подменяют нынешние typed settings.
 Сохраняйте реальные bot IDs, support group/topics, DB/mail/code keys, panel identities,
 provider credentials и публичные URL; сопоставляйте их с текущим владельцем.

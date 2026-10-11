@@ -1,6 +1,6 @@
 # Обслуживание общего backend
 
-Владелец — `operations`, сценарий [#44](https://github.com/ekho/3xui-shop/issues/44).
+Владелец — `operations`, сценарий [#44](/../../issues/44).
 Точная граница: [спецификация](../superpowers/specs/2026-10-09-s42-maintenance-design.md).
 
 ## Включение и выключение

@@ -1,6 +1,6 @@
 # С11 — ручная оплата с подтверждением оператора
 
-Дата: 2026-10-06. Владелец [#19](https://github.com/ekho/3xui-shop/issues/19), контракт `2026-10-06-s11-manual-payment-v1`. База `origin/v2` c9c075e40f822fbe4f7d058d292f2a14ad07cc3f; #11/#17/#59 CLOSED. Документы и Native-реализация ведутся автономно по [решению владельца](https://github.com/ekho/3xui-shop/issues/55#issuecomment-6004574101).
+Дата: 2026-10-06. Владелец [#19](/../../issues/19), контракт `2026-10-06-s11-manual-payment-v1`. База `origin/v2` c9c075e40f822fbe4f7d058d292f2a14ad07cc3f; #11/#17/#59 CLOSED. Документы и Native-реализация ведутся автономно по [решению владельца](/../../issues/55#issuecomment-6004574101).
 
 ## Результат
 
@@ -51,4 +51,4 @@ React-admin получает отдельный список заявок со �
 - AC06: общий worker выдаёт новый доступ и переход с триала с прежними IDs; panel outage/restart сохраняет paid и одну выдачу; позднее решение не выдаёт повторно, backup/restore сохраняет actor/claim/receipt и незавершённое paid.
 - AC07: actual HTTP и browser CRUD/очередь/статусы/poll/reload/ошибки/keyboard/ru-en; actual локальная3X-UI3.7.0/TLS и teardown; generation и границы модулей стабильны, прежние миграции1–15/зависимости не меняются.
 
-Native coordinator: domain/API → web → own local acceptance; один Astra/high final review, один Critical/Important fix pass с RED→GREEN без re-review, minor deferred. Exact-source required CI → manual v2 merge → ранее согласованный preview/3multiarch. Production, реальный ручной перевод, Telegram-delivery и Happ/VPN/trust исключены; С13 остаётся отдельной локальной приёмкой с заглушками по [уточнению владельца](https://github.com/ekho/3xui-shop/issues/18#issuecomment-6014628265); real provider delivery не заявляется.
+Native coordinator: domain/API → web → own local acceptance; один Astra/high final review, один Critical/Important fix pass с RED→GREEN без re-review, minor deferred. Exact-source required CI → manual v2 merge → ранее согласованный preview/3multiarch. Production, реальный ручной перевод, Telegram-delivery и Happ/VPN/trust исключены; С13 остаётся отдельной локальной приёмкой с заглушками по [уточнению владельца](/../../issues/18#issuecomment-6014628265); real provider delivery не заявляется.

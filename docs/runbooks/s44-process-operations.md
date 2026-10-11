@@ -1,6 +1,6 @@
 # С44: защищённый restart и состояние backend
 
-Источник: [#46](https://github.com/ekho/3xui-shop/issues/46),
+Источник: [#46](/../../issues/46),
 [спецификация](../superpowers/specs/2026-10-09-s44-process-operations-design.md).
 HTTP, River, schedulers и оба Telegram-канала работают в одном `backend`.
 Web-роль оператора не даёт прав Docker/SSH. Процедура доступна только оператору

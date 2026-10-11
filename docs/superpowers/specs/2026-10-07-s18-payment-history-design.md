@@ -1,7 +1,7 @@
 # С18 — история заказов и денег
 
-Дата: 2026-10-07. Владелец [#25](https://github.com/ekho/3xui-shop/issues/25).
-[Общее решение](https://github.com/ekho/3xui-shop/issues/25#issuecomment-6029754500):
+Дата: 2026-10-07. Владелец [#25](/../../issues/25).
+[Общее решение](/../../issues/25#issuecomment-6029754500):
 `2026-10-07-s18-payment-history-v1`. Документы, Native, одна свежая проверка
 ветки, один проход Critical/Important и последовательное слияние разрешены
 владельцем. База — origin/v2 после С17, c827f1944d543624309c93da6e55ad92871efaa7.
@@ -15,7 +15,7 @@
 скрывают историю. Чтение ничего не оплачивает, не восстанавливает и не выдаёт.
 
 Alignment: [роадмап](../../roadmaps/2026-10-01-platform-roadmap.md),
-[#25](https://github.com/ekho/3xui-shop/issues/25), архитектура
+[#25](/../../issues/25), архитектура
 [модульного монолита v1](2026-10-05-modular-monolith-design.md), С10–С17:
 confirmed. В старом app/bot/utils/user_card.py показаны последние три
 транзакции. В app/bot/payment_gateways/_gateway.py pending меняется на

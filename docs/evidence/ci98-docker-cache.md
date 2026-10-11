@@ -1,6 +1,6 @@
 # CI #98: Docker Hub cache
 
-Scope: [#98](https://github.com/ekho/3xui-shop/issues/98), branch
+Scope: [#98](/../../issues/98), branch
 `feature/ci-dockerhub-cache` from `origin/v2` at `5bdcdbb255733052e2320d4982ec4edf10451972`.
 
 Plan:
@@ -34,7 +34,7 @@ is read back before mirror request evidence is accepted.
 
 BuildKit 0.33.1's private tracing logger takes precedence over containerd's later
 logger context, dropping URL/host fields while retaining direct request fields.
-The [focused runner diagnostic](https://github.com/ekho/3xui-shop/actions/runs/37999410317)
+The [focused runner diagnostic](/../../actions/runs/37999410317)
 confirmed that exact distinction. Required route evidence therefore uses Buildx's
 existing history trace, whose HTTP attributes retain the actual URL and host.
 When stdout is a pipe, the command emits JSON without a UI server or browser.
@@ -50,8 +50,8 @@ authorization. The isolated job config removes that inherited auth and retains
 the later GHCR login in the same directory. Original client settings are untouched.
 A repeated digest pull can reuse its local manifest; the comparison alone does
 not prove recovery. Acceptance requires the full final HEAD on fresh job runners.
-Diagnostic evidence: [PR runner](https://github.com/ekho/3xui-shop/actions/runs/37997221147),
-[push runner](https://github.com/ekho/3xui-shop/actions/runs/37997215927).
+Diagnostic evidence: [PR runner](/../../actions/runs/37997221147),
+[push runner](/../../actions/runs/37997215927).
 
 Public registry preflight returned the unchanged Python 3.13, Go, PostgreSQL and
 Redis pinned manifest digests on 2026-10-10; the handoff already verified pinned

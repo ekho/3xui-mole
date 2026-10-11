@@ -1,6 +1,6 @@
 # С44: локальная приёмка процесса и оповещений
 
-Дата: 2026-10-09. Задача: [#46](https://github.com/ekho/3xui-shop/issues/46).
+Дата: 2026-10-09. Задача: [#46](/../../issues/46).
 Ветка `feature/s44-process-operations`, база `9305fa5b6a5dec44648aa9a57bb1501164e455f6`.
 Контракт `2026-10-09-s44-v1`; [spec](../superpowers/specs/2026-10-09-s44-process-operations-design.md),
 [plan](../superpowers/plans/2026-10-09-s44-process-operations.md),

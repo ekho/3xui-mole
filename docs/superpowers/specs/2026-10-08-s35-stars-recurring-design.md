@@ -1,11 +1,11 @@
 # С35: Stars с автопродлением
 
 Контракт `2026-10-08-s35-stars-recurring-v1`; владелец `payments`, задача
-[#33](https://github.com/ekho/3xui-shop/issues/33),
-[общая запись решения](https://github.com/ekho/3xui-shop/issues/33#issuecomment-6051821522).
+[#33](/../../issues/33),
+[общая запись решения](/../../issues/33#issuecomment-6051821522).
 Основа `origin/v2` — `27ae2dec9aadfe03bada575a416d1f1afdf3c383` после С34/PR86/dev.68.
 Документы и Native-реализация разрешены автономным мандатом
-[6004574101](https://github.com/ekho/3xui-shop/issues/55#issuecomment-6004574101).
+[6004574101](/../../issues/55#issuecomment-6004574101).
 
 ## Результат
 

@@ -1,6 +1,6 @@
 # С35 — автопродление Telegram Stars
 
-Владелец [#33](https://github.com/ekho/3xui-shop/issues/33); контракт
+Владелец [#33](/../../issues/33); контракт
 `2026-10-08-s35-stars-recurring-v1`, комментарии6051821522/6052341410/6052964308/6053125079.
 База `27ae2dec9aadfe03bada575a416d1f1afdf3c383`.
 Задачи1–4 завершены; один fresh Astra/high reviewer проверил всю ветку
@@ -186,7 +186,7 @@ resume_allowed. Контролы используют прежние auth/CSRF/i
 
 ## Исправление тестовых inputs после CI
 
-[CI37744667538](https://github.com/ekho/3xui-shop/actions/runs/37744667538)
+[CI37744667538](/../../actions/runs/37744667538)
 исчерпал global20m budget во время нового loader в HTTP fixture. Это cumulative
 package timeout; текущий `starter-applied` тест исполнялся1s, stack находился
 в JSON parser. Зависание этого отдельного теста не установлено.
@@ -251,8 +251,8 @@ regressions входят в focused GREEN18.459s. После fixes полный 
 
 ## Фактическая доставка С35
 
-[PR87](https://github.com/ekho/3xui-shop/pull/87), source390eb97f833f705d1d74d7670586b5ea6d4b90b1 → actual merge0d19b02669a90c335a7ac62d5062de4715687706. Два родителя и merged tree проверены; exact-source PR Platform37748760067 и PR Preview37748760072 COMPLETE SUCCESS. Go13 tested packages, web403/Python110, все generated/static/container/native-process TLS3X-UI3.7.0/TLS SMTP/restart/cleanup PASS. Individual Go CI count не выводился.
+[PR87](/../../pull/87), source390eb97f833f705d1d74d7670586b5ea6d4b90b1 → actual merge0d19b02669a90c335a7ac62d5062de4715687706. Два родителя и merged tree проверены; exact-source PR Platform37748760067 и PR Preview37748760072 COMPLETE SUCCESS. Go13 tested packages, web403/Python110, все generated/static/container/native-process TLS3X-UI3.7.0/TLS SMTP/restart/cleanup PASS. Individual Go CI count не выводился.
 
-[V2 prerelease2.0.0-dev.71](https://github.com/ekho/3xui-shop/releases/tag/2.0.0-dev.71), run37752856394/all4jobs PASS; annotated tag→exactmerge,3OCI indexes amd64/arm64 и6config revision/version/source labels/aliases проверены. [#33closed/ProjectDone](https://github.com/ekho/3xui-shop/issues/33#issuecomment-6056418435),5DoD checked. Full34Rulings/1Minor/review/logs/hashes архивированы до удаления только SDD этого плана. Ранее failed local/CI checks выше остаются историческими фактами; нынешняя полная проверка1215PASS, прежняя support причина неизвестна.
+[V2 prerelease2.0.0-dev.71](/../../releases/tag/2.0.0-dev.71), run37752856394/all4jobs PASS; annotated tag→exactmerge,3OCI indexes amd64/arm64 и6config revision/version/source labels/aliases проверены. [#33closed/ProjectDone](/../../issues/33#issuecomment-6056418435),5DoD checked. Full34Rulings/1Minor/review/logs/hashes архивированы до удаления только SDD этого плана. Ранее failed local/CI checks выше остаются историческими фактами; нынешняя полная проверка1215PASS, прежняя support причина неизвестна.
 
 Один свежий review/один author fix pass, no re-review/CI rerun. M1 committed-range whitespace exit2 остаётся deferred; clean working-tree check не подменяет его. Production/real money/live Happ исключены. Этот итоговый документальный checkpoint включён в следующую ветку С36; C35 product source не меняется.

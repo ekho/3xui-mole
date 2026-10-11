@@ -1,6 +1,6 @@
 # М04а: локальная приёмка панельного клиента vpn
 
-Дата: 2026-10-06. Задача [М04 #58](https://github.com/ekho/3xui-shop/issues/58).
+Дата: 2026-10-06. Задача [М04 #58](/../../issues/58).
 Ветка `feature/m04-vpn`, baseline `1a24150726f6ba46a4724649f208ab6c3b362357`
 из fresh origin/v2. Проверенная реализация `88170462e9bef1f64bc87dd49485a8773ce12ae0`.
 Контракт `2026-10-06-m04a-vpn-v1`; Native.
@@ -67,19 +67,19 @@ Private logs не публикуются. Проверки:
 
 ## Доставка и пределы
 
-Локальная приёмка и review выполнены. [PR #64](https://github.com/ekho/3xui-shop/pull/64)
+Локальная приёмка и review выполнены. [PR #64](/../../pull/64)
 слит в v2: source `8efc8cccac71c44c80f3dbfa0f37cac5fc26ba2f`, merge
 `65560b061438b5ceabb18d10c36502cff24954ff`; parents и tree проверены.
 CI Platform `37386149473`, image builds `37386149769` и preview `37387356724`
-успешны. [2.0.0-dev.15](https://github.com/ekho/3xui-shop/releases/tag/2.0.0-dev.15)
+успешны. [2.0.0-dev.15](/../../releases/tag/2.0.0-dev.15)
 указывает на этот merge. У всех трёх GHCR images проверены source/version и
 linux/amd64 + linux/arm64. Полный М04/#58 остаётся открытым до М04б. Общая авторизация последовательных PR
-в v2: [решение владельца](https://github.com/ekho/3xui-shop/issues/55#issuecomment-6004574101).
+в v2: [решение владельца](/../../issues/55#issuecomment-6004574101).
 CI waiver относится только к старому PR #62.
 
-М03 доставлен через [PR #63](https://github.com/ekho/3xui-shop/pull/63),
-[2.0.0-dev.13](https://github.com/ekho/3xui-shop/releases/tag/2.0.0-dev.13);
-#57 Closed / Project Done. [PR #5](https://github.com/ekho/3xui-shop/pull/5)
+М03 доставлен через [PR #63](/../../pull/63),
+[2.0.0-dev.13](/../../releases/tag/2.0.0-dev.13);
+#57 Closed / Project Done. [PR #5](/../../pull/5)
 сохраняет `afaeacf652964453ddd61883aa6da6a0d285783c` до полного М04.
 
 Duplicate-guard 3X-UI не подтверждён; uncertain create по-прежнему не повторяется.

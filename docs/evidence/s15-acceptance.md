@@ -1,6 +1,6 @@
 # С15 — локальная приёмка Heleket
 
-Владелец [#22](https://github.com/ekho/3xui-shop/issues/22), контракт
+Владелец [#22](/../../issues/22), контракт
 `2026-10-06-s15-heleket-v1`; [spec](../superpowers/specs/2026-10-06-s15-heleket-design.md),
 [Native plan](../superpowers/plans/2026-10-06-s15-heleket.md), [решения](s15-decisions.md).
 Backend checkpoint e39eb76, включение проверенной migration19 c11949f, UI ce24c83.

@@ -70,4 +70,4 @@
 - [x] Publish exhaustive rulings, export logs/ledger/report then delete only own Native workspace.
 - [x] Final source SSH guarded push/create+attach PR v2/exact-source CI/manual SHA guarded merge/parents/source-equal tree/preview tag+3publicmultiarch indexes+6configs. Close #60/Project Done only after own whole-M06 acceptance; re-read statuses/dependents and choose next available roadmap order without treating external S13 resources as already ready.
 
-D08 завершён PR71/c9c075e/dev.31; [канонический отчёт](https://github.com/ekho/3xui-shop/issues/60#issuecomment-6013023863). Исторические Task3 pending-формулировки выше относятся к исходному checkpoint; #60 теперь CLOSED/Project Done.
+D08 завершён PR71/c9c075e/dev.31; [канонический отчёт](/../../issues/60#issuecomment-6013023863). Исторические Task3 pending-формулировки выше относятся к исходному checkpoint; #60 теперь CLOSED/Project Done.

@@ -1,6 +1,6 @@
 # С38 — локальная приёмка
 
-Задача [#42](https://github.com/ekho/3xui-shop/issues/42), owner `vpn`,
+Задача [#42](/../../issues/42), owner `vpn`,
 контракт `2026-10-09-s38-server-management-v1`.
 [Спецификация](../superpowers/specs/2026-10-09-s38-server-management-design.md),
 [план](../superpowers/plans/2026-10-09-s38-server-management.md),

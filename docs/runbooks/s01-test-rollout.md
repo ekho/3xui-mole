@@ -2,7 +2,7 @@
 
 После С47 приёмка запускает Go runtime и отдельный web/Caddy; Python используется
 только для независимых stdlib fixtures/orchestration. Старые adapter-команды
-сохранены как [историческая версия](https://github.com/ekho/3xui-shop/blob/e53746c4a13d4209438012a33390ec84eb38539c/docs/runbooks/s01-test-rollout.md).
+сохранены как [историческая версия](/../e53746c4a13d4209438012a33390ec84eb38539c/docs/runbooks/s01-test-rollout.md).
 
 ## Connected Go и браузер
 

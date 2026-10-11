@@ -1,6 +1,6 @@
 # С29 — локальная приёмка журнала действий
 
-Дата: 2026-10-09. Issue [#39](https://github.com/ekho/3xui-shop/issues/39).
+Дата: 2026-10-09. Issue [#39](/../../issues/39).
 Решение 2026-10-09-s29-audit-history-v1; база a093add4e76bb36039d21ba8ba00ebfc0f788d00.
 Native execution, один свежий финальный reviewer и один авторский проход исправлений.
 

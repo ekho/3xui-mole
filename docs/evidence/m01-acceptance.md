@@ -2,7 +2,7 @@
 
 Дата: 2026-10-05. Ветка: `feature/m01-embedded-telegram`, baseline
 `157fb918c360a4c0f4f924dee34a38574a7d032f` (`v2`).
-Задача: [М01 #55](https://github.com/ekho/3xui-shop/issues/55).
+Задача: [М01 #55](/../../issues/55).
 Архитектурное решение: `2026-10-05-modular-monolith-v1`.
 Проверки ниже относятся к реализации М01; финальная ревизия и результаты CI
 фиксируются в PR. Merge, prerelease и production в эту приёмку не входят.

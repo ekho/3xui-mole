@@ -62,7 +62,7 @@ RED WsQ9in → native overlay исправлен → GREEN Q6w2XL. Prepare/resto
 М04b: PR #65, source d73c4f1c4d2078ab6dc7b63922ae7a1b6e2ec323, merge
 26d4b96733881d89b0538e479c2facdca232f419, source-equal tree. Оба exact-source CI
 SUCCESS; push-run37395227843 SUCCESS, preliminary
-[2.0.0-dev.17](https://github.com/ekho/3xui-shop/releases/tag/2.0.0-dev.17).
+[2.0.0-dev.17](/../../releases/tag/2.0.0-dev.17).
 Tag peeled to merge; все три GHCR images имеют linux/amd64 и linux/arm64 и OCI
 source/version, проверенные по digest. #58 CLOSED/Project Done; это собственная
 приёмка М04, не автоматическое закрытие С10.
@@ -122,30 +122,30 @@ manual SHA-guarded merge и три multiarch образа проверяются
 
 ## Итоговая доставка С10
 
-[PR #5](https://github.com/ekho/3xui-shop/pull/5): source
+[PR #5](/../../pull/5): source
 `0836afb03bd31c921ac055d0dca26786fae7f2d1`, merge
 `c57c5e77f0368ac449ae4fbbb7581389cf108f74`, source-equal tree
 `5234d785ad806d4220def696e0aa5fd90ef992c3`. Прежний afaeacf сохранён как ancestor.
 Exact-source CI SUCCESS:
-[Platform PR](https://github.com/ekho/3xui-shop/actions/runs/37402124706),
-[Platform push](https://github.com/ekho/3xui-shop/actions/runs/37402120527),
-[V2 PR](https://github.com/ekho/3xui-shop/actions/runs/37402124695).
+[Platform PR](/../../actions/runs/37402124706),
+[Platform push](/../../actions/runs/37402120527),
+[V2 PR](/../../actions/runs/37402124695).
 
-[Preview push](https://github.com/ekho/3xui-shop/actions/runs/37402955519)
+[Preview push](/../../actions/runs/37402955519)
 на merge c57c5e7: все четыре jobs SUCCESS.
-[2.0.0-dev.19](https://github.com/ekho/3xui-shop/releases/tag/2.0.0-dev.19)
+[2.0.0-dev.19](/../../releases/tag/2.0.0-dev.19)
 — prerelease, не draft, tag peeled к указанному merge. Digest и дочерние
 manifests/configs трёх GHCR repositories проверены; у каждого linux/amd64 и
-linux/arm64, OCI source=https://github.com/ekho/3xui-shop, revision=c57c5e7,
+linux/arm64, OCI source соответствует GitHub-репозиторию проекта, revision=c57c5e7,
 version=2.0.0-dev.19:
 
-| Repository | Index digest |
+| Компонент | Index digest |
 | --- | --- |
-| ekho/3xui-shop | sha256:20e3933a2fcd4d896e21a17794733db892f7a9cc8846b1841eda7b2504bc54cc |
-| ekho/3xui-shop-backend | sha256:8b5673cf0466c3735db98bee737d2fae075c7ce7ce3b7f2139c25fd35f35b29c |
-| ekho/3xui-shop-web | sha256:38799068c3d6efc2e95b20dc6e1801c0c9a46273448fc7592d32b9403c24151d |
+| Python-бот (исторический) | sha256:20e3933a2fcd4d896e21a17794733db892f7a9cc8846b1841eda7b2504bc54cc |
+| Backend | sha256:8b5673cf0466c3735db98bee737d2fae075c7ce7ce3b7f2139c25fd35f35b29c |
+| Кабинет | sha256:38799068c3d6efc2e95b20dc6e1801c0c9a46273448fc7592d32b9403c24151d |
 
-[Канонический итог #17](https://github.com/ekho/3xui-shop/issues/17#issuecomment-6007981660):
+[Канонический итог #17](/../../issues/17#issuecomment-6007981660):
 CLOSED/Project Done, parent отсутствует. Внешняя С13 и production остаются
 отдельными критериями. M05 повторно проверяет тот же функциональный сценарий
 после переноса владельца денег; завершение С10 не означает завершение M05.

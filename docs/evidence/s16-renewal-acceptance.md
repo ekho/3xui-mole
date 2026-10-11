@@ -1,6 +1,6 @@
 # С16 — локальная приёмка продления
 
-Владелец [#23](https://github.com/ekho/3xui-shop/issues/23), контракт
+Владелец [#23](/../../issues/23), контракт
 `2026-10-07-s16-renewal-v2`; [spec](../superpowers/specs/2026-10-07-s16-renewal-design.md),
 [Native plan](../superpowers/plans/2026-10-07-s16-renewal.md).
 Backend checkpoint c69767b, UI c1541b5. Product inputs и результаты сохраняются

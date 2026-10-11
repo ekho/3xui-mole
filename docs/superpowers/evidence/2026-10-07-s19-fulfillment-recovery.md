@@ -1,6 +1,6 @@
 # С19 — Локальная приёмка восстановления выдачи
 
-Owner [#26](https://github.com/ekho/3xui-shop/issues/26), canonical `2026-10-07-s19-fulfillment-recovery-v1`. [Спецификация](../specs/2026-10-07-s19-fulfillment-recovery-design.md), [Native-план](../plans/2026-10-07-s19-fulfillment-recovery.md). База origin/v2 `5246923c6a7fe92a1f29693d401fde292368d63d`; исходная реализация проверена на `872a9eb1c09efa5ba403950e3e12d713b04b8593`, единственная fresh review — на `b63f399739b1e2c700b2523023331d30505a04f4`. Авторский fix pass и текущие source manifests приведены ниже. Доставка pending до actual CI/merge/prerelease; локальная приёмка не означает production-готовность.
+Owner [#26](/../../issues/26), canonical `2026-10-07-s19-fulfillment-recovery-v1`. [Спецификация](../specs/2026-10-07-s19-fulfillment-recovery-design.md), [Native-план](../plans/2026-10-07-s19-fulfillment-recovery.md). База origin/v2 `5246923c6a7fe92a1f29693d401fde292368d63d`; исходная реализация проверена на `872a9eb1c09efa5ba403950e3e12d713b04b8593`, единственная fresh review — на `b63f399739b1e2c700b2523023331d30505a04f4`. Авторский fix pass и текущие source manifests приведены ниже. Доставка pending до actual CI/merge/prerelease; локальная приёмка не означает production-готовность.
 
 ## Изменение
 
@@ -76,4 +76,4 @@ Rendered `accepted purchase operation stays with its client while the next order
 
 Deferred Minor: дополнительные assertions смены order ID/reason/operation ID. Существующие checks доказывают неизменённый preparation key и смену reset consent; код включает ID/input, отдельного дефекта ключа reviewer не обнаружил. Полная заявленная матрица этих дополнительных assertions не считается доказанной.
 
-Повторного обзора нет. [PR80](https://github.com/ekho/3xui-shop/pull/80) направлен в v2; actual source CI/guarded manual merge/annotated prerelease и три OCI indexes подтверждаются отдельным public completion checkpoint, закрытие #26 допускается только после них.
+Повторного обзора нет. [PR80](/../../pull/80) направлен в v2; actual source CI/guarded manual merge/annotated prerelease и три OCI indexes подтверждаются отдельным public completion checkpoint, закрытие #26 допускается только после них.

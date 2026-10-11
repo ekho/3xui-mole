@@ -1,7 +1,7 @@
 # С11 — локальная приёмка ручной оплаты
 
-Дата: 2026-10-06. Владелец [#19](https://github.com/ekho/3xui-shop/issues/19), контракт `2026-10-06-s11-manual-payment-v1`.
-[Спецификация](../superpowers/specs/2026-10-06-s11-manual-payment-design.md) · [Native-план](../superpowers/plans/2026-10-06-s11-manual-payment.md) · [Общий контракт](https://github.com/ekho/3xui-shop/issues/19#issuecomment-6013365763).
+Дата: 2026-10-06. Владелец [#19](/../../issues/19), контракт `2026-10-06-s11-manual-payment-v1`.
+[Спецификация](../superpowers/specs/2026-10-06-s11-manual-payment-design.md) · [Native-план](../superpowers/plans/2026-10-06-s11-manual-payment.md) · [Общий контракт](/../../issues/19#issuecomment-6013365763).
 
 ## Результат и ревизия
 
@@ -94,13 +94,13 @@ Task3 первая26 matrix остановилась на manual fixture HTTP409
 
 Реквизиты и подтверждение поступления в fixture синтетические: **real_payment=false, live_vpn_changed=false**. Нет реального банковского/provider перевода, настоящей Telegram-доставки, production/cutover, Happ/VPN/macOS trust изменений. Настоящая SMTP-доставляемость и benchmark целевого сервера остаются вне локальной приёмки.
 Решение и причина доступны в кабинете/React-admin; outbound channels остаются С27/С28/С32. Python удаляется только С47, promos/referrals — Р7.
-По [новому уточнению С13](https://github.com/ekho/3xui-shop/issues/18#issuecomment-6014628265) отдельная локальная приёмка YooMoney будет завершена с заглушками после текущей С11. Проверка настоящей доставки провайдера и legacy/production readiness этим не доказывается; договорённость о real-transfer prerequisite больше не удерживает локальную С13. Остальные provider/renew/history контракты не меняются.
+По [новому уточнению С13](/../../issues/18#issuecomment-6014628265) отдельная локальная приёмка YooMoney будет завершена с заглушками после текущей С11. Проверка настоящей доставки провайдера и legacy/production readiness этим не доказывается; договорённость о real-transfer prerequisite больше не удерживает локальную С13. Остальные provider/renew/history контракты не меняются.
 
 ## Доставка в v2
 
-[PR72](https://github.com/ekho/3xui-shop/pull/72) вручную слит в v2. Source `c8f4c28c9a5f10e0a1fc6b6c919001702a9956a2`; merge `5144fc26b68d9660914e09459849b00303914dbe`; actual parents `c9c075e`/`c8f4c28` и source-equal tree `9ecbd0b2671485e5fdcf8e7c49230036c4fd0eb1` проверены SSH fetch. Итоговый source меняет только docs относительно product d407ad3; auto-merge не использован.
-Exact-source [PR Platform](https://github.com/ekho/3xui-shop/actions/runs/37456900745), [push Platform](https://github.com/ekho/3xui-shop/actions/runs/37456828726), [PR images](https://github.com/ekho/3xui-shop/actions/runs/37456900691) — SUCCESS.
-[Preview37458619616](https://github.com/ekho/3xui-shop/actions/runs/37458619616) —4/4 SUCCESS; [2.0.0-dev.33](https://github.com/ekho/3xui-shop/releases/tag/2.0.0-dev.33) prerelease/non-draft, tag peeled exact merge. Anonymous GHCR чтение подтвердило3 публичных indexes и6 linux/amd64+arm64 config revision/version/source labels:
+[PR72](/../../pull/72) вручную слит в v2. Source `c8f4c28c9a5f10e0a1fc6b6c919001702a9956a2`; merge `5144fc26b68d9660914e09459849b00303914dbe`; actual parents `c9c075e`/`c8f4c28` и source-equal tree `9ecbd0b2671485e5fdcf8e7c49230036c4fd0eb1` проверены SSH fetch. Итоговый source меняет только docs относительно product d407ad3; auto-merge не использован.
+Exact-source [PR Platform](/../../actions/runs/37456900745), [push Platform](/../../actions/runs/37456828726), [PR images](/../../actions/runs/37456900691) — SUCCESS.
+[Preview37458619616](/../../actions/runs/37458619616) —4/4 SUCCESS; [2.0.0-dev.33](/../../releases/tag/2.0.0-dev.33) prerelease/non-draft, tag peeled exact merge. Anonymous GHCR чтение подтвердило3 публичных indexes и6 linux/amd64+arm64 config revision/version/source labels:
 
 | Компонент | Index digest |
 | --- | --- |
@@ -108,4 +108,4 @@ Exact-source [PR Platform](https://github.com/ekho/3xui-shop/actions/runs/374569
 | backend | sha256:b53a0467f13b2c0a7390b435064a3d5c845ad8cdacb014ac41986ea602f7fddf |
 | web | sha256:fadd64c4f465ea93d96b69a4454f59fcfd52b4a49e444971b69f43915339669d |
 
-После собственных AC01–07 и этой доставки [#19 CLOSED/Project Done](https://github.com/ekho/3xui-shop/issues/19#issuecomment-6015652047), parent=null; состояние перечитано. Ранее ledgered pending gates теперь выполнены; все8 Native/6 Final rulings и их внешние ограничения сохранены, deferred minors отсутствуют. Это локальная приёмка и предварительный v2 release; production/provider delivery не подтверждены.
+После собственных AC01–07 и этой доставки [#19 CLOSED/Project Done](/../../issues/19#issuecomment-6015652047), parent=null; состояние перечитано. Ранее ledgered pending gates теперь выполнены; все8 Native/6 Final rulings и их внешние ограничения сохранены, deferred minors отсутствуют. Это локальная приёмка и предварительный v2 release; production/provider delivery не подтверждены.

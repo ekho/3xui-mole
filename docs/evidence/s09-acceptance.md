@@ -23,11 +23,11 @@ credentials, raw panel replies и личные данные в evidence не в�
 **10/10 PASS** ([append-only rows](../../.superpowers/sdd/2026-10-02-s09-catalogue/e2e/local.jsonl)).
 
 Выполненные bounded команды из корня
-`/Users/ekho/.codex/worktrees/web-trial-s01/3xui-shop`:
+`$PWD` (корень исторического worktree):
 
 ```text
-node /Users/ekho/.codex/plugins/cache/tradeos/tradeos-ai-engineering-kit/2.0.0/scripts/run-check.mjs --cwd /Users/ekho/.codex/worktrees/web-trial-s01/3xui-shop --timeout-seconds 420 --lines 12 -- node deploy/s09/browser.mjs
-node /Users/ekho/.codex/plugins/cache/tradeos/tradeos-ai-engineering-kit/2.0.0/scripts/run-check.mjs --cwd /Users/ekho/.codex/worktrees/web-trial-s01/3xui-shop --timeout-seconds 420 --lines 12 -- python3 deploy/s09/local.py import-acceptance
+node /Users/ekho/.codex/plugins/cache/tradeos/tradeos-ai-engineering-kit/2.0.0/scripts/run-check.mjs --cwd "$PWD" --timeout-seconds 420 --lines 12 -- node deploy/s09/browser.mjs
+node /Users/ekho/.codex/plugins/cache/tradeos/tradeos-ai-engineering-kit/2.0.0/scripts/run-check.mjs --cwd "$PWD" --timeout-seconds 420 --lines 12 -- python3 deploy/s09/local.py import-acceptance
 ```
 
 Первый import вызов до host guard фикса `04c6c42` остановился до первой

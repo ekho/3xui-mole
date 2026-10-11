@@ -3,7 +3,7 @@
 Issue #50, контракт `2026-10-10-referrals-v1`. Архитектура
 `2026-10-05-modular-monolith-v1`, общий каркас
 `2026-10-10-bonuses-scaffold-v1` из
-[#48](https://github.com/ekho/3xui-shop/issues/48#issuecomment-6094467060).
+[#48](/../../issues/48#issuecomment-6094467060).
 
 ## Поведение
 

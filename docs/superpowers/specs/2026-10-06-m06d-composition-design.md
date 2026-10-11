@@ -1,9 +1,9 @@
 # М06d — Удаление общего platform/store
 
-Дата: 2026-10-06. Владелец [#60](https://github.com/ekho/3xui-shop/issues/60), контракт `2026-10-06-m06d-composition-v1`.
+Дата: 2026-10-06. Владелец [#60](/../../issues/60), контракт `2026-10-06-m06d-composition-v1`.
 Спецификация self-reviewed и принята в рамках разрешённого автономного ведения документов; исполнение Native.
 Основание: [модульный монолит](2026-10-05-modular-monolith-design.md), правило7 и завершённые М01–М06c.
-Fresh base origin/v2 `d796e3a076785ce0f5b933fcd2a22c0f4baf4e26`; [М06c PR70/dev29 полностью доставлен](https://github.com/ekho/3xui-shop/issues/60#issuecomment-6011429496).
+Fresh base origin/v2 `d796e3a076785ce0f5b933fcd2a22c0f4baf4e26`; [М06c PR70/dev29 полностью доставлен](/../../issues/60#issuecomment-6011429496).
 
 ## Результат и выбранный подход
 
@@ -70,4 +70,4 @@ TrialBridge держит только subscriptions/notifications; IDs, raw comp
 
 Production/реальный provider/Telegram/Happ/VPN/macOS trust и внешняя SMTP-доставка исключены. Local/CI/merge/preview acceptance разделяются. Branch feature/m06d-composition от свежей origin/v2, PR в v2, no codex prefix/force-push/auto-merge. Предварительный release и GHCR после ручного merge уже разрешены; CI waiver PR62 неприменим.
 
-Rollback этого source change — revert доставленного merge с неизменными DB/API/IDs; production переключение требует отдельного разрешения. #60 остаётся OPEN/In progress, пока D01–D08 и доставка не доказаны. Native/autonomous documents/manual v2 merge/preview authority: https://github.com/ekho/3xui-shop/issues/55#issuecomment-6004574101.
+Rollback этого source change — revert доставленного merge с неизменными DB/API/IDs; production переключение требует отдельного разрешения. #60 остаётся OPEN/In progress, пока D01–D08 и доставка не доказаны. Native/autonomous documents/manual v2 merge/preview authority: [запись GitHub](/../../issues/55#issuecomment-6004574101).

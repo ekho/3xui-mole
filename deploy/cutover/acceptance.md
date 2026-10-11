@@ -1,6 +1,6 @@
 # С47: локальная приёмка
 
-Дата: 2026-10-10. Задача [#54](https://github.com/ekho/3xui-shop/issues/54).
+Дата: 2026-10-10. Задача [#54](/../../issues/54).
 Контракт `2026-10-10-cutover-v2`; исходная база
 `e53746c4a13d4209438012a33390ec84eb38539c`.
 Implementation checkpoint: `aa559ea45df75b162a3e3f3e73d0a46d46e435a4`.

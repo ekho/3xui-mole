@@ -2,7 +2,7 @@
 
 Scope #43, owner `vpn`. Base `a6ef9bf3dab4407dcf664dda04c93619f549deb8` (`v2`).
 Contracts `2026-10-05-modular-monolith-v1`, `2026-10-09-s39-server-pool-v1`.
-Migration39 reservation: [canonical record](https://github.com/ekho/3xui-shop/issues/43#issuecomment-6092044105).
+Migration39 reservation: [canonical record](/../../issues/43#issuecomment-6092044105).
 
 ## Подтверждённые сценарии
 
@@ -56,7 +56,7 @@ HTTP package достиг локального cutoff25m во время тек�
 Остальные packages PASS. Это не доказательство полного Go PASS или зависания.
 Согласованный restore consumer берётся из доставленной #44 через public
 `TEST_POSTGRES_COMPOSE_FILE`, контракт `2026-10-10-owned-postgres-restore-v1`
-[owner #45](https://github.com/ekho/3xui-shop/issues/45#issuecomment-6091389100).
+[owner #45](/../../issues/45#issuecomment-6091389100).
 Нового общего fixture adapter в #43 нет. Итоговый полный прогон использует
 fixture с явным project name, random loopback ports и cutoff60m как в CI.
 Независимое whole-branch review и follow-up review исправлений PASS: оба Important

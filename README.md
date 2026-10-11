@@ -11,10 +11,9 @@ state and Redis supports throttling. Product Python and the transitional HTTP
 bot adapter have been retired.
 
 The new project **3xui-mole** starts its own versioning at **0.1.0**;
-preview builds use `0.1.0-dev.N`. Its GitHub repository is still
-[`ekho/3xui-shop`](https://github.com/ekho/3xui-shop), and the current GHCR image
-addresses remain unchanged; see [preview releases](docs/releases.md).
-Historical records and upstream references retain their original names.
+preview builds use `0.1.0-dev.N`; see [preview releases](docs/releases.md).
+
+This project was inspired by [3xui-shop](https://github.com/snoups/3xui-shop).
 
 Set the optional `PRODUCT_NAME=3xui-mole` web runtime setting to display this
 name in the cabinet header and browser tab. Existing deployment names and the

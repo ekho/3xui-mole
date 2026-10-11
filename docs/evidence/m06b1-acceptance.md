@@ -3,17 +3,17 @@
 Дата: 2026-10-06. Владелец #60, контракт `2026-10-06-m06b1-telegram-delivery-v1`.
 [Спецификация](../superpowers/specs/2026-10-06-m06b-telegram-delivery-design.md) ·
 [Native-план](../superpowers/plans/2026-10-06-m06b-telegram-delivery.md) ·
-[Общее решение](https://github.com/ekho/3xui-shop/issues/60#issuecomment-6009126213).
+[Общее решение](/../../issues/60#issuecomment-6009126213).
 
 ## Ревизия и результат
 
 Product revision `52ea333a3504ba59475b519eb4f553bf1956d8e8`. Полная матрица **22/22 PASS**, 416.361s.
 Локальная приёмка завершена. Fresh Astra/high whole-branch review диапазона
-6cc8d03..95301a9: **0 Critical/Important/Minor**. Exact-source PR CI и manual merge [PR #68](https://github.com/ekho/3xui-shop/pull/68)
+6cc8d03..95301a9: **0 Critical/Important/Minor**. Exact-source PR CI и manual merge [PR #68](/../../pull/68)
 завершены: source64f1ec7, merge729eea5, source-equal tree/actual parents.
-[Preview2.0.0-dev.25](https://github.com/ekho/3xui-shop/releases/tag/2.0.0-dev.25),
+[Preview2.0.0-dev.25](/../../releases/tag/2.0.0-dev.25),
 run37415157747/all4jobs и tag/three indexes/both linux architectures/labels проверены.
-[Delivery record](https://github.com/ekho/3xui-shop/issues/60#issuecomment-6009555826). #60 OPEN/In progress:
+[Delivery record](/../../issues/60#issuecomment-6009555826). #60 OPEN/In progress:
 после Telegram остаются email M06b2 → audit M06c → removal shared platform/store
 M06d и собственная архитектурная приёмка всего M06.
 

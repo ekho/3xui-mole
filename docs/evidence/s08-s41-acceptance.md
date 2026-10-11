@@ -48,7 +48,7 @@ root-owned probe `localhost:59449`.
 
 Команды ниже выполнены из корня worktree. Каждая стадия была ограничена
 `run-check.mjs --timeout-seconds 420 --lines 8 -- env` и получила
-`S08_RUNTIME_MANIFEST=/Users/ekho/.codex/worktrees/web-trial-s01/3xui-shop/.superpowers/sdd/2026-10-02-s48-s09-s07-s08/runtime-s08.json`.
+`S08_RUNTIME_MANIFEST=.superpowers/sdd/2026-10-02-s48-s09-s07-s08/runtime-s08.json`.
 Фактическая команда `browser.mjs` в JSONL включает полный manifest path;
 `restore` запускался как `python3 deploy/s08/local.py restore` с тем же env.
 Этапы одноразовые: повторять их на тех же fixtures нельзя.

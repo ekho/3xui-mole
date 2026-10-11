@@ -1,7 +1,7 @@
 # С18 — локальная приёмка истории платежей
 
-Владелец [#25](https://github.com/ekho/3xui-shop/issues/25), контракт
-[2026-10-07-s18-payment-history-v1](https://github.com/ekho/3xui-shop/issues/25#issuecomment-6029754500).
+Владелец [#25](/../../issues/25), контракт
+[2026-10-07-s18-payment-history-v1](/../../issues/25#issuecomment-6029754500).
 База c827f1944d543624309c93da6e55ad92871efaa7, ветка feature/s18-payment-history,
 цель PR — v2. Спецификация и план находятся в соседних каталогах superpowers.
 
