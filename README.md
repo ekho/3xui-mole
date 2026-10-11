@@ -18,10 +18,10 @@ Available payment methods are manual transfers, YooMoney, YooKassa, Cryptomus,
 Heleket and Telegram Stars. Each method and the Telegram channels are enabled
 separately by the administrator.
 
-| Documentation | English | Русский |
-| --- | --- | --- |
-| Operators and administrators | [User guide](docs/operators.md) | [Руководство пользователя](docs/operators.ru_RU.md) |
-| Architecture, deployment and configuration | [Engineering guide](docs/engineering.md) | [Инженерное руководство](docs/engineering.ru_RU.md) |
+| Documentation | Guide |
+| --- | --- |
+| Operators and administrators | [User guide](docs/operators.md) |
+| Architecture, deployment and configuration | [Engineering guide](docs/engineering.md) |
 
 The backend is Go with PostgreSQL, Redis and River background jobs. The web
 application is React, served through Caddy. The machine-readable
