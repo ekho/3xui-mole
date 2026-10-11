@@ -366,5 +366,21 @@ For focused verification use `go -C backend test ./...`,
 `npm --prefix web run typecheck` and `python3 -m unittest discover -s tests -v`.
 Connected Go and browser checks need dedicated PostgreSQL/Redis and other test
 fixtures; the existing `deploy/acceptance/` scripts create synthetic resources.
-Do not point them at a live installation. Feature branches and pull requests
-for this version use `v2` as their base and target.
+Do not point them at a live installation.
+
+## CI and releases
+
+Each push to `main`, including a merged pull request, runs Platform checks,
+then builds and publishes the backend and cabinet images to GHCR for
+`linux/amd64` and `linux/arm64`. Image names follow the GitHub repository:
+`ghcr.io/<owner>/<repository>-backend` and `ghcr.io/<owner>/<repository>-web`.
+Both images receive the release version, `latest` and `sha-<full-commit>` tags.
+The GitHub Release is published after both image builds succeed.
+
+Versioning starts at `0.1.0` and automatically increments patch (`0.1.1`,
+`0.1.2`, ...); legacy and preview tags are ignored. CI reserves the Git tag
+after checks pass, so retrying a failed build keeps the same version. Rerunning
+an older release after a newer tag exists is rejected to protect `latest`.
+Pull requests run checks without publishing. The workflow uses the built-in
+`GITHUB_TOKEN`; no additional publication secrets are needed. When deploying,
+use an explicit release version for both images.

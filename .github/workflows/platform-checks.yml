@@ -1,10 +1,11 @@
 name: Platform checks
 on:
+  workflow_call:
   pull_request:
-    paths: ['backend/**', 'web/**', 'docs/api/**', 'tests/**', 'deploy/**', '.github/workflows/platform-checks.yml', '.github/scripts/**', '.github/buildkitd.toml']
+    paths: ['backend/**', 'web/**', 'docs/api/**', 'tests/**', 'deploy/**', '.github/workflows/**', '.github/scripts/**', '.github/buildkitd.toml']
   push:
     branches: ['feature/**']
-    paths: ['backend/**', 'web/**', 'docs/api/**', 'tests/**', 'deploy/**', '.github/workflows/platform-checks.yml', '.github/scripts/**', '.github/buildkitd.toml']
+    paths: ['backend/**', 'web/**', 'docs/api/**', 'tests/**', 'deploy/**', '.github/workflows/**', '.github/scripts/**', '.github/buildkitd.toml']
 permissions:
   contents: read
 concurrency:
