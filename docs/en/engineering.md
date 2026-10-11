@@ -372,15 +372,23 @@ Do not point them at a live installation.
 
 Each push to `main`, including a merged pull request, runs Platform checks,
 then builds and publishes the backend and cabinet images to GHCR for
-`linux/amd64` and `linux/arm64`. Image names follow the GitHub repository:
-`ghcr.io/<owner>/<repository>-backend` and `ghcr.io/<owner>/<repository>-web`.
-Both images receive the release version, `latest` and `sha-<full-commit>` tags.
+`linux/amd64` and `linux/arm64`. Both images share one GHCR package:
+`ghcr.io/<owner>/3xui-mole`, with `backend-<version>` and `web-<version>` tags.
+Each component also receives its own `<component>-latest` and
+`<component>-sha-<full-commit>` tags. For example:
+
+```sh
+docker pull ghcr.io/ekho/3xui-mole:backend-0.1.0
+docker pull ghcr.io/ekho/3xui-mole:web-0.1.0
+```
+
 The GitHub Release is published after both image builds succeed.
 
 Versioning starts at `0.1.0` and automatically increments patch (`0.1.1`,
 `0.1.2`, ...); legacy and preview tags are ignored. CI reserves the Git tag
 after checks pass, so retrying a failed build keeps the same version. Rerunning
-an older release after a newer tag exists is rejected to protect `latest`.
+an older release after a newer tag exists is rejected to protect the component
+`latest` tags.
 Pull requests run checks without publishing. The workflow uses the built-in
 `GITHUB_TOKEN`; no additional publication secrets are needed. When deploying,
 use an explicit release version for both images.

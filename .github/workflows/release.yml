@@ -9,6 +9,7 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
+  IMAGE: ghcr.io/${{ github.repository_owner }}/3xui-mole
 
 concurrency:
   group: main-release-${{ github.ref }}
@@ -67,10 +68,8 @@ jobs:
         include:
           - component: backend
             context: ./backend
-            suffix: -backend
           - component: web
             context: ./web
-            suffix: -web
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
@@ -103,12 +102,12 @@ jobs:
         id: meta
         uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository }}${{ matrix.suffix }}
+          images: ${{ env.IMAGE }}
           flavor: latest=false
           tags: |
-            type=raw,value=latest
-            type=raw,value=${{ env.VERSION }}
-            type=sha,prefix=sha-,format=long
+            type=raw,value=${{ matrix.component }}-latest
+            type=raw,value=${{ matrix.component }}-${{ env.VERSION }}
+            type=sha,prefix=${{ matrix.component }}-sha-,format=long
           labels: |
             org.opencontainers.image.version=${{ env.VERSION }}
             org.opencontainers.image.revision=${{ github.sha }}
@@ -160,8 +159,8 @@ jobs:
           Source commit: $GITHUB_SHA
 
           Docker images for linux/amd64 and linux/arm64:
-          - Backend: $REGISTRY/$GITHUB_REPOSITORY-backend:$VERSION
-          - Cabinet: $REGISTRY/$GITHUB_REPOSITORY-web:$VERSION
+          - Backend: $IMAGE:backend-$VERSION
+          - Cabinet: $IMAGE:web-$VERSION
 
           Public cabinet settings are provided at container startup.
           EOF
