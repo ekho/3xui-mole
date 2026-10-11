@@ -1,6 +1,6 @@
 # Engineering guide
 
-[Русский](../../doc/ru/engineering.md) · [Project](../../README.md) · [Operator guide](operators.md)
+[Русский](../ru/engineering.md) · [Project](../../README.md) · [Operator guide](operators.md)
 
 ## Architecture
 

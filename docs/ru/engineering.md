@@ -1,6 +1,6 @@
 # Инженерное руководство
 
-[English](../../docs/en/engineering.md) · [О проекте](../../README.ru_RU.md) · [Руководство оператора](operators.md)
+[English](../en/engineering.md) · [О проекте](../../README.ru_RU.md) · [Руководство оператора](operators.md)
 
 ## Архитектура
 
@@ -363,7 +363,7 @@ npm --prefix web ci --ignore-scripts
 npm --prefix web run build
 ```
 
-Из [контракта OpenAPI](../../docs/api/openapi.yaml) генерируются типы Go/TypeScript:
+Из [контракта OpenAPI](../api/openapi.yaml) генерируются типы Go/TypeScript:
 `make -C backend generate` и `npm --prefix web run api:generate`.
 Для отдельных проверок используйте `go -C backend test ./...`,
 `npm --prefix web run typecheck`, `python3 -m unittest discover -s tests -v`.

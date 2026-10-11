@@ -1,6 +1,6 @@
 # Operator and administrator guide
 
-[Русский](../../doc/ru/operators.md) · [Project](../../README.md) · [Engineering guide](engineering.md)
+[Русский](../ru/operators.md) · [Project](../../README.md) · [Engineering guide](engineering.md)
 
 3xui-mole brings together a customer cabinet, Telegram, payments and 3X-UI
 access management. The web interface supports English and Russian. Optional
