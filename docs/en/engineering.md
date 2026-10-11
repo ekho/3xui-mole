@@ -1,6 +1,6 @@
 # Engineering guide
 
-[Русский](engineering.ru_RU.md) · [Project](../README.md) · [Operator guide](operators.md)
+[Русский](../../doc/ru/engineering.md) · [Project](../../README.md) · [Operator guide](operators.md)
 
 ## Architecture
 
@@ -30,9 +30,9 @@ supervisor before handing execution to another host.
 
 ## Deployment
 
-The reference [Compose file](../deploy/compose.yml) builds the backend and web
+The reference [Compose file](../../deploy/compose.yml) builds the backend and web
 images, starts PostgreSQL and Redis, runs migrations and exposes Caddy on HTTPS
-port 443. It uses the existing [Caddy configuration](../deploy/acceptance/Caddyfile).
+port 443. It uses the existing [Caddy configuration](../../deploy/acceptance/Caddyfile).
 Only the gateway publishes a port. You need Docker with Compose, a free private
 subnet, a domain pointing to the host, its certificate/key, TLS SMTP and a 3X-UI
 panel with working HTTPS authentication. Certificate renewal is external to
@@ -51,7 +51,7 @@ openssl rand -base64 32 > /secure/mole/mail-key
 openssl rand -base64 32 > /secure/mole/code-key
 ```
 
-Edit `deployment.env` using the [example](../deploy/.env.example). Replace all
+Edit `deployment.env` using the [example](../../deploy/.env.example). Replace all
 example addresses and paths, publish the policy documents, and prepare files:
 
 | File | Contents |
@@ -200,11 +200,11 @@ All `SHOP_PAYMENT_*_ENABLED` flags default to false. Add the matching file from
 
 | Method / overlay | Settings | Currency |
 | --- | --- | --- |
-| Manual / [compose.manual.yml](../deploy/purchase/compose.manual.yml) | `SHOP_PAYMENT_MANUAL_ENABLED`, `MANUAL_CARD_DETAILS_FILE` (plain-text customer instructions). | RUB |
-| YooMoney / [compose.yoomoney.yml](../deploy/purchase/compose.yoomoney.yml) | `SHOP_PAYMENT_YOOMONEY_ENABLED`, `YOOMONEY_WALLET_ID`, `YOOMONEY_NOTIFICATION_SECRET_FILE`. | RUB |
-| YooKassa / [compose.yookassa.yml](../deploy/purchase/compose.yookassa.yml) | `SHOP_PAYMENT_YOOKASSA_ENABLED`, `YOOKASSA_SHOP_ID`, `YOOKASSA_TOKEN_FILE`, `SHOP_EMAIL`, `YOOKASSA_TEST_MODE` (`false`). | RUB |
-| Cryptomus / [compose.cryptomus.yml](../deploy/purchase/compose.cryptomus.yml) | `SHOP_PAYMENT_CRYPTOMUS_ENABLED`, `CRYPTOMUS_MERCHANT_ID`, `CRYPTOMUS_API_KEY_FILE`. | USD |
-| Heleket / [compose.heleket.yml](../deploy/purchase/compose.heleket.yml) | `SHOP_PAYMENT_HELEKET_ENABLED`, `HELEKET_MERCHANT_ID`, `HELEKET_API_KEY_FILE`. | USD |
+| Manual / [compose.manual.yml](../../deploy/purchase/compose.manual.yml) | `SHOP_PAYMENT_MANUAL_ENABLED`, `MANUAL_CARD_DETAILS_FILE` (plain-text customer instructions). | RUB |
+| YooMoney / [compose.yoomoney.yml](../../deploy/purchase/compose.yoomoney.yml) | `SHOP_PAYMENT_YOOMONEY_ENABLED`, `YOOMONEY_WALLET_ID`, `YOOMONEY_NOTIFICATION_SECRET_FILE`. | RUB |
+| YooKassa / [compose.yookassa.yml](../../deploy/purchase/compose.yookassa.yml) | `SHOP_PAYMENT_YOOKASSA_ENABLED`, `YOOKASSA_SHOP_ID`, `YOOKASSA_TOKEN_FILE`, `SHOP_EMAIL`, `YOOKASSA_TEST_MODE` (`false`). | RUB |
+| Cryptomus / [compose.cryptomus.yml](../../deploy/purchase/compose.cryptomus.yml) | `SHOP_PAYMENT_CRYPTOMUS_ENABLED`, `CRYPTOMUS_MERCHANT_ID`, `CRYPTOMUS_API_KEY_FILE`. | USD |
+| Heleket / [compose.heleket.yml](../../deploy/purchase/compose.heleket.yml) | `SHOP_PAYMENT_HELEKET_ENABLED`, `HELEKET_MERCHANT_ID`, `HELEKET_API_KEY_FILE`. | USD |
 | Stars / base Compose | `SHOP_PAYMENT_STARS_ENABLED`, configured main Telegram bot. | XTR |
 
 For example, add `SHOP_PAYMENT_MANUAL_ENABLED=true` and the absolute
@@ -318,7 +318,7 @@ attachment bytes cause `BACKUP_INCOMPLETE`. A failed rehearsal leaves its new
 DB for inspection; do not attach runtime to it or reuse that target name.
 Never run `serve` or `reconcile` against a rehearsal copy. Before a real restore,
 stop writers, keep keys, reconcile external state and apply the existing
-[post-restore authentication cleanup](../backend/db/maintenance/post_restore_auth.sql)
+[post-restore authentication cleanup](../../backend/db/maintenance/post_restore_auth.sql)
 to invalidate copied login/recovery state.
 
 ## Importing an existing SQLite installation
@@ -351,8 +351,8 @@ they do not automatically create new paid orders or access.
 
 ## Development and checks
 
-Use the Go version from [go.mod](../backend/go.mod) (currently 1.27.1) and Node
-24.11.1 as pinned in the [web Dockerfile](../web/Dockerfile). Build from source:
+Use the Go version from [go.mod](../../backend/go.mod) (currently 1.27.1) and Node
+24.11.1 as pinned in the [web Dockerfile](../../web/Dockerfile). Build from source:
 
 ```sh
 go -C backend build -o server ./cmd/server
@@ -360,7 +360,7 @@ npm --prefix web ci --ignore-scripts
 npm --prefix web run build
 ```
 
-The [OpenAPI contract](api/openapi.yaml) generates Go/TypeScript API types:
+The [OpenAPI contract](../api/openapi.yaml) generates Go/TypeScript API types:
 `make -C backend generate` and `npm --prefix web run api:generate`.
 For focused verification use `go -C backend test ./...`,
 `npm --prefix web run typecheck` and `python3 -m unittest discover -s tests -v`.

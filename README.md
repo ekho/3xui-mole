@@ -20,8 +20,8 @@ separately by the administrator.
 
 | Documentation | Guide |
 | --- | --- |
-| Operators and administrators | [User guide](docs/operators.md) |
-| Architecture, deployment and configuration | [Engineering guide](docs/engineering.md) |
+| Operators and administrators | [User guide](docs/en/operators.md) |
+| Architecture, deployment and configuration | [Engineering guide](docs/en/engineering.md) |
 
 The backend is Go with PostgreSQL, Redis and River background jobs. The web
 application is React, served through Caddy. The machine-readable

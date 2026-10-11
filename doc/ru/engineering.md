@@ -1,6 +1,6 @@
 # Инженерное руководство
 
-[English](engineering.md) · [О проекте](../README.ru_RU.md) · [Руководство оператора](operators.ru_RU.md)
+[English](../../docs/en/engineering.md) · [О проекте](../../README.ru_RU.md) · [Руководство оператора](operators.md)
 
 ## Архитектура
 
@@ -30,9 +30,9 @@ React и Caddy работают в отдельном контейнере: Cadd
 
 ## Деплой
 
-Пример [Compose](../deploy/compose.yml) собирает backend и веб, запускает
+Пример [Compose](../../deploy/compose.yml) собирает backend и веб, запускает
 PostgreSQL и Redis, применяет миграции и открывает Caddy на HTTPS-порту 443.
-Он использует существующую [конфигурацию Caddy](../deploy/acceptance/Caddyfile).
+Он использует существующую [конфигурацию Caddy](../../deploy/acceptance/Caddyfile).
 Наружу публикуется только шлюз. Нужны Docker с Compose, свободная частная
 подсеть, домен с DNS-записью на хост, сертификат и ключ, SMTP с TLS и панель
 3X-UI с рабочей HTTPS-авторизацией. Сертификат обновляется отдельно:
@@ -51,7 +51,7 @@ openssl rand -base64 32 > /secure/mole/mail-key
 openssl rand -base64 32 > /secure/mole/code-key
 ```
 
-Заполните `deployment.env` по [примеру](../deploy/.env.example). Замените
+Заполните `deployment.env` по [примеру](../../deploy/.env.example). Замените
 адреса и пути, опубликуйте документы и подготовьте файлы:
 
 | Файл | Содержимое |
@@ -202,11 +202,11 @@ curl --fail https://cabinet.example.com/readyz
 
 | Способ / дополнение | Настройки | Валюта |
 | --- | --- | --- |
-| Ручной / [compose.manual.yml](../deploy/purchase/compose.manual.yml) | `SHOP_PAYMENT_MANUAL_ENABLED`, `MANUAL_CARD_DETAILS_FILE` (текст инструкции клиенту). | RUB |
-| YooMoney / [compose.yoomoney.yml](../deploy/purchase/compose.yoomoney.yml) | `SHOP_PAYMENT_YOOMONEY_ENABLED`, `YOOMONEY_WALLET_ID`, `YOOMONEY_NOTIFICATION_SECRET_FILE`. | RUB |
-| YooKassa / [compose.yookassa.yml](../deploy/purchase/compose.yookassa.yml) | `SHOP_PAYMENT_YOOKASSA_ENABLED`, `YOOKASSA_SHOP_ID`, `YOOKASSA_TOKEN_FILE`, `SHOP_EMAIL`, `YOOKASSA_TEST_MODE` (`false`). | RUB |
-| Cryptomus / [compose.cryptomus.yml](../deploy/purchase/compose.cryptomus.yml) | `SHOP_PAYMENT_CRYPTOMUS_ENABLED`, `CRYPTOMUS_MERCHANT_ID`, `CRYPTOMUS_API_KEY_FILE`. | USD |
-| Heleket / [compose.heleket.yml](../deploy/purchase/compose.heleket.yml) | `SHOP_PAYMENT_HELEKET_ENABLED`, `HELEKET_MERCHANT_ID`, `HELEKET_API_KEY_FILE`. | USD |
+| Ручной / [compose.manual.yml](../../deploy/purchase/compose.manual.yml) | `SHOP_PAYMENT_MANUAL_ENABLED`, `MANUAL_CARD_DETAILS_FILE` (текст инструкции клиенту). | RUB |
+| YooMoney / [compose.yoomoney.yml](../../deploy/purchase/compose.yoomoney.yml) | `SHOP_PAYMENT_YOOMONEY_ENABLED`, `YOOMONEY_WALLET_ID`, `YOOMONEY_NOTIFICATION_SECRET_FILE`. | RUB |
+| YooKassa / [compose.yookassa.yml](../../deploy/purchase/compose.yookassa.yml) | `SHOP_PAYMENT_YOOKASSA_ENABLED`, `YOOKASSA_SHOP_ID`, `YOOKASSA_TOKEN_FILE`, `SHOP_EMAIL`, `YOOKASSA_TEST_MODE` (`false`). | RUB |
+| Cryptomus / [compose.cryptomus.yml](../../deploy/purchase/compose.cryptomus.yml) | `SHOP_PAYMENT_CRYPTOMUS_ENABLED`, `CRYPTOMUS_MERCHANT_ID`, `CRYPTOMUS_API_KEY_FILE`. | USD |
+| Heleket / [compose.heleket.yml](../../deploy/purchase/compose.heleket.yml) | `SHOP_PAYMENT_HELEKET_ENABLED`, `HELEKET_MERCHANT_ID`, `HELEKET_API_KEY_FILE`. | USD |
 | Stars / основной Compose | `SHOP_PAYMENT_STARS_ENABLED`, настроенный основной Telegram-бот. | XTR |
 
 Например, добавьте `SHOP_PAYMENT_MANUAL_ENABLED=true` и абсолютный путь
@@ -320,7 +320,7 @@ RESTORE_DATABASE_URL_FILE=/secure/mole/restore-database-url \
 новую БД для разбора; не подключайте к ней приложение и не повторяйте то же имя.
 Не запускайте `serve` или `reconcile` на репетиционной копии. Перед настоящим
 восстановлением остановите запись, сохраните ключи, сверьте внешнее состояние
-и примените существующую [очистку данных авторизации](../backend/db/maintenance/post_restore_auth.sql),
+и примените существующую [очистку данных авторизации](../../backend/db/maintenance/post_restore_auth.sql),
 чтобы отозвать скопированные сеансы и данные восстановления доступа.
 
 ## Импорт существующей установки SQLite
@@ -354,8 +354,8 @@ DATABASE_URL_FILE=/secure/mole/database-url \
 
 ## Разработка и проверки
 
-Используйте версию Go из [go.mod](../backend/go.mod), сейчас 1.27.1, и Node
-24.11.1 из [Dockerfile веба](../web/Dockerfile). Сборка из исходников:
+Используйте версию Go из [go.mod](../../backend/go.mod), сейчас 1.27.1, и Node
+24.11.1 из [Dockerfile веба](../../web/Dockerfile). Сборка из исходников:
 
 ```sh
 go -C backend build -o server ./cmd/server
@@ -363,7 +363,7 @@ npm --prefix web ci --ignore-scripts
 npm --prefix web run build
 ```
 
-Из [контракта OpenAPI](api/openapi.yaml) генерируются типы Go/TypeScript:
+Из [контракта OpenAPI](../../docs/api/openapi.yaml) генерируются типы Go/TypeScript:
 `make -C backend generate` и `npm --prefix web run api:generate`.
 Для отдельных проверок используйте `go -C backend test ./...`,
 `npm --prefix web run typecheck`, `python3 -m unittest discover -s tests -v`.

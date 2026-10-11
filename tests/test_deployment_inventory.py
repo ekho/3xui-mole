@@ -18,7 +18,7 @@ class DeploymentInventoryTests(unittest.TestCase):
             names.update(name + '_FILE' for name in re.findall(r'(?:SecretFile|loadTokenFile)\("([A-Z_]+)"\)', source))
             names.update(re.findall(r'"([A-Z]+_[A-Z_]+)":\s*&', source))
         names.update(re.findall(r'\$\{([A-Z_]+)(?::[-+?][^}]*)?\}', (ROOT / 'web/scripts/runtime-config.sh').read_text()))
-        for relative in ('docs/engineering.md', 'docs/engineering.ru_RU.md'):
+        for relative in ('docs/en/engineering.md', 'doc/ru/engineering.md'):
             with self.subTest(document=relative):
                 inventory = (ROOT / relative).read_text()
                 missing = sorted(name for name in names if name not in inventory and name + '_FILE' not in inventory)
