@@ -30,16 +30,25 @@ React и Caddy работают в отдельном контейнере: Cadd
 
 ## Деплой
 
-Пример [Compose](../../deploy/compose.yml) собирает backend и веб, запускает
-PostgreSQL и Redis, применяет миграции и открывает Caddy на HTTPS-порту 443.
+Пример [Compose](../../deploy/compose.yml) запускает PostgreSQL и Redis,
+применяет миграции и открывает Caddy на HTTPS-порту 443. В нём заданы локальные
+сборки; дополнение ниже выбирает опубликованные образы backend и веба.
 Он использует существующую [конфигурацию Caddy](../../deploy/acceptance/Caddyfile).
 Наружу публикуется только шлюз. Нужны Docker с Compose, свободная частная
 подсеть, домен с DNS-записью на хост, сертификат и ключ, SMTP с TLS и панель
 3X-UI с рабочей HTTPS-авторизацией. Сертификат обновляется отдельно:
 автоматический HTTPS Caddy в этом примере выключен.
 
-Выполняйте команды из корня репозитория. Для новой установки создайте
-приватную конфигурацию вне Git:
+Примеры используют релиз `0.1.1`. Версия исходников и обоих образов должна
+совпадать. Для новой установки:
+
+```sh
+git clone --branch 0.1.1 https://github.com/ekho/3xui-mole.git
+cd 3xui-mole
+```
+
+Остальные команды выполняйте из корня этого репозитория. Создайте приватную
+конфигурацию вне Git:
 
 ```sh
 umask 077
@@ -90,13 +99,35 @@ SUBSCRIPTION_BASE_URL=https://subscriptions.example.com/sub/
 тесте. Только после проверки включайте флаг для выдачи доступа. При обновлении
 существующей установки сохраняйте идентификаторы панелей и серверов.
 
-Проверьте конфигурацию и запустите:
+Создайте дополнение с образами вне Git. Сервисы `migrate`, `backend` и
+`reconcile` используют один образ backend, а `gateway` — образ веба:
+
+```sh
+cat > /secure/mole/compose.images.yml <<'YAML'
+services:
+  migrate:
+    image: &backend-image ghcr.io/ekho/3xui-mole:backend-0.1.1
+  backend:
+    image: *backend-image
+  reconcile:
+    image: *backend-image
+  gateway:
+    image: ghcr.io/ekho/3xui-mole:web-0.1.1
+YAML
+```
+
+Проверьте конфигурацию, скачайте образы и запустите без пересборки:
 
 ```sh
 printf 'SOURCE_REVISION=%s\n' "$(git rev-parse HEAD)" >> /secure/mole/deployment.env
-docker compose --env-file /secure/mole/deployment.env -f deploy/compose.yml config --quiet
-docker compose --env-file /secure/mole/deployment.env -f deploy/compose.yml up -d --build
-docker compose --env-file /secure/mole/deployment.env -f deploy/compose.yml ps
+docker compose --env-file /secure/mole/deployment.env \
+  -f deploy/compose.yml -f /secure/mole/compose.images.yml config --quiet
+docker compose --env-file /secure/mole/deployment.env \
+  -f deploy/compose.yml -f /secure/mole/compose.images.yml pull
+docker compose --env-file /secure/mole/deployment.env \
+  -f deploy/compose.yml -f /secure/mole/compose.images.yml up -d --no-build
+docker compose --env-file /secure/mole/deployment.env \
+  -f deploy/compose.yml -f /secure/mole/compose.images.yml ps
 curl --fail https://cabinet.example.com/readyz
 ```
 
@@ -110,7 +141,8 @@ curl --fail https://cabinet.example.com/readyz
 Во всех командах сохраняйте тот же проект Compose, env-файл и набор дополнений.
 `config --quiet` проверяет конфигурацию без её вывода. Для списка образов
 используйте `config --images`; не публикуйте приватную конфигурацию и журналы
-с данными доступа клиентов.
+с данными доступа клиентов. Для собственной сборки уберите `compose.images.yml`
+и используйте `up -d --build` с нужной ревизией исходников.
 
 ## Справочник настроек
 
@@ -141,7 +173,7 @@ curl --fail https://cabinet.example.com/readyz
 | `APP_RUNTIME_UID`, `APP_RUNTIME_GID` | Пользователь/группа контейнеров Compose, `10001`. |
 | `APP_NETWORK_SUBNET`, `APP_GATEWAY_IP` | Сеть Compose и фиксированный адрес доверенного шлюза; выбирайте свободную подсеть. |
 | `PG_USER`, `BASE_DATABASE`, `PG_PASSWORD_FILE` | Пользователь/БД PostgreSQL (`cabinet`) и файл начального пароля. Изменение не меняет существующий том БД. |
-| `SOURCE_REVISION` | Коммит, встроенный при сборке backend; используется при проверке совместимости отката. |
+| `SOURCE_REVISION` | Обязателен для описания сборки в Compose; укажите коммит выбранного релиза. В опубликованный образ ревизия уже встроена CI. |
 
 При запуске шлюз создаёт `/config.json` только с версиями документов,
 публичными URL и названием. Ссылки Telegram не подходят для документов/поддержки.
@@ -214,9 +246,11 @@ curl --fail https://cabinet.example.com/readyz
 
 ```sh
 docker compose --env-file /secure/mole/deployment.env \
-  -f deploy/compose.yml -f deploy/purchase/compose.manual.yml config --quiet
+  -f deploy/compose.yml -f deploy/purchase/compose.manual.yml \
+  -f /secure/mole/compose.images.yml config --quiet
 docker compose --env-file /secure/mole/deployment.env \
-  -f deploy/compose.yml -f deploy/purchase/compose.manual.yml up -d --build
+  -f deploy/compose.yml -f deploy/purchase/compose.manual.yml \
+  -f /secure/mole/compose.images.yml up -d --no-build
 ```
 
 У провайдера задайте URL событий `https://cabinet.example.com/webhooks/PROVIDER`,
@@ -235,9 +269,11 @@ docker compose --env-file /secure/mole/deployment.env \
 
 ```sh
 docker compose --env-file /secure/mole/deployment.env -f deploy/compose.yml \
+  -f /secure/mole/compose.images.yml \
   run --rm --no-deps -v /secure/mole/operator-account:/run/operator-account:ro \
   backend operator grant --account-file /run/operator-account
 docker compose --env-file /secure/mole/deployment.env -f deploy/compose.yml \
+  -f /secure/mole/compose.images.yml \
   run --rm --no-deps -v /secure/mole/operator-account:/run/operator-account:ro \
   backend infrastructure grant --account-file /run/operator-account
 ```
@@ -250,8 +286,9 @@ host-бинарника командам ролей нужен только `DAT
 ## Обновление и восстановление работы
 
 Перед обновлением сделайте копию, сохраните текущую ревизию/образы и включите
-режим обслуживания. Обновите `SOURCE_REVISION` в env-файле до нужного коммита,
-соберите эту ревизию, остановите backend через SIGTERM
+режим обслуживания. Переключите исходники на Git-тег нового релиза, обновите
+`SOURCE_REVISION` до его коммита и оба тега в `compose.images.yml` до этой версии.
+Скачайте образы той же командой Compose `pull`, остановите backend через SIGTERM
 и дайте ему предусмотренные 75 секунд на завершение. Выполните `migrate`
 новым образом, затем запустите один backend и при необходимости пересоздайте
 шлюз. Сохраните env, секреты, проект и дополнения. До открытия продаж проверьте
@@ -259,8 +296,8 @@ readiness, ожидающие платежи/доступ, панель и ка�
 события провайдера не принимаются; проверьте повторную доставку и сверьте
 пропущенные события после запуска.
 
-Изменение env/образа требует пересоздания контейнера (`up -d --no-deps backend`
-или `gateway`, после нужной сборки/миграции). `restart` не перечитывает env.
+Изменение env/образа требует пересоздания контейнера (`up -d --no-build --no-deps backend`
+или `gateway`, после нужной миграции). `restart` не перечитывает env.
 Не используйте `down -v` при обновлении: команда удаляет том БД.
 
 `server reconcile` исполняет очереди оплаты и доступа без HTTP, почтовых
@@ -381,8 +418,8 @@ npm --prefix web run build
 `<компонент>-sha-<полный-коммит>`. Например:
 
 ```sh
-docker pull ghcr.io/ekho/3xui-mole:backend-0.1.0
-docker pull ghcr.io/ekho/3xui-mole:web-0.1.0
+docker pull ghcr.io/ekho/3xui-mole:backend-0.1.1
+docker pull ghcr.io/ekho/3xui-mole:web-0.1.1
 ```
 
 GitHub Release публикуется после успешной сборки обоих образов.
@@ -394,4 +431,4 @@ GitHub Release публикуется после успешной сборки �
 блокируется, чтобы не откатить `latest` компонентов. Pull request проходят
 проверки без публикации. Workflow использует встроенный `GITHUB_TOKEN`;
 дополнительные секреты для публикации не нужны. При деплое указывайте явную
-версию релиза для обоих образов.
+версию релиза для обоих образов, как в [примере деплоя](#деплой).

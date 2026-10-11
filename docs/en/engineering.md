@@ -30,16 +30,25 @@ supervisor before handing execution to another host.
 
 ## Deployment
 
-The reference [Compose file](../../deploy/compose.yml) builds the backend and web
-images, starts PostgreSQL and Redis, runs migrations and exposes Caddy on HTTPS
-port 443. It uses the existing [Caddy configuration](../../deploy/acceptance/Caddyfile).
+The reference [Compose file](../../deploy/compose.yml) starts PostgreSQL and Redis,
+runs migrations and exposes Caddy on HTTPS port 443. It contains local build
+definitions; the override below selects published backend and web images.
+It uses the existing [Caddy configuration](../../deploy/acceptance/Caddyfile).
 Only the gateway publishes a port. You need Docker with Compose, a free private
 subnet, a domain pointing to the host, its certificate/key, TLS SMTP and a 3X-UI
 panel with working HTTPS authentication. Certificate renewal is external to
 this example; Caddy automatic HTTPS is disabled.
 
-Run the following from the repository root. For a new installation, create
-private configuration outside Git:
+The examples use release `0.1.1`. Use the same version for the repository
+checkout and both images. For a new installation:
+
+```sh
+git clone --branch 0.1.1 https://github.com/ekho/3xui-mole.git
+cd 3xui-mole
+```
+
+Run the remaining commands from this repository root. Create private
+configuration outside Git:
 
 ```sh
 umask 077
@@ -90,13 +99,35 @@ client operations against your actual panel in a controlled test. Only then
 set it to true for access provisioning. Keep panel and server identities stable
 when updating an existing installation.
 
-Validate and start:
+Create an image override outside Git. `migrate`, `backend` and `reconcile` use
+the same backend image; `gateway` uses the web image:
+
+```sh
+cat > /secure/mole/compose.images.yml <<'YAML'
+services:
+  migrate:
+    image: &backend-image ghcr.io/ekho/3xui-mole:backend-0.1.1
+  backend:
+    image: *backend-image
+  reconcile:
+    image: *backend-image
+  gateway:
+    image: ghcr.io/ekho/3xui-mole:web-0.1.1
+YAML
+```
+
+Validate, download the images and start without rebuilding:
 
 ```sh
 printf 'SOURCE_REVISION=%s\n' "$(git rev-parse HEAD)" >> /secure/mole/deployment.env
-docker compose --env-file /secure/mole/deployment.env -f deploy/compose.yml config --quiet
-docker compose --env-file /secure/mole/deployment.env -f deploy/compose.yml up -d --build
-docker compose --env-file /secure/mole/deployment.env -f deploy/compose.yml ps
+docker compose --env-file /secure/mole/deployment.env \
+  -f deploy/compose.yml -f /secure/mole/compose.images.yml config --quiet
+docker compose --env-file /secure/mole/deployment.env \
+  -f deploy/compose.yml -f /secure/mole/compose.images.yml pull
+docker compose --env-file /secure/mole/deployment.env \
+  -f deploy/compose.yml -f /secure/mole/compose.images.yml up -d --no-build
+docker compose --env-file /secure/mole/deployment.env \
+  -f deploy/compose.yml -f /secure/mole/compose.images.yml ps
 curl --fail https://cabinet.example.com/readyz
 ```
 
@@ -109,7 +140,8 @@ providers separately.
 Keep the same Compose project, env file and enabled overlays for every command.
 `config --quiet` validates without printing configuration. Use `config --images`
 when you need image names; do not publish private configuration or logs with
-customer credentials.
+customer credentials. To build your own images, omit `compose.images.yml`
+and use `up -d --build` with the intended source checkout.
 
 ## Configuration reference
 
@@ -140,7 +172,7 @@ configuration; there is no fallback.
 | `APP_RUNTIME_UID`, `APP_RUNTIME_GID` | Compose runtime user/group, `10001`. |
 | `APP_NETWORK_SUBNET`, `APP_GATEWAY_IP` | Compose network and fixed trusted gateway IP; choose an unused subnet. |
 | `PG_USER`, `BASE_DATABASE`, `PG_PASSWORD_FILE` | Compose PostgreSQL user/database (`cabinet`) and initial password file. Changing these does not modify an existing database volume. |
-| `SOURCE_REVISION` | Source commit embedded in the backend build; used by rollback compatibility checks. |
+| `SOURCE_REVISION` | Required by the Compose build definition; use the checked-out release commit. Published images already contain the revision embedded by CI. |
 
 The gateway generates `/config.json` at startup with only policy versions,
 public URLs and the display name. Telegram links are not accepted as policy/support URLs.
@@ -212,9 +244,11 @@ For example, add `SHOP_PAYMENT_MANUAL_ENABLED=true` and the absolute
 
 ```sh
 docker compose --env-file /secure/mole/deployment.env \
-  -f deploy/compose.yml -f deploy/purchase/compose.manual.yml config --quiet
+  -f deploy/compose.yml -f deploy/purchase/compose.manual.yml \
+  -f /secure/mole/compose.images.yml config --quiet
 docker compose --env-file /secure/mole/deployment.env \
-  -f deploy/compose.yml -f deploy/purchase/compose.manual.yml up -d --build
+  -f deploy/compose.yml -f deploy/purchase/compose.manual.yml \
+  -f /secure/mole/compose.images.yml up -d --no-build
 ```
 
 Configure provider callbacks at `https://cabinet.example.com/webhooks/PROVIDER`,
@@ -233,9 +267,11 @@ file must be readable by UID `10001`. Grant roles:
 
 ```sh
 docker compose --env-file /secure/mole/deployment.env -f deploy/compose.yml \
+  -f /secure/mole/compose.images.yml \
   run --rm --no-deps -v /secure/mole/operator-account:/run/operator-account:ro \
   backend operator grant --account-file /run/operator-account
 docker compose --env-file /secure/mole/deployment.env -f deploy/compose.yml \
+  -f /secure/mole/compose.images.yml \
   run --rm --no-deps -v /secure/mole/operator-account:/run/operator-account:ro \
   backend infrastructure grant --account-file /run/operator-account
 ```
@@ -248,8 +284,9 @@ as a host binary. Do not grant roles by manually editing database rows.
 ## Updates and recovery
 
 Before updating, take a backup, record the current revision/images and enable
-business maintenance. Update `SOURCE_REVISION` in the env file to the intended
-commit and build that revision, then stop the backend with
+business maintenance. Check out the target release tag, update `SOURCE_REVISION`
+to its commit and change both image tags in `compose.images.yml` to that version.
+Download them with the same Compose `pull` command, then stop the backend with
 SIGTERM and allow the configured 75-second grace period. Run `migrate` with the
 new image, then start exactly one backend and recreate the gateway if needed.
 Keep the same env, secrets, project and overlays. Check readiness, pending
@@ -257,8 +294,8 @@ payments/access, panel observations and channels before reopening sales.
 During backend downtime callbacks cannot be accepted; verify provider retry
 and reconcile missed events afterwards.
 
-An env/image change requires container recreation (`up -d --no-deps backend`
-or `gateway` after building/migrating as appropriate). `restart` does not
+An env/image change requires container recreation (`up -d --no-build --no-deps backend`
+or `gateway` after migrating as appropriate). `restart` does not
 reread env. Never use `down -v` for an update: it deletes the database volume.
 
 `server reconcile` runs the payment/provisioning queues without HTTP, email
@@ -378,8 +415,8 @@ Each component also receives its own `<component>-latest` and
 `<component>-sha-<full-commit>` tags. For example:
 
 ```sh
-docker pull ghcr.io/ekho/3xui-mole:backend-0.1.0
-docker pull ghcr.io/ekho/3xui-mole:web-0.1.0
+docker pull ghcr.io/ekho/3xui-mole:backend-0.1.1
+docker pull ghcr.io/ekho/3xui-mole:web-0.1.1
 ```
 
 The GitHub Release is published after both image builds succeed.
@@ -391,4 +428,4 @@ an older release after a newer tag exists is rejected to protect the component
 `latest` tags.
 Pull requests run checks without publishing. The workflow uses the built-in
 `GITHUB_TOKEN`; no additional publication secrets are needed. When deploying,
-use an explicit release version for both images.
+use an explicit release version for both images, as in the [deployment example](#deployment).

@@ -2,8 +2,6 @@
 
 ![3xui-mole](docs/assets/3xui-mole-banner.png)
 
-[Русский](README.ru_RU.md)
-
 3xui-mole manages subscription access to VPN servers running 3X-UI. Customers
 use a web cabinet or Telegram; operators manage clients, plans, payments and
 support in one system. Both interfaces use the same backend and data.
