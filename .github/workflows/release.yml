@@ -1,0 +1,174 @@
+name: 3xui-mole release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: ghcr.io
+
+concurrency:
+  group: main-release-${{ github.ref }}
+  # shortcut: GitHub queues at most 100 pending releases; revisit if that ceiling is reached.
+  queue: max
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    name: Platform checks
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/platform-checks.yml
+
+  version:
+    name: Reserve release version
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 0
+          ref: ${{ github.sha }}
+      - name: Reserve a tag for the exact checked source
+        id: version
+        shell: bash
+        run: |
+          VERSION="$(python3 .github/scripts/release_version.py)"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if git show-ref --verify --quiet "refs/tags/$VERSION"; then
+            test "$(git rev-parse "$VERSION^{commit}")" = "$GITHUB_SHA"
+          else
+            git tag -a "$VERSION" "$GITHUB_SHA" -m "$VERSION — 3xui-mole"
+            git push origin "refs/tags/$VERSION"
+          fi
+          printf 'version=%s\n' "$VERSION" >> "$GITHUB_OUTPUT"
+
+  images:
+    name: Image (${{ matrix.component }})
+    needs: version
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - component: backend
+            context: ./backend
+            suffix: -backend
+          - component: web
+            context: ./web
+            suffix: -web
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ github.sha }}
+      - name: Verify the reserved source before publishing
+        run: |
+          test "$(python3 .github/scripts/release_version.py)" = "$VERSION"
+          test "$(git rev-parse "$VERSION^{commit}")" = "$GITHUB_SHA"
+      - name: Configure Docker Hub cache before containers
+        run: |
+          printf 'DOCKER_CONFIG=%s\n' "$(mktemp -d "$RUNNER_TEMP/ci-docker-config.XXXXXX")" >> "$GITHUB_ENV"
+          python3 -m unittest discover -s .github/scripts -v
+          sudo --preserve-env=GITHUB_ACTIONS,RUNNER_ENVIRONMENT python3 .github/scripts/configure_docker_cache.py
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
+        id: buildx
+        with:
+          buildkitd-config: .github/buildkitd.toml
+          buildkitd-flags: --log-level=debug --allow-insecure-entitlement security.insecure --allow-insecure-entitlement network.host
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Image tags
+        id: meta
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}${{ matrix.suffix }}
+          flavor: latest=false
+          tags: |
+            type=raw,value=latest
+            type=raw,value=${{ env.VERSION }}
+            type=sha,prefix=sha-,format=long
+          labels: |
+            org.opencontainers.image.version=${{ env.VERSION }}
+            org.opencontainers.image.revision=${{ github.sha }}
+      - name: Build and publish images from main
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8
+        with:
+          builder: ${{ steps.buildx.outputs.name }}
+          context: ${{ matrix.context }}
+          build-args: |
+            SOURCE_REVISION=${{ github.sha }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=release-${{ matrix.component }}
+          cache-to: type=gha,mode=max,scope=release-${{ matrix.component }}
+      - name: Verify BuildKit mirror requests
+        shell: bash
+        env:
+          BUILDX_BUILDER: ${{ steps.buildx.outputs.name }}
+        run: python3 .github/scripts/verify_buildkit_cache.py
+
+  release:
+    name: GitHub release
+    needs: [version, images]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 0
+          ref: ${{ github.sha }}
+      - name: Publish the release for the built source
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          test "$(python3 .github/scripts/release_version.py)" = "$VERSION"
+          test "$(git rev-parse "$VERSION^{commit}")" = "$GITHUB_SHA"
+          notes="$RUNNER_TEMP/release-notes.md"
+          cat > "$notes" <<EOF
+          3xui-mole release from main.
+
+          Source commit: $GITHUB_SHA
+
+          Docker images for linux/amd64 and linux/arm64:
+          - Backend: $REGISTRY/$GITHUB_REPOSITORY-backend:$VERSION
+          - Cabinet: $REGISTRY/$GITHUB_REPOSITORY-web:$VERSION
+
+          Public cabinet settings are provided at container startup.
+          EOF
+          if gh release view "$VERSION" --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease --jq '.isDraft or .isPrerelease' > "$RUNNER_TEMP/existing-release"; then
+            test "$(cat "$RUNNER_TEMP/existing-release")" = false
+          else
+            gh release create "$VERSION" --repo "$GITHUB_REPOSITORY" --verify-tag \
+              --title "$VERSION — 3xui-mole" --notes-file "$notes" \
+              --generate-notes --latest
+          fi

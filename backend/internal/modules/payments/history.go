@@ -1,0 +1,282 @@
+package payments
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"strconv"
+	"time"
+
+	"example.com/cabinet/backend/internal/modules/accounts"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+)
+
+type PaymentHistoryInput struct {
+	Kind            string
+	BeforeCreatedAt *time.Time
+	BeforeId        *string
+	LegacySourceId  *string
+}
+type PaymentHistoryPage struct {
+	Kind               string
+	Orders             []HistoryOrder
+	Receipts           []HistoryReceipt
+	LegacyTransactions []LegacyPayment
+	Refunds            []PaymentRefund
+	HasMore            bool
+}
+type HistoryOrder struct {
+	OrderId                            uuid.UUID
+	Action, PaymentMethod, PaymentType string
+	Quote                              PurchaseQuote
+	PaymentStatus, FulfillmentStatus   string
+	ReviewRequired                     bool
+	ReviewReason                       *string
+	AccessOperationId                  *uuid.UUID
+	CreatedAt, ExpiresAt               time.Time
+}
+type HistoryReceipt struct {
+	OperationId                string
+	OrderId                    uuid.UUID
+	PaymentMethod              string
+	CreatedAt, OccurredAt      time.Time
+	GrossMinor                 string
+	NetMinor, Currency         *string
+	RawCurrency, Source        string
+	FundsOrder, ReviewRequired bool
+	ReviewReason               *string
+	Codepro, Unaccepted        bool
+	CryptoAmounts              *CryptoAmounts
+}
+type CryptoAmounts struct{ PaymentAmount, PayerAmount, MerchantAmount, PayerCurrency string }
+type LegacyPayment struct {
+	SourceId                         string
+	CreatedAt, UpdatedAt             time.Time
+	PaymentStatus, FulfillmentStatus string
+	PaymentMethod                    *string
+	Quote                            *LegacyQuote
+}
+type LegacyQuote struct {
+	Action, AmountMinor, Currency  string
+	Devices, PeriodDays, TrafficGb int64
+}
+
+func historyInput(in PaymentHistoryInput) error {
+	if in.Kind != "orders" && in.Kind != "receipts" && in.Kind != "legacy" && in.Kind != "refunds" {
+		return failure(400, "INVALID_INPUT")
+	}
+	if (in.BeforeCreatedAt == nil) != (in.BeforeId == nil) {
+		return failure(400, "INVALID_INPUT")
+	}
+	if in.LegacySourceId != nil {
+		id, err := strconv.ParseInt(*in.LegacySourceId, 10, 64)
+		if in.Kind != "legacy" || in.BeforeCreatedAt != nil || err != nil || id <= 0 || strconv.FormatInt(id, 10) != *in.LegacySourceId {
+			return failure(400, "INVALID_INPUT")
+		}
+	}
+	if in.BeforeCreatedAt == nil {
+		return nil
+	}
+	t := *in.BeforeCreatedAt
+	if t.IsZero() || t.Year() < 1 || t.Year() > 9999 || t.Nanosecond()%1000 != 0 || !validText(*in.BeforeId, 1, 128) {
+		return failure(400, "INVALID_INPUT")
+	}
+	switch in.Kind {
+	case "orders", "refunds":
+		id, err := uuid.Parse(*in.BeforeId)
+		if err != nil || id == uuid.Nil {
+			return failure(400, "INVALID_INPUT")
+		}
+	case "legacy":
+		id, err := strconv.ParseInt(*in.BeforeId, 10, 64)
+		if err != nil || id <= 0 || strconv.FormatInt(id, 10) != *in.BeforeId {
+			return failure(400, "INVALID_INPUT")
+		}
+	}
+	return nil
+}
+
+func (s *Service) requirePaymentReader(ctx context.Context, account uuid.UUID) error {
+	a, err := s.accountByID(ctx, account)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return failure(401, "INVALID_CREDENTIALS")
+	}
+	if err != nil {
+		return err
+	}
+	if !accounts.SourceEligible(a) {
+		return failure(401, "INVALID_CREDENTIALS")
+	}
+	if a.Restricted {
+		return failure(403, "ACCOUNT_RESTRICTED")
+	}
+	return nil
+}
+func (s *Service) PaymentHistory(ctx context.Context, account uuid.UUID, in PaymentHistoryInput) (PaymentHistoryPage, error) {
+	if err := s.requirePaymentReader(ctx, account); err != nil {
+		return PaymentHistoryPage{}, err
+	}
+	return s.paymentHistory(ctx, account, in)
+}
+func (s *Service) OperatorPaymentHistory(ctx context.Context, actor, target uuid.UUID, in PaymentHistoryInput) (PaymentHistoryPage, error) {
+	if err := s.authority.RequireOperator(ctx, actor); err != nil {
+		return PaymentHistoryPage{}, err
+	}
+	if _, err := s.accountByID(ctx, target); errors.Is(err, pgx.ErrNoRows) {
+		return PaymentHistoryPage{}, failure(404, "INVALID_INPUT")
+	} else if err != nil {
+		return PaymentHistoryPage{}, err
+	}
+	return s.paymentHistory(ctx, target, in)
+}
+func (s *Service) paymentHistory(ctx context.Context, account uuid.UUID, in PaymentHistoryInput) (PaymentHistoryPage, error) {
+	out := PaymentHistoryPage{Kind: in.Kind, Orders: []HistoryOrder{}, Receipts: []HistoryReceipt{}, LegacyTransactions: []LegacyPayment{}}
+	if err := historyInput(in); err != nil {
+		return out, err
+	}
+	switch in.Kind {
+	case "orders":
+		rows, err := s.pool.Query(ctx, `SELECT id,action,payment_method,payment_type,quote,payment_status,fulfillment_status,review_required,review_reason,access_operation_id,created_at,expires_at FROM purchase_orders
+ WHERE account_id=$1 AND ($2::timestamptz IS NULL OR (created_at,id)<($2,$3::uuid)) ORDER BY created_at DESC,id DESC LIMIT 51`, account, in.BeforeCreatedAt, in.BeforeId)
+		if err != nil {
+			return out, unavailable()
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var order HistoryOrder
+			var raw []byte
+			if err = rows.Scan(&order.OrderId, &order.Action, &order.PaymentMethod, &order.PaymentType, &raw, &order.PaymentStatus, &order.FulfillmentStatus, &order.ReviewRequired, &order.ReviewReason, &order.AccessOperationId, &order.CreatedAt, &order.ExpiresAt); err != nil || json.Unmarshal(raw, &order.Quote) != nil {
+				return out, unavailable()
+			}
+			out.Orders = append(out.Orders, order)
+		}
+		if rows.Err() != nil {
+			return out, unavailable()
+		}
+		if len(out.Orders) > 50 {
+			out.HasMore = true
+			out.Orders = out.Orders[:50]
+		}
+	case "receipts":
+		rows, err := s.pool.Query(ctx, "SELECT "+receiptColumns+` FROM purchase_receipts r JOIN purchase_orders p ON p.id=r.order_id WHERE p.account_id=$1 AND ($2::timestamptz IS NULL OR (r.created_at,r.operation_id)<($2,$3::text)) ORDER BY r.created_at DESC,r.operation_id DESC LIMIT 51`, account, in.BeforeCreatedAt, in.BeforeId)
+		if err != nil {
+			return out, unavailable()
+		}
+		defer rows.Close()
+		for rows.Next() {
+			r, err := scanHistoryReceipt(rows)
+			if err != nil {
+				return out, unavailable()
+			}
+			out.Receipts = append(out.Receipts, r)
+		}
+		if rows.Err() != nil {
+			return out, unavailable()
+		}
+		if len(out.Receipts) > 50 {
+			out.HasMore = true
+			out.Receipts = out.Receipts[:50]
+		}
+	case "refunds":
+		rows, err := s.pool.Query(ctx, "SELECT "+refundColumns+` FROM purchase_refunds f JOIN purchase_receipts r ON r.operation_id=f.receipt_operation_id JOIN purchase_orders p ON p.id=f.order_id
+ WHERE p.account_id=$1 AND ($2::timestamptz IS NULL OR (f.created_at,f.id)<($2,$3::uuid)) ORDER BY f.created_at DESC,f.id DESC LIMIT 51`, account, in.BeforeCreatedAt, in.BeforeId)
+		if err != nil {
+			return out, unavailable()
+		}
+		defer rows.Close()
+		out.Refunds = []PaymentRefund{}
+		for rows.Next() {
+			f, err := scanRefund(rows)
+			if err != nil {
+				return out, unavailable()
+			}
+			out.Refunds = append(out.Refunds, f)
+		}
+		if rows.Err() != nil {
+			return out, unavailable()
+		}
+		if len(out.Refunds) > 50 {
+			out.HasMore = true
+			out.Refunds = out.Refunds[:50]
+		}
+	case "legacy":
+		rows, err := s.pool.Query(ctx, `SELECT source_id,created_at,updated_at,status,subscription,source_tg_id FROM legacy_payment_transactions
+ WHERE account_id=$1 AND ($2::timestamptz IS NULL OR (created_at,source_id)<($2,$3::bigint)) AND ($4::bigint IS NULL OR source_id=$4) ORDER BY created_at DESC,source_id DESC LIMIT 51`, account, in.BeforeCreatedAt, in.BeforeId, in.LegacySourceId)
+		if err != nil {
+			return out, unavailable()
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var item LegacyPayment
+			var id, tgID int64
+			var packed string
+			if rows.Scan(&id, &item.CreatedAt, &item.UpdatedAt, &item.PaymentStatus, &packed, &tgID) != nil {
+				return out, unavailable()
+			}
+			item.SourceId = strconv.FormatInt(id, 10)
+			item.FulfillmentStatus = "unknown"
+			item.PaymentMethod, item.Quote = legacyPaymentQuote(packed, tgID)
+			out.LegacyTransactions = append(out.LegacyTransactions, item)
+		}
+		if rows.Err() != nil {
+			return out, unavailable()
+		}
+		if len(out.LegacyTransactions) > 50 {
+			out.HasMore = true
+			out.LegacyTransactions = out.LegacyTransactions[:50]
+		}
+	}
+	return out, nil
+}
+
+func legacyPaymentQuote(packed string, tgID int64) (*string, *LegacyQuote) {
+	b, err := decodeLegacySubscription(packed, tgID)
+	if err != nil || b.method == nil || b.quote.Devices <= 0 || b.quote.PeriodDays <= 0 {
+		return nil, nil
+	}
+	return b.method, &b.quote
+}
+
+const receiptColumns = `r.operation_id,r.order_id,
+ CASE WHEN r.provider_data->>'provider' IN ('yookassa','cryptomus','heleket','telegram_stars') THEN r.provider_data->>'provider'
+ WHEN r.notification_type='manual_confirmation' THEN 'manual' ELSE 'yoomoney' END,
+ r.created_at,r.occurred_at,r.gross_minor,r.net_minor,r.currency,r.notification_type,COALESCE(p.funding_operation_id=r.operation_id,false),r.review_reason,r.codepro,r.unaccepted,
+ CASE WHEN r.provider_data->>'provider' IN ('cryptomus','heleket') THEN r.provider_data->>'payment_amount' END,
+ CASE WHEN r.provider_data->>'provider' IN ('cryptomus','heleket') THEN r.provider_data->>'payer_amount' END,
+ CASE WHEN r.provider_data->>'provider' IN ('cryptomus','heleket') THEN r.provider_data->>'merchant_amount' END,
+ CASE WHEN r.provider_data->>'provider' IN ('cryptomus','heleket') THEN r.provider_data->>'payer_currency' END`
+
+func scanHistoryReceipt(row pgx.Row) (HistoryReceipt, error) {
+	var receipt HistoryReceipt
+	var gross int64
+	var net *int64
+	var notification string
+	var paymentAmount, payerAmount, merchantAmount, payerCurrency *string
+	if err := row.Scan(&receipt.OperationId, &receipt.OrderId, &receipt.PaymentMethod, &receipt.CreatedAt, &receipt.OccurredAt, &gross, &net, &receipt.RawCurrency, &notification, &receipt.FundsOrder, &receipt.ReviewReason, &receipt.Codepro, &receipt.Unaccepted, &paymentAmount, &payerAmount, &merchantAmount, &payerCurrency); err != nil {
+		return receipt, err
+	}
+	receipt.GrossMinor = strconv.FormatInt(gross, 10)
+	if net != nil {
+		value := strconv.FormatInt(*net, 10)
+		receipt.NetMinor = &value
+	}
+	switch receipt.RawCurrency {
+	case "643", "RUB":
+		value := "RUB"
+		receipt.Currency = &value
+	case "USD", "XTR":
+		value := receipt.RawCurrency
+		receipt.Currency = &value
+	}
+	receipt.Source = "provider"
+	if notification == "manual_confirmation" {
+		receipt.Source = "operator"
+	}
+	receipt.ReviewRequired = receipt.ReviewReason != nil || receipt.Codepro || receipt.Unaccepted
+	if paymentAmount != nil && payerAmount != nil && merchantAmount != nil && payerCurrency != nil {
+		receipt.CryptoAmounts = &CryptoAmounts{*paymentAmount, *payerAmount, *merchantAmount, *payerCurrency}
+	}
+
+	return receipt, nil
+}

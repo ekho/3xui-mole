@@ -1,0 +1,150 @@
+name: Platform checks
+on:
+  workflow_call:
+  pull_request:
+    paths: ['backend/**', 'web/**', 'docs/api/**', 'tests/**', 'deploy/**', '.github/workflows/**', '.github/scripts/**', '.github/buildkitd.toml']
+  push:
+    branches: ['feature/**']
+    paths: ['backend/**', 'web/**', 'docs/api/**', 'tests/**', 'deploy/**', '.github/workflows/**', '.github/scripts/**', '.github/buildkitd.toml']
+permissions:
+  contents: read
+concurrency:
+  group: platform-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # existing repository v4 pin
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Configure Docker Hub cache before containers
+        run: |
+          printf 'DOCKER_CONFIG=%s\n' "$(mktemp -d "$RUNNER_TEMP/ci-docker-config.XXXXXX")" >> "$GITHUB_ENV"
+          python3 -m unittest discover -s .github/scripts -v
+          sudo --preserve-env=GITHUB_ACTIONS,RUNNER_ENVIRONMENT python3 .github/scripts/configure_docker_cache.py
+      - name: Verify runner registry boundary
+        shell: bash
+        run: |
+          docker version --format 'Docker server={{.Server.Version}} API={{.Server.APIVersion}}'
+          docker info --format 'Image storage driver={{.Driver}}'
+          sudo python3 - <<'PY'
+          from pathlib import Path
+          import tomllib
+          path = Path('/etc/docker/certs.d/docker.io/hosts.toml')
+          config = tomllib.loads(path.read_text()) if path.exists() else {}
+          print('docker.io hosts.toml exists:', path.exists(), 'configured host count:', len(config.get('host', {})))
+          PY
+          curl --fail --silent --show-error --head --max-time 30 \
+            'https://mirror.gcr.io/v2/library/redis/manifests/sha256:6f81e8915c60b065a524e6967e0ad1c639ba6efa84d669f823683ea04d9150ee?ns=docker.io' \
+            | awk 'tolower($0) ~ /^(http\/|docker-content-digest:)/'
+      - name: Set up mirrored BuildKit for all Compose consumers
+        id: buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
+        with:
+          buildkitd-config: .github/buildkitd.toml
+          buildkitd-flags: --log-level=debug --allow-insecure-entitlement security.insecure --allow-insecure-entitlement network.host
+      - name: Select builder for Compose and native scripts
+        env:
+          BUILDER: ${{ steps.buildx.outputs.name }}
+        run: printf 'BUILDX_BUILDER=%s\n' "$BUILDER" >> "$GITHUB_ENV"
+      - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version: '24.11.1'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with:
+          python-version: '3.13'
+      - name: Dependencies and isolated databases
+        run: |
+          npm --prefix web ci --ignore-scripts
+          cd web && npx playwright install --with-deps chromium
+          cd ..
+          docker compose -f deploy/acceptance/compose.test.yml up -d --wait postgres redis
+          printf '%s' 'postgres://platform_test@127.0.0.1:55491/platform_test?sslmode=disable' > "$RUNNER_TEMP/database-url"
+          printf '%s' 'redis://127.0.0.1:56391/0' > "$RUNNER_TEMP/redis-url"
+          chmod 600 "$RUNNER_TEMP/database-url" "$RUNNER_TEMP/redis-url"
+          printf 'TEST_DATABASE_URL_FILE=%s/database-url\nTEST_REDIS_URL_FILE=%s/redis-url\n' "$RUNNER_TEMP" "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          docker build --load --target operations -t cabinet-migration-operations:local backend
+          printf 'TEST_OPERATIONS_IMAGE=cabinet-migration-operations:local\n' >> "$GITHUB_ENV"
+      - name: Generated contract and static checks
+        run: |
+          python deploy/acceptance/check_names.py
+          make -C backend generate
+          npm --prefix web run api:generate
+          git diff --exit-code
+          go -C backend vet ./...
+          npm --prefix web run typecheck
+          npm --prefix web run build -- --mode test
+          (cd web && node scripts/runtime-config.test.mjs)
+      - name: Behavior and connected consumers
+        run: |
+          RUN_BROWSER_TESTS=1 RUN_CUTOVER_ARTIFACT_TESTS=1 make -C backend test-integration TEST_TIMEOUT=60m
+          python -m unittest discover -s tests -v
+          npm --prefix web run test:e2e
+      - name: Container readiness (local images only)
+        run: |
+          docker compose --env-file deploy/acceptance/.env.example -f deploy/acceptance/compose.acceptance.yml config --quiet
+          docker compose --env-file deploy/acceptance/.env.example -f deploy/acceptance/compose.acceptance.yml build backend gateway
+          python deploy/acceptance/smoke.py
+      - name: Native process with 3X-UI 3.7.0 and TLS SMTP
+        run: |
+          python deploy/acceptance/local.py up --reuse-images
+          python deploy/acceptance/local.py check
+      - name: Server management and group reconciliation with two TLS panels and Chromium
+        env:
+          SERVER_MANAGEMENT_NATIVE_STATE: ${{ runner.temp }}/server-management-native
+        run: |
+          python deploy/server-management/local.py up
+          python deploy/server-management/local.py check
+          RUN_BROWSER_TESTS=1 go -C backend test -race ./tests -run '^(TestNativeServerManagementPrimaryRetirement|TestNativeServerManagement|TestServerManagementBrowser|TestNativeGroupReconciliationRealPanel)$' -count=1 -timeout=5m -v
+      - name: Isolated backup and restore rehearsal
+        run: |
+          python deploy/acceptance/backup_restore.py up
+          python deploy/acceptance/backup_restore.py check
+      - name: Verify BuildKit mirror requests
+        shell: bash
+        run: python3 .github/scripts/verify_buildkit_cache.py
+      - name: Diagnose daemon fallback without raw logs
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import re, subprocess
+          result = subprocess.run(['sudo', 'journalctl', '-u', 'docker', '--no-pager', '-o', 'cat'], check=True, capture_output=True, text=True)
+          for line in result.stdout.splitlines():
+              if 'Error getting v2 registry' in line or 'Attempting next endpoint for pull after error' in line:
+                  hosts = [host for host in ('mirror.gcr.io', 'registry-1.docker.io', 'auth.docker.io') if host in line]
+                  errors = [error for error in ('timeout', 'deadline exceeded', 'unauthorized', 'denied', '429', '403', '404', 'x509') if error in line.lower()]
+                  print('Docker registry fallback:', hosts, 'categories:', errors)
+          PY
+      - name: Cleanup backup rehearsal
+        if: always()
+        run: |
+          if [ -f .superpowers/acceptance/backup-restore/runtime.json ]; then
+            python deploy/acceptance/backup_restore.py down
+          fi
+      - name: Cleanup server management
+        if: always()
+        env:
+          SERVER_MANAGEMENT_NATIVE_STATE: ${{ runner.temp }}/server-management-native
+        run: |
+          if [ -f "$SERVER_MANAGEMENT_NATIVE_STATE/public.env" ]; then
+            python deploy/server-management/local.py down
+          fi
+      - name: Cleanup native acceptance
+        if: always()
+        run: |
+          if [ -f .superpowers/acceptance/native-docker/public.env ]; then
+            python deploy/acceptance/local.py down
+          fi
+      - name: Cleanup test services
+        if: always()
+        run: |
+          docker compose -f deploy/acceptance/compose.test.yml down -v

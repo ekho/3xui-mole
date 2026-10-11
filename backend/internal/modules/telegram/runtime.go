@@ -1,0 +1,485 @@
+package telegram
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
+	"example.com/cabinet/backend/internal/modules/telegram/internal/botapi"
+	"log/slog"
+	"net/http"
+	"sync"
+	"time"
+)
+
+type State struct {
+	Enabled, Degraded bool
+	Code              string
+	Status            string
+}
+type Runtime struct {
+	enabled                                                                bool
+	started                                                                bool
+	token                                                                  string
+	api                                                                    *botapi.Client
+	dispatcher                                                             *dispatcher
+	outbox                                                                 Outbox
+	clients                                                                *Client
+	servers                                                                *serverBridge
+	promocodes                                                             *promocodeBridge
+	activation                                                             *clientPromocodeBridge
+	support                                                                *supportBridge
+	now                                                                    func() time.Time
+	startupCode                                                            string
+	mu                                                                     sync.RWMutex
+	pollCode, deliveryCode, deliveryClaimCode, clientCode, clientClaimCode string
+	phase                                                                  string
+	observer                                                               func(State)
+}
+
+func New(cfg Config, client *http.Client, actions TrialActions, outbox Outbox, clients *Client) (*Runtime, error) {
+	if err := cfg.validate(); err != nil {
+		return nil, err
+	}
+	r := &Runtime{enabled: cfg.Enabled, outbox: outbox, clients: clients, token: cfg.Token}
+	if cfg.Enabled {
+		if actions == nil || outbox == nil {
+			return nil, errors.New("missing Telegram domain contracts")
+		}
+		r.api = botapi.New(cfg.Token, client)
+		if clients != nil {
+			clients.api = r.api
+		}
+		r.dispatcher = newDispatcher(r.api, actions, cfg.Operators)
+	}
+	return r, nil
+}
+func (r *Runtime) State() State {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.stateLocked()
+}
+func (r *Runtime) stateLocked() State {
+	if !r.enabled {
+		return State{Code: "DISABLED", Status: "disabled"}
+	}
+	code := r.pollCode
+	if code == "" {
+		code = r.deliveryCode
+	}
+	if code == "" {
+		code = r.deliveryClaimCode
+	}
+	if code == "" {
+		code = r.clientCode
+	}
+	if code == "" {
+		code = r.clientClaimCode
+	}
+	status := r.phase
+	if status == "" {
+		status = "stopped"
+	}
+	if code != "" && status != "stopped" {
+		status = "degraded"
+	}
+	return State{Enabled: true, Degraded: code != "", Code: code, Status: status}
+}
+func (r *Runtime) Observe(observer func(State)) {
+	r.mu.Lock()
+	r.observer = observer
+	state := r.stateLocked()
+	r.mu.Unlock()
+	if observer != nil {
+		observer(state)
+	}
+}
+func (r *Runtime) setPhase(phase string) {
+	r.mu.Lock()
+	r.phase = phase
+	state, observer := r.stateLocked(), r.observer
+	r.mu.Unlock()
+	if observer != nil {
+		observer(state)
+	}
+}
+func safeCode(err error) string {
+	var api *botapi.APIError
+	if errors.As(err, &api) {
+		switch api.Code {
+		case "UNAUTHORIZED", "CONFLICT", "RATE_LIMITED", "FORBIDDEN", "BAD_REQUEST", "THREAD_NOT_FOUND", "NOT_MODIFIED", "INVALID_RESPONSE", "INVALID_INPUT", "UNAVAILABLE":
+			return api.Code
+		}
+	}
+	var action *ActionError
+	if errors.As(err, &action) {
+		switch action.Code {
+		case "REQUEST_STATE_CONFLICT", "UNSUPPORTED_PAYMENT", "WEBHOOK_CONFIGURED", "MINI_APP_NOT_CONFIGURED", "INVALID_INPUT", "SUPPORT_BOT_MISMATCH", "SUPPORT_GROUP_NOT_FORUM", "SUPPORT_ADMIN_REQUIRED", "INVALID_CONFIGURATION":
+			return action.Code
+		}
+	}
+	return "SERVICE_UNAVAILABLE"
+}
+func (r *Runtime) setCode(poll bool, code string) {
+	field := &r.deliveryCode
+	if poll {
+		field = &r.pollCode
+	}
+	r.setLoopCode(field, code)
+}
+func (r *Runtime) setLoopCode(field *string, code string) {
+	r.mu.Lock()
+	changed := *field != code
+	*field = code
+	state, observer := r.stateLocked(), r.observer
+	r.mu.Unlock()
+	if changed && code != "" {
+		slog.Warn("Telegram channel degraded", "code", code)
+	}
+	if changed && observer != nil {
+		observer(state)
+	}
+}
+func fatal(err error) bool {
+	switch safeCode(err) {
+	case "UNAUTHORIZED", "CONFLICT", "WEBHOOK_CONFIGURED", "UNSUPPORTED_PAYMENT", "MINI_APP_NOT_CONFIGURED", "SUPPORT_BOT_MISMATCH", "SUPPORT_GROUP_NOT_FORUM", "SUPPORT_ADMIN_REQUIRED":
+		return true
+	}
+	return false
+}
+func pause(ctx context.Context, d time.Duration) bool {
+	t := time.NewTimer(d)
+	defer t.Stop()
+	select {
+	case <-ctx.Done():
+		return false
+	case <-t.C:
+		return true
+	}
+}
+func retryDelay(err error, backoff time.Duration) time.Duration {
+	var api *botapi.APIError
+	if errors.As(err, &api) && api.RetryAfter > 0 {
+		return api.RetryAfter
+	}
+	return backoff
+}
+func nextDelay(d time.Duration) time.Duration {
+	d *= 2
+	if d > 30*time.Second {
+		return 30 * time.Second
+	}
+	return d
+}
+
+func (r *Runtime) Run(parent context.Context) error {
+	if !r.enabled {
+		return nil
+	}
+	r.setPhase("starting")
+	defer func() { r.mu.Lock(); r.started = false; r.mu.Unlock(); r.setPhase("stopped") }()
+	if r.startupCode != "" {
+		r.setCode(true, r.startupCode)
+		return &ActionError{Code: r.startupCode}
+	}
+	ctx, cancel := context.WithCancel(parent)
+	defer cancel()
+	delay := time.Second
+	for {
+		info, err := r.api.GetWebhookInfo(ctx)
+		if ctx.Err() != nil {
+			return nil
+		}
+		if err == nil && info.URL != "" {
+			err = &ActionError{Code: "WEBHOOK_CONFIGURED"}
+		}
+		if err == nil && r.clients != nil {
+			err = r.clients.start(ctx, r.api, r.token)
+		}
+		if err == nil && r.support != nil {
+			err = r.support.start(ctx)
+		}
+		if err == nil {
+			r.mu.Lock()
+			r.started = true
+			r.mu.Unlock()
+			r.setCode(true, "")
+			r.setPhase("running")
+			break
+		}
+		r.setCode(true, safeCode(err))
+		if fatal(err) {
+			return err
+		}
+		if !pause(ctx, retryDelay(err, delay)) {
+			return nil
+		}
+		delay = nextDelay(delay)
+	}
+	workers := 2
+	if r.clients != nil {
+		workers++
+	}
+	results := make(chan error, workers)
+	go func() { results <- r.poll(ctx) }()
+	go func() { results <- r.deliveries(ctx) }()
+	if r.clients != nil {
+		go func() { results <- r.clientDeliveries(ctx) }()
+	}
+	err := <-results
+	cancel()
+	for i := 1; i < workers; i++ {
+		<-results
+	}
+	if parent.Err() != nil {
+		return nil
+	}
+	return err
+}
+func (r *Runtime) poll(ctx context.Context) error {
+	offset := int64(0)
+	now := r.now
+	if now == nil {
+		now = time.Now
+	}
+	lastHandled := now()
+	delay := time.Second
+	for ctx.Err() == nil {
+		// Telegram may choose a lower ID after a week. An old cursor must
+		// never acknowledge a new update before we have received it.
+		if offset > 0 && now().Sub(lastHandled) >= 24*time.Hour {
+			offset = 0
+		}
+		updates, err := r.api.GetUpdates(ctx, offset)
+		if ctx.Err() != nil {
+			return nil
+		}
+		if err == nil {
+			if len(updates) == 0 {
+				// The completed updates were acknowledged by this request.
+				// Zero now asks for the earliest unconfirmed update.
+				offset = 0
+			}
+			for _, u := range updates {
+				err = r.handle(ctx, u)
+				if err != nil {
+					break
+				}
+				offset = u.ID + 1 // The next request acknowledges only completed/refused handling.
+				lastHandled = now()
+			}
+		}
+		if err == nil {
+			r.setCode(true, "")
+			delay = time.Second
+			continue
+		}
+		r.setCode(true, safeCode(err))
+		if fatal(err) {
+			return err
+		}
+		if !pause(ctx, retryDelay(err, delay)) {
+			return nil
+		}
+		delay = nextDelay(delay)
+	}
+	return nil
+}
+
+func present(raw json.RawMessage) bool {
+	return len(raw) > 0 && !bytes.Equal(bytes.TrimSpace(raw), []byte("null"))
+}
+func (r *Runtime) clientDeliveries(ctx context.Context) error {
+	delay := time.Second
+	for ctx.Err() == nil {
+		claimCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		job, err := r.clients.notices.ClaimClient(claimCtx)
+		cancel()
+		claimFailed := err != nil
+		if err == nil {
+			r.setLoopCode(&r.clientClaimCode, "")
+		}
+		if err == nil && job == nil {
+			delay = time.Second
+			if !pause(ctx, 5*time.Second) {
+				return nil
+			}
+			continue
+		}
+		if err == nil {
+			err = r.clients.deliver(ctx, *job)
+		}
+		if err == nil {
+			r.setLoopCode(&r.clientCode, "")
+			delay = time.Second
+			continue
+		}
+		if ctx.Err() != nil {
+			return nil
+		}
+		if claimFailed {
+			r.setLoopCode(&r.clientClaimCode, safeCode(err))
+		} else {
+			r.setLoopCode(&r.clientCode, safeCode(err))
+		}
+		if fatal(err) {
+			return err
+		}
+		if !pause(ctx, retryDelay(err, delay)) {
+			return nil
+		}
+		delay = nextDelay(delay)
+	}
+	return nil
+}
+func (r *Runtime) deliveries(ctx context.Context) error {
+	delay := time.Second
+	for ctx.Err() == nil {
+		claimCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		var err error
+		var empty bool
+		var deliver func(context.Context) error
+		if r.support != nil {
+			d, e := r.support.owner.ClaimTelegramDelivery(claimCtx)
+			err, empty = e, d == nil
+			if d != nil {
+				deliver = func(ctx context.Context) error { return r.support.owner.DeliverTelegram(ctx, *d, r.support.send) }
+			}
+		} else {
+			d, e := r.outbox.Claim(claimCtx)
+			err, empty = e, d == nil
+			if d != nil {
+				deliver = func(ctx context.Context) error { return r.deliver(ctx, *d) }
+			}
+		}
+		cancel()
+		claimFailed := err != nil
+		if err == nil {
+			r.setLoopCode(&r.deliveryClaimCode, "")
+		}
+		if err == nil && empty {
+			delay = time.Second
+			if !pause(ctx, 5*time.Second) {
+				return nil
+			}
+			continue
+		}
+		if err == nil {
+			err = deliver(ctx)
+		}
+		if err == nil {
+			r.setCode(false, "")
+			delay = time.Second
+			continue
+		}
+		if ctx.Err() != nil {
+			return nil
+		}
+		if claimFailed {
+			r.setLoopCode(&r.deliveryClaimCode, safeCode(err))
+		} else {
+			r.setCode(false, safeCode(err))
+		}
+		if fatal(err) {
+			return err
+		}
+		if !pause(ctx, retryDelay(err, delay)) {
+			return nil
+		}
+		delay = nextDelay(delay)
+	}
+	return nil
+}
+func (r *Runtime) deliver(ctx context.Context, d Delivery) error {
+	if !r.dispatcher.operators[d.ChatID] || !time.Now().Before(d.LeaseExpiresAt) {
+		return &ActionError{Code: "REQUEST_STATE_CONFLICT"}
+	}
+	text, k, err := renderCard(d.Card)
+	out := DeliveryOutcome{Kind: "delivery_failed", Code: "invalid_response"}
+	if err == nil {
+		var msg botapi.Message
+		if target := d.Card.TargetMessageID; target != nil {
+			msg, err = r.api.EditMessage(ctx, d.ChatID, *target, text, k)
+			if safeCode(err) == "NOT_MODIFIED" {
+				msg = botapi.Message{ID: *target, Chat: botapi.Chat{ID: d.ChatID}}
+				err = nil
+			} else if safeCode(err) == "BAD_REQUEST" {
+				msg, err = r.api.SendMessage(ctx, d.ChatID, text, k)
+			}
+		} else {
+			msg, err = r.api.SendMessage(ctx, d.ChatID, text, k)
+		}
+		if err == nil {
+			out = DeliveryOutcome{Kind: "sent", ChatID: d.ChatID, MessageID: msg.ID}
+		} else {
+			switch safeCode(err) {
+			case "FORBIDDEN":
+				out.Code = "forbidden"
+			case "BAD_REQUEST":
+				if d.Card.TargetMessageID != nil {
+					out.Code = "edit_failed"
+				}
+			default:
+				return err // Network/invalid response: the send may have happened.
+			}
+		}
+	}
+	completeCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	return r.outbox.Complete(completeCtx, d, out)
+}
+
+func (r *Runtime) handle(ctx context.Context, u botapi.Update) error {
+	if r.support != nil {
+		return r.support.handle(ctx, u)
+	}
+	if present(u.Subscription) {
+		return r.starsSubscriptionUpdate(ctx, u.ID, u.Subscription)
+	}
+	if present(u.PreCheckout) {
+		return r.preCheckout(ctx, u.PreCheckout)
+	}
+	if u.Message != nil && (present(u.Message.SuccessfulPayment) || present(u.Message.RefundedPayment)) {
+		return r.starsPayment(ctx, u.Message)
+	}
+	if r.servers != nil {
+		username := ""
+		if r.clients != nil {
+			username = r.clients.username
+		}
+		handled, err := r.servers.handle(ctx, u, username)
+		if handled {
+			return err
+		}
+	}
+	if r.promocodes != nil {
+		username := ""
+		if r.clients != nil {
+			username = r.clients.username
+		}
+		handled, err := r.promocodes.handle(ctx, u, username)
+		if handled {
+			return err
+		}
+	}
+	if r.activation != nil {
+		username := ""
+		if r.clients != nil {
+			username = r.clients.username
+		}
+		handled, err := r.activation.handle(ctx, u, username)
+		if handled {
+			return err
+		}
+	}
+	if r.clients != nil {
+		handled, err := r.clients.handle(ctx, u)
+		if handled {
+			if u.Message != nil && u.Message.From != nil {
+				delete(r.dispatcher.pending, u.Message.From.ID)
+			}
+			return err
+		}
+	}
+	return r.dispatcher.handle(ctx, u)
+}

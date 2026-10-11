@@ -1,0 +1,146 @@
+# External-resource acceptance is separate from the credential-free local fixture DBs.
+name: cabinet-acceptance
+x-backend: &backend
+  image: cabinet-backend:local
+  build: {context: ../../backend}
+  user: '${APP_RUNTIME_UID:-10001}:${APP_RUNTIME_GID:-10001}'
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  environment: &backend-env
+    CABINET_ORIGIN: '${CABINET_ORIGIN:?required}'
+    TERMS_VERSION: '${TERMS_VERSION:?required}'
+    PRIVACY_VERSION: '${PRIVACY_VERSION:?required}'
+    DATABASE_URL_FILE: /run/secrets/database_url
+    REDIS_URL_FILE: /run/secrets/redis_url
+    MAIL_KEY_FILE: /run/secrets/mail_key
+    CODE_KEY_FILE: /run/secrets/code_key
+    BOT_OPERATOR_IDS: '${BOT_OPERATOR_IDS:-}'
+    SMTP_ADDRESS: '${SMTP_ADDRESS:?required}'
+    SMTP_USER: '${SMTP_USER:?required}'
+    SMTP_FROM: '${SMTP_FROM:?required}'
+    SMTP_PASSWORD_FILE: /run/secrets/smtp_password
+    SMTP_CA_FILE: /run/secrets/smtp_ca
+    PANEL_ID: dedicated-acceptance
+    PANEL_URL: '${PANEL_URL:?required}'
+    PANEL_TOKEN_FILE: /run/secrets/panel_token
+    PANEL_CA_FILE: /run/secrets/panel_ca
+    SUBSCRIPTION_BASE_URL: '${SUBSCRIPTION_BASE_URL:?required}'
+    ACCESS_RESET_TIMEZONE: '${ACCESS_RESET_TIMEZONE:-UTC}'
+    AUDIT_RETENTION_DAYS: '${AUDIT_RETENTION_DAYS:-365}'
+    AUDIT_RETENTION_TIMEZONE: '${AUDIT_RETENTION_TIMEZONE:-}'
+    BOT_TIMEZONE: '${BOT_TIMEZONE:-UTC}'
+    SHOP_PAYMENT_STARS_ENABLED: '${SHOP_PAYMENT_STARS_ENABLED:-false}'
+    PANEL_DUPLICATE_GUARD_VERIFIED: '${PANEL_DUPLICATE_GUARD_VERIFIED:-false}'
+    TRIAL_ENABLED: '${TRIAL_ENABLED:-false}'
+    TRIAL_PERIOD: '${TRIAL_PERIOD:-3}'
+    TRIAL_TRAFFIC_GB: '${TRIAL_TRAFFIC_GB:-15}'
+    BONUS_DEVICES_COUNT: '${BONUS_DEVICES_COUNT:-1}'
+    SHOP_REFERRED_TRIAL_ENABLED: '${SHOP_REFERRED_TRIAL_ENABLED:-false}'
+    SHOP_REFERRED_TRIAL_PERIOD: '${SHOP_REFERRED_TRIAL_PERIOD:-7}'
+    SHOP_REFERRER_REWARD_ENABLED: '${SHOP_REFERRER_REWARD_ENABLED:-true}'
+    SHOP_REFERRED_REWARD_TYPE: '${SHOP_REFERRED_REWARD_TYPE:-days}'
+    SHOP_REFERRER_LEVEL_ONE_PERIOD: '${SHOP_REFERRER_LEVEL_ONE_PERIOD:-10}'
+    SHOP_REFERRER_LEVEL_TWO_PERIOD: '${SHOP_REFERRER_LEVEL_TWO_PERIOD:-3}'
+  secrets: [database_url, redis_url, mail_key, code_key, smtp_password, smtp_ca, panel_token, panel_ca]
+services:
+  postgres:
+    image: postgres@sha256:d74eeac9a635390a49bc21bd49fccd973de707e2a53a76ac49b552b8712ec46f
+    environment: {POSTGRES_USER: '${PG_USER:-cabinet}', POSTGRES_DB: '${BASE_DATABASE:-cabinet}', POSTGRES_PASSWORD_FILE: /run/secrets/pg_password}
+    secrets: [pg_password]
+    volumes: [pg:/var/lib/postgresql/data]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 2s
+      timeout: 2s
+      retries: 20
+  redis:
+    image: redis@sha256:6f81e8915c60b065a524e6967e0ad1c639ba6efa84d669f823683ea04d9150ee
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 2s
+      timeout: 2s
+      retries: 20
+  migrate:
+    <<: *backend
+    command: [migrate]
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+  backend:
+    <<: *backend
+    restart: unless-stopped
+    stop_grace_period: 75s
+    healthcheck:
+      test: ['CMD', '/server', 'healthcheck']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    environment:
+      <<: *backend-env
+      LISTEN_ADDRESS: 0.0.0.0:8080
+      TRUSTED_PROXY_CIDRS: '${APP_GATEWAY_IP:-172.31.98.14}/32'
+      TELEGRAM_ENABLED: '${TELEGRAM_ENABLED:-false}'
+      BOT_TOKEN_FILE: /run/secrets/bot_token
+      SUPPORT_TELEGRAM_ENABLED: '${SUPPORT_TELEGRAM_ENABLED:-false}'
+      SUPPORT_BOT_TOKEN_FILE: /run/secrets/support_bot_token
+      SUPPORT_GROUP_ID: '${SUPPORT_GROUP_ID:-}'
+      AUDIT_MIRROR_ENABLED: '${AUDIT_MIRROR_ENABLED:-false}'
+      OPERATIONS_EMAIL_FILE: '${OPERATIONS_EMAIL_FILE:+/run/secrets/operations_email}'
+    secrets: [database_url, redis_url, mail_key, code_key, smtp_password, smtp_ca, panel_token, panel_ca, operations_email, bot_token, support_bot_token]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+  reconcile:
+    <<: *backend
+    profiles: [restore]
+    command: [reconcile]
+    environment:
+      <<: *backend-env
+      LISTEN_ADDRESS: 0.0.0.0:8080
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+  gateway:
+    image: cabinet-web:local
+    build: {context: ../../web}
+    user: '${APP_RUNTIME_UID:-10001}:${APP_RUNTIME_GID:-10001}'
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    environment:
+      CABINET_HOST: '${CABINET_HOST:?required}'
+      CABINET_MAINTENANCE: '${CABINET_MAINTENANCE:-false}'
+      TERMS_VERSION: '${TERMS_VERSION:?required}'
+      PRIVACY_VERSION: '${PRIVACY_VERSION:?required}'
+      TERMS_URL: '${TERMS_URL:?required}'
+      PRIVACY_URL: '${PRIVACY_URL:?required}'
+      SUPPORT_URL: '${SUPPORT_URL:?required}'
+      PRODUCT_NAME: '${PRODUCT_NAME:-}'
+    command: [caddy, run, --config, /etc/caddy/Caddyfile, --adapter, caddyfile]
+    ports: ['127.0.0.1:58443:8443']
+    volumes: ['./Caddyfile:/etc/caddy/Caddyfile:ro']
+    secrets: [public_cert, public_key]
+    tmpfs: ['/data:uid=${APP_RUNTIME_UID:-10001},gid=${APP_RUNTIME_GID:-10001},mode=0700', '/config:uid=${APP_RUNTIME_UID:-10001},gid=${APP_RUNTIME_GID:-10001},mode=0700', '/run/web-public:uid=${APP_RUNTIME_UID:-10001},gid=${APP_RUNTIME_GID:-10001},mode=0700']
+    networks:
+      default: {ipv4_address: '${APP_GATEWAY_IP:-172.31.98.14}'}
+    depends_on: [backend]
+volumes: {pg: {}}
+networks:
+  default:
+    ipam:
+      config: [{subnet: '${APP_NETWORK_SUBNET:-172.31.98.0/28}'}]
+secrets:
+  pg_password: {file: '${PG_PASSWORD_FILE:?required}'}
+  database_url: {file: '${DATABASE_URL_FILE:?required}'}
+  redis_url: {file: '${REDIS_URL_FILE:?required}'}
+  mail_key: {file: '${MAIL_KEY_FILE:?required}'}
+  code_key: {file: '${CODE_KEY_FILE:?required}'}
+  smtp_password: {file: '${SMTP_PASSWORD_FILE:?required}'}
+  smtp_ca: {file: '${SMTP_CA_FILE:?required}'}
+  panel_token: {file: '${PANEL_TOKEN_FILE:?required}'}
+  panel_ca: {file: '${PANEL_CA_FILE:?required}'}
+  public_cert: {file: '${PUBLIC_CERT_FILE:?required}'}
+  public_key: {file: '${PUBLIC_KEY_FILE:?required}'}
+  bot_token: {file: '${BOT_TOKEN_FILE:-/dev/null}'}
+  support_bot_token: {file: '${SUPPORT_BOT_TOKEN_FILE:-/dev/null}'}
+  operations_email: {file: '${OPERATIONS_EMAIL_FILE:-/dev/null}'}

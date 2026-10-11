@@ -1,0 +1,44 @@
+-- name: AnyWebOperator :one
+SELECT EXISTS(SELECT 1 FROM operator_accounts o JOIN accounts a ON a.id=o.account_id
+ WHERE a.kind='web' AND NOT a.restricted AND a.verified_at IS NOT NULL);
+
+-- name: GrantOperator :execrows
+INSERT INTO operator_accounts(account_id,granted_at) VALUES($1,$2)
+ON CONFLICT (account_id) DO NOTHING;
+
+-- name: RevokeOperator :execrows
+DELETE FROM operator_accounts WHERE account_id=$1;
+
+-- name: CountOperatorClients :one
+SELECT count(*) FROM accounts
+WHERE sqlc.arg(query)::text='' OR
+ strpos(lower(COALESCE(email_key,'')),lower(sqlc.arg(query)::text))>0 OR
+ strpos(lower(COALESCE(display_name,'')),lower(sqlc.arg(query)::text))>0 OR
+ strpos(id::text,lower(sqlc.arg(query)::text))>0 OR
+ strpos(COALESCE(telegram_id::text,''),sqlc.arg(query)::text)>0;
+
+-- name: SearchOperatorClients :many
+SELECT * FROM accounts
+WHERE sqlc.arg(query)::text='' OR
+ strpos(lower(COALESCE(email_key,'')),lower(sqlc.arg(query)::text))>0 OR
+ strpos(lower(COALESCE(display_name,'')),lower(sqlc.arg(query)::text))>0 OR
+ strpos(id::text,lower(sqlc.arg(query)::text))>0 OR
+ strpos(COALESCE(telegram_id::text,''),sqlc.arg(query)::text)>0
+ORDER BY created_at DESC NULLS LAST,id DESC LIMIT sqlc.arg(page_limit)::int OFFSET sqlc.arg(page_offset)::bigint;
+
+-- name: AddTelegramAccount :exec
+INSERT INTO accounts(id,kind,display_name,telegram_id,locale,vpn_id,sub_id,panel_key,access_profile,registration_source_code)
+VALUES($1,'telegram',$2,$3,$4,$5,$6,$7,'regular',$8);
+
+-- name: AccountByTelegramID :one
+SELECT * FROM accounts WHERE telegram_id=$1;
+
+-- name: LegacyIdentities :many
+SELECT * FROM accounts WHERE telegram_id=ANY(sqlc.arg(telegram_ids)::bigint[]) ORDER BY id;
+-- name: LockLegacyIdentities :many
+SELECT * FROM accounts WHERE telegram_id=ANY(sqlc.arg(telegram_ids)::bigint[]) ORDER BY id FOR UPDATE;
+
+-- name: OperatorExists :one
+SELECT EXISTS(SELECT 1 FROM operator_accounts WHERE account_id=$1);
+-- name: LockOperatorRole :one
+SELECT account_id FROM operator_accounts WHERE account_id=$1 FOR SHARE;
