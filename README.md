@@ -4,40 +4,27 @@
 
 [Русский](README.ru_RU.md)
 
-A web cabinet and Telegram interface for subscription access managed by 3X-UI.
-One Go process owns HTTP, River jobs, main/support Telegram and schedulers.
-The web application and Caddy run in a separate image; PostgreSQL holds product
-state and Redis supports throttling. Product Python and the transitional HTTP
-bot adapter have been retired.
+3xui-mole manages subscription access to VPN servers running 3X-UI. Customers
+use a web cabinet or Telegram; operators manage clients, plans, payments and
+support in one system. Both interfaces use the same backend and data.
 
-The new project **3xui-mole** starts its own versioning at **0.1.0**;
-preview builds use `0.1.0-dev.N`; see [preview releases](docs/releases.md).
+- **Customers:** registration, subscription purchase and renewal, connection
+  links, payment history, referrals, promocodes and support.
+- **Operators:** trial approval, access management, catalogue, payment review,
+  campaigns, notifications, statistics and audit.
+- **Administrators:** server management, deployment, configuration and backups.
+
+Available payment methods are manual transfers, YooMoney, YooKassa, Cryptomus,
+Heleket and Telegram Stars. Each method and the Telegram channels are enabled
+separately by the administrator.
+
+| Documentation | English | Русский |
+| --- | --- | --- |
+| Operators and administrators | [User guide](docs/operators.md) | [Руководство пользователя](docs/operators.ru_RU.md) |
+| Architecture, deployment and configuration | [Engineering guide](docs/engineering.md) | [Инженерное руководство](docs/engineering.ru_RU.md) |
+
+The backend is Go with PostgreSQL, Redis and River background jobs. The web
+application is React, served through Caddy. The machine-readable
+[API contract](docs/api/openapi.yaml) is kept alongside the source.
 
 This project was inspired by [3xui-shop](https://github.com/snoups/3xui-shop).
-
-Set the optional `PRODUCT_NAME=3xui-mole` web runtime setting to display this
-name in the cabinet header and browser tab. Existing deployment names and the
-generic cabinet labels remain available.
-
-Build the backend with Go 1.27.1 and the web application with Node 24.11.1:
-
-```sh
-go -C backend build -o server ./cmd/server
-npm --prefix web ci --ignore-scripts
-npm --prefix web run build
-```
-
-Run `server migrate` before `server serve` with the deployment's private
-configuration files. `server reconcile` is the bounded recovery executor and
-cannot run beside `serve` against the same PostgreSQL database.
-
-- [Deployment and configuration](DEPLOYMENT.md)
-- [Local acceptance](docs/runbooks/s01-test-rollout.md)
-- [SQLite data migration](deploy/data-migration/README.md)
-- [Cutover, late payments and rollback](deploy/cutover/README.md)
-- [Preview backend/web releases](docs/releases.md)
-- [API contract](docs/api/openapi.yaml)
-
-Feature branches start at current `origin/v2`; pull requests target `v2`.
-Local acceptance uses owned synthetic resources. A production cutover requires
-separate authorization for its exact environment and operation.
