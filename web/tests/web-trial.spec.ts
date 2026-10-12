@@ -83,16 +83,14 @@ test('pending snapshot polling does not refetch an unchanged current purchase or
 });
 
 test('a new cabinet account discards the previous account order before the fresh read completes',async({page})=>{
- await page.clock.install({time:new Date('2026-10-01T00:00:00Z')});await page.clock.pauseAt(new Date('2026-10-01T00:00:01Z'));
  const id='80000000-0000-4000-8000-000000000001';
  const order:Model<'PurchaseOrder'>={order_id:id,action:'purchase',quote:{plan_id:'70000000-0000-4000-8000-000000000001',revision:1,devices:1,period_days:30,traffic_gb:10,profile:'regular',amount_minor:'100',currency:'RUB'},payment_method:'yoomoney',payment_type:'AC',payment_status:'pending',fulfillment_status:'not_started',created_at:'2026-10-01T00:00:00Z',expires_at:'2026-10-01T00:30:00Z',expired:false,can_pay:false,can_cancel:false,review_required:false,access_operation_id:null,checkout:null};
  let current=account,reads=0,release!:()=>void;const held=new Promise<void>(resolve=>{release=resolve;});
  await mock(page,{request:trial},{...none,status:'active',access_operation_status:'pending'});
  await page.route('**/api/v1/me',route=>route.fulfill({json:current}));
  await page.route('**/api/v1/orders/current',async route=>{reads++;if(reads===1)return route.fulfill({json:{order,can_purchase:false}});await held;await route.fulfill({json:{order:null,can_purchase:true}});});
- const initial=page.waitForResponse(r=>r.url().endsWith('/subscription'));const first=page.waitForResponse(r=>r.url().endsWith('/orders/current'));await page.goto('/cabinet');await finishQueryRead(page,initial);await finishQueryRead(page,first);await expect(page.locator('a[href*="'+id+'"]')).toBeVisible();await page.getByRole('button',{name:'Показать ссылку',exact:true}).click();await expect(page.getByLabel('Ссылка подписки',{exact:true})).toBeVisible();
+ await page.goto('/cabinet');await expect(page.locator('a[href*="'+id+'"]')).toBeVisible();await page.getByRole('button',{name:'Показать ссылку',exact:true}).click();await expect(page.getByLabel('Ссылка подписки',{exact:true})).toBeVisible();
  current={...account,account:{...account.account,account_id:'60000000-0000-4000-8000-000000000001',email:'next@example.test'}};
- const response=page.waitForResponse(r=>r.url().endsWith('/subscription'));await page.clock.runFor(5000);await finishQueryRead(page,response);
  try{await expect(page.getByRole('heading',{name:'next@example.test',exact:true})).toBeVisible();await expect(page.locator('a[href*="'+id+'"]')).toHaveCount(0);await expect.poll(()=>reads).toBe(2);await expect(page.getByLabel('Ссылка подписки',{exact:true})).toHaveCount(0);}finally{release();}
 });
 
