@@ -419,6 +419,15 @@ change routes without a document reload. Language is stored in the `lang=en`
 URL parameter; Russian is the default. Authentication, verification and logout
 keep document navigation so session and one-time proof state are reset.
 
+Customer cabinet, catalogue and referrals reads use TanStack Query with an
+instance per mounted customer session. Queries forward cancellation signals and
+keep data in memory only; inactive reads are discarded immediately. Session ending
+and page exit clear the cache, and a restored browser page reloads session state.
+Pending cabinet operations are polled five seconds after the preceding read ends.
+Automatic retries are disabled; the cabinet retains its existing transient-error
+polling. Financial writes remain explicit and subscription connection keys never
+enter the query cache.
+
 ## CI and releases
 
 Each push to `main`, including a merged pull request, runs Platform checks,

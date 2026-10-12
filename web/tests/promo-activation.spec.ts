@@ -79,7 +79,7 @@ test('invalid and used codes show specific errors, focus and keyboard flow',asyn
 test('signed MiniApp uses the same form with bearer auth and English copy',async({page})=>{
  let posted=false;
  await fixture(page,async(route,path)=>{if(path!=='/api/v1/promocodes/activate')return false;posted=true;expect(route.request().headers().authorization).toBe('Bearer mini_'+'b'.repeat(43));expect(route.request().headers().cookie).toBeUndefined();expect(route.request().headers()['x-csrf-token']).toBe(csrf);await route.fulfill({status:201,json:{...activation,status:'needs_review'}});return true;},true);
- await page.goto('/mini-app/cabinet?lang=en');const form=page.getByRole('region',{name:'Activate promocode'});await expect(form.getByText('Enter a code from support.')).toBeVisible();
+ await page.goto('/mini-app/cabinet?lang=en');const form=page.getByRole('region',{name:'Activate promocode'});await expect(form).toHaveCount(1);await expect(form.getByText('Enter a code from support.')).toBeVisible();
  await form.getByLabel('Promocode').fill('mini-code');await form.getByRole('button',{name:'Activate',exact:true}).click();await expect(form.getByRole('status')).toContainText('Support review needed');expect(posted).toBe(true);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });

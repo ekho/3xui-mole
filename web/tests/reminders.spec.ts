@@ -1,4 +1,5 @@
 import {test,expect,type Page,type Route} from '@playwright/test';
+import {finishQueryRead} from './query-timers';
 import type {components} from '../src/api/schema.gen';
 type Model<K extends keyof components['schemas']>=components['schemas'][K];
 const account:Model<'AccountResult'>={account:{account_id:'11111111-1111-4111-8111-111111111111',email:'reminders@example.test',email_verified:true,locale:'ru',telegram_linked:false},csrf_token:'c'.repeat(43),capabilities:{trial_available:false}};
@@ -134,8 +135,8 @@ test('changing account aborts the prior account save',async({page})=>{
   if(path==='/api/v1/reminders/preferences'){saves++;await hold;await r.fulfill({json:{...reminders,email_enabled:true}});return true;}
   if(path==='/api/v1/reminders'){reads++;await r.fulfill({json:empty});return true;}return false;
  }});
- await page.goto('/cabinet?lang=en');const section=page.getByRole('region',{name:'Subscription reminders'});await section.getByRole('checkbox').check();await section.getByRole('button',{name:'Save reminder settings'}).click();await expect.poll(()=>saves).toBe(1);
- current={...account,account:{...account.account,account_id:'55555555-5555-4555-8555-555555555555',email:'new-account@example.test'}};await page.clock.runFor(5000);await expect(page.getByRole('heading',{name:'new-account@example.test'})).toBeVisible();await expect.poll(()=>reads).toBe(2);release();await expect(section.getByRole('checkbox')).not.toBeChecked();await expect(section.getByRole('listitem')).toHaveCount(0);
+ const initial=page.waitForResponse(r=>r.url().endsWith('/subscription'));await page.goto('/cabinet?lang=en');await finishQueryRead(page,initial);const section=page.getByRole('region',{name:'Subscription reminders'});await section.getByRole('checkbox').check();await section.getByRole('button',{name:'Save reminder settings'}).click();await expect.poll(()=>saves).toBe(1);
+ current={...account,account:{...account.account,account_id:'55555555-5555-4555-8555-555555555555',email:'new-account@example.test'}};const response=page.waitForResponse(r=>r.url().endsWith('/subscription'));await page.clock.runFor(5000);await finishQueryRead(page,response);await expect(page.getByRole('heading',{name:'new-account@example.test'})).toBeVisible();await expect.poll(()=>reads).toBe(2);release();await expect(section.getByRole('checkbox')).not.toBeChecked();await expect(section.getByRole('listitem')).toHaveCount(0);
 });
 test('logout removes reminders while an earlier save is pending',async({page})=>{
  let saves=0,release!:()=>void,logout!:()=>void;const hold=new Promise<void>(r=>release=r),holdLogout=new Promise<void>(r=>logout=r);
