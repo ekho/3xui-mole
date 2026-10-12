@@ -400,6 +400,15 @@ npm --prefix web ci --ignore-scripts
 npm --prefix web run build
 ```
 
+Для разработки веба запустите `npm --prefix web run dev` и откройте URL
+из вывода. Сервер разработки отдаёт синтетическую публичную конфигурацию; для API
+нужен локальный backend или моки. React Fast Refresh сохраняет состояние компонентов
+при редактировании. `npm --prefix web run lint` проверяет React Hooks,
+`npm --prefix web run format` форматирует код, кроме сгенерированных типов API,
+а `npm --prefix web run test:dev` проверяет CSP сервера разработки и Fast Refresh.
+TypeScript остаётся на 5.9: `openapi-typescript` требует зависимость ветки 5.x.
+
+
 Из [контракта OpenAPI](../api/openapi.yaml) генерируются типы Go/TypeScript:
 `make -C backend generate` и `npm --prefix web run api:generate`.
 Для отдельных проверок используйте `go -C backend test ./...`,

@@ -1,4 +1,4 @@
-import {useEffect,useRef,useState,type ReactNode} from 'react';
+import {useEffectEvent,useEffect,useRef,useState,type ReactNode} from 'react';
 import {useLocation,useNavigate} from 'react-router-dom';
 import * as api from './api/client';
 import {config} from './config';
@@ -20,11 +20,12 @@ export function MiniApp({lang,children}:{lang:Lang;children:ReactNode}){
   }catch(reason){if(!controller.signal.aborted){if(reason instanceof api.ApiError&&reason.status===401)endMiniSession();else setError(reason instanceof api.ApiError&&reason.code==='IDENTITY_CONFLICT'?t.identityConflict:reason instanceof api.ApiError&&reason.code==='INVALID_VERIFICATION'?t.identityExpired:errorText(reason,lang));}}
   finally{if(!controller.signal.aborted)setBusy(false);}
  }
+ const initialSignIn=useEffectEvent(signIn);
  useEffect(()=>{
   const controller=new AbortController();login.current=controller;
   const ended=(event:Event)=>{controller.abort();login.current?.abort();raw.current='';setLinkCode('');setTerms(false);setPrivacy(false);api.clearSession();setIdentityChanged((event as CustomEvent).detail==='identity-changed');setState('ended');setBusy(false);};
   const hide=()=>endMiniSession('closed');window.addEventListener(miniSessionEnded,ended);window.addEventListener('pagehide',hide);
-  setState('loading');setLinkMode(false);setRetired(false);setLinkCode('');setTerms(false);setPrivacy(false);void loadTelegram(controller.signal).then(sdk=>{if(controller.signal.aborted)return;setApp(sdk);optionalSDK(()=>sdk.ready?.());optionalSDK(()=>sdk.expand?.());if(typeof sdk.initData!=='string'||!sdk.initData){setState('empty');return;}raw.current=sdk.initData;void signIn(controller.signal);}).catch(()=>{if(!controller.signal.aborted){setError('');setState('error');}});
+  setState('loading');setLinkMode(false);setRetired(false);setLinkCode('');setTerms(false);setPrivacy(false);void loadTelegram(controller.signal).then(sdk=>{if(controller.signal.aborted)return;setApp(sdk);optionalSDK(()=>sdk.ready?.());optionalSDK(()=>sdk.expand?.());if(typeof sdk.initData!=='string'||!sdk.initData){setState('empty');return;}raw.current=sdk.initData;void initialSignIn(controller.signal);}).catch(()=>{if(!controller.signal.aborted){setError('');setState('error');}});
   return()=>{controller.abort();login.current?.abort();raw.current='';api.clearSession();clearMiniLaunch();window.removeEventListener(miniSessionEnded,ended);window.removeEventListener('pagehide',hide);};
  },[retry]);
  useEffect(()=>()=>clearMiniLaunch(true),[]);
