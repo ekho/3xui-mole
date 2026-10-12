@@ -1,3 +1,5 @@
+import {Link} from 'react-router-dom';
+import {useQuery} from '@tanstack/react-query';
 import {useEffect,useId,useRef,useState} from 'react';
 import * as api from './api/client';
 import {text,link,loginRedirect,errorText,type Lang} from './i18n';
@@ -10,17 +12,15 @@ function checked(value:api.ReferralsResult){
 }
 
 export function Referrals({lang}:{lang:Lang}){
- const t=text(lang),id=useId();const[value,setValue]=useState<api.ReferralsResult>();const[loading,setLoading]=useState(true);const[error,setError]=useState('');const[revision,setRevision]=useState(0);const heading=useRef<HTMLHeadingElement>(null),focusAfterRetry=useRef(false);
- useEffect(()=>{
-  const controller=new AbortController();setLoading(true);setValue(undefined);setError('');
-  void api.getReferrals(controller.signal).then(result=>{if(!controller.signal.aborted)setValue(checked(result));}).catch(reason=>{if(controller.signal.aborted)return;setError(errorText(reason,lang));if(reason instanceof api.ApiError&&reason.status===401)loginRedirect(lang);}).finally(()=>{if(!controller.signal.aborted)setLoading(false);});
-  return()=>controller.abort();
- },[lang,revision]);
+ const t=text(lang),id=useId();const[revision,setRevision]=useState(0);const heading=useRef<HTMLHeadingElement>(null),focusAfterRetry=useRef(false);
+ const query=useQuery({queryKey:['customer','referrals',lang,revision],queryFn:async({signal})=>checked(await api.getReferrals(signal))});
+ const value=query.data,loading=query.isPending||query.isFetching,error=query.error?errorText(query.error,lang):'';
+ useEffect(()=>{if(query.error instanceof api.ApiError&&query.error.status===401)loginRedirect(lang);},[query.error,lang]);
  useEffect(()=>{if(!loading&&focusAfterRetry.current){heading.current?.focus();focusAfterRetry.current=false;}},[loading]);
  const empty=value&&value.unclassified_records===0&&value.levels.every(level=>level.invited===0&&level.granted_rewards===0&&level.pending_rewards===0&&level.money_records===0&&level.pending_money_records===0);
  return <section className="card" aria-labelledby={id+'-title'} aria-busy={loading}>
   <h1 id={id+'-title'} ref={heading} tabIndex={-1}>{t.referralsTitle}</h1>
-  <p><a href={link('/cabinet',lang)}>{t.referralsBack}</a></p>
+  <p><Link to={link('/cabinet',lang)}>{t.referralsBack}</Link></p>
   {loading?<p role="status">{t.loading}</p>:null}
   {error?<div className="error" role="alert"><p>{error}</p><button disabled={loading} onClick={()=>{focusAfterRetry.current=true;setRevision(value=>value+1);}}>{t.retry}</button></div>:null}
   {value&&!loading?<>

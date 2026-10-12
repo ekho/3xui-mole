@@ -81,7 +81,9 @@ jobs:
           npm --prefix web run api:generate
           git diff --exit-code
           go -C backend vet ./...
+          npm --prefix web run lint
           npm --prefix web run typecheck
+          npm --prefix web run test:dev
           npm --prefix web run build -- --mode test
           npm --prefix web run check:bundle
           (cd web && node scripts/runtime-config.test.mjs)

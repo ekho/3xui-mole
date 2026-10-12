@@ -397,6 +397,15 @@ npm --prefix web ci --ignore-scripts
 npm --prefix web run build
 ```
 
+For local web development, run `npm --prefix web run dev` and open the printed
+URL. The dev server serves a synthetic public configuration; API requests need a
+local backend or mocks. React Fast Refresh preserves component state while editing.
+Use `npm --prefix web run lint` for React Hooks checks,
+`npm --prefix web run format` for formatting (generated API types are excluded),
+and `npm --prefix web run test:dev` to check development CSP and Fast Refresh.
+TypeScript stays on 5.9 while `openapi-typescript` requires its 5.x peer dependency.
+
+
 The [OpenAPI contract](../api/openapi.yaml) generates Go/TypeScript API types:
 `make -C backend generate` and `npm --prefix web run api:generate`.
 For focused verification use `go -C backend test ./...`,
@@ -405,12 +414,26 @@ Connected Go and browser checks need dedicated PostgreSQL/Redis and other test
 fixtures; the existing `deploy/acceptance/` scripts create synthetic resources.
 Do not point them at a live installation.
 
+Customer screens use React Router: internal cabinet links and order creation
+change routes without a document reload. Language is stored in the `lang=en`
+URL parameter; Russian is the default. Authentication, verification and logout
+keep document navigation so session and one-time proof state are reset.
+
 Customer pages are loaded on demand; QR generation is loaded only after the
 user requests a QR code. After building, run `npm --prefix web run check:bundle`
 to check route separation and the startup/login JavaScript size budgets. CI
 runs the same check. Failed browser page loads offer an explicit reload; in
 Mini App, another page remains available without ending the session. QR failures
 retain the subscription link for manual import.
+
+Customer cabinet, catalogue and referrals reads use TanStack Query with an
+instance per mounted customer session. Queries forward cancellation signals and
+keep data in memory only; inactive reads are discarded immediately. Session ending
+and page exit clear the cache, and a restored browser page reloads session state.
+Pending cabinet operations are polled five seconds after the preceding read ends.
+Automatic retries are disabled; the cabinet retains its existing transient-error
+polling. Financial writes remain explicit and subscription connection keys never
+enter the query cache.
 
 ## CI and releases
 

@@ -44,6 +44,22 @@ test('renewal uses one own plan and a frozen retry',async({page})=>{
 const account:Model<'AccountResult'>={account:{account_id:'20000000-0000-4000-8000-000000000001',email:'client@example.test',email_verified:true,locale:'en',telegram_linked:false},csrf_token:'s'.repeat(43),capabilities:{trial_available:false}};
 const subscription:Model<'Subscription'>={status:'active',devices:2,traffic_limit_bytes:1024,traffic_used_bytes:0,observed_at:'2026-10-03T10:00:00Z',data_stale:false,expires_at:'2026-10-05T10:00:00Z',connection_available:false,access_profile:'regular',vpn_banned:false,access_operation_id:null,access_operation_status:null};
 
+for(const nextMethods of ['changed','unavailable'] as const)test('lost renewal keeps displayed terms when methods become '+nextMethods,async({page})=>{
+ const calls:{body:Model<'PurchaseOrderInput'>;key:string}[]=[];let methodReads=0,offerReads=0;
+ await routes(page,async(route,path)=>{
+  if(path.endsWith('/subscription/renewal')){offerReads++;await route.fulfill({json:calls.length?{...plan,revision:4,prices:plan.prices.map(price=>({...price,amount_minor:'99999'}))}:plan});return true;}
+  if(path.endsWith('/payment-methods')){methodReads++;await route.fulfill(calls.length&&nextMethods==='unavailable'?{status:503,json:{error:{code:'SERVICE_UNAVAILABLE'}}}:{json:{methods:calls.length?[{id:'cryptomus',currency:'USD'}]:[{id:'yoomoney',currency:'RUB'}]}});return true;}
+  if(path.endsWith('/orders')&&route.request().method()==='POST'){calls.push({body:route.request().postDataJSON(),key:route.request().headers()['idempotency-key']});if(calls.length===1)await route.abort();else await route.fulfill({status:201,json:order});return true;}
+  return false;
+ });
+ await page.goto('/cabinet/renew?lang=en');await page.getByRole('button',{name:'Renew subscription',exact:true}).click();await page.getByRole('button',{name:'Confirm renewal',exact:true}).click();await expect(page.getByRole('alert')).toBeVisible();
+ await page.getByRole('button',{name:'RU',exact:true}).click();await expect(page.getByRole('button',{name:'Подтвердить продление',exact:true})).toBeEnabled();
+ await expect(page.getByRole('combobox',{name:'Валюта',exact:true})).toHaveValue('RUB');await expect(page.getByText('Цена: 123,45 RUB',{exact:true})).toBeVisible();
+ await expect(page.getByRole('radio',{name:'Банковская карта',exact:true})).toBeChecked();await expect(page.getByRole('button',{name:'Повторить',exact:true})).toHaveCount(0);
+ expect(methodReads).toBe(1);expect(offerReads).toBe(1);await page.getByRole('button',{name:'Подтвердить продление',exact:true}).click();await expect(page).toHaveURL(/\/orders\//);
+ expect(calls).toHaveLength(2);expect(calls[1]).toEqual(calls[0]);expect(calls[1].body).toEqual({action:'renew',plan_id:planId,revision:3,period_days:30,payment_method:'yoomoney',payment_type:'AC'});
+});
+
 for(const lang of ['ru','en'] as const)test('mobile cabinet renewal link and keyboard controls '+lang,async({page})=>{
  await routes(page,async(route,path)=>{if(path.endsWith('/me')){await route.fulfill({json:account});return true;}if(path.endsWith('/subscription')){await route.fulfill({json:subscription});return true;}if(path.endsWith('/trial-requests/current')){await route.fulfill({json:{request:null}});return true;}return false;});
  const title=lang==='ru'?'Продлить подписку':'Renew subscription';await page.setViewportSize({width:375,height:812});await page.goto('/cabinet'+(lang==='en'?'?lang=en':''));

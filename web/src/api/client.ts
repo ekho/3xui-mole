@@ -86,7 +86,8 @@ export type PasswordChangeInput=components['schemas']['PasswordChangeInput'];
 export type CurrentPasswordInput=components['schemas']['CurrentPasswordInput'];
 export type SessionContext=components['schemas']['SessionContext'];
 export type AccountSecurity=components['schemas']['AccountSecurity'];
-export const clearSession=()=>{csrf=undefined;miniToken=undefined;miniEpoch++;};
+export const sessionCleared='3xui-mole:session-cleared';
+export const clearSession=()=>{csrf=undefined;miniToken=undefined;miniEpoch++;window.dispatchEvent(new Event(sessionCleared));};
 export async function getSessionContext(signal?:AbortSignal){const out=await request<SessionContext>('auth/session','GET',undefined,signal);csrf=out.csrf_token;return out;}
 export const getAccountSecurity=(signal?:AbortSignal)=>request<AccountSecurity>('me/security','GET',undefined,signal);
 export const changePassword=(input:PasswordChangeInput)=>request<void>('me/password-change','POST',input,undefined,true);

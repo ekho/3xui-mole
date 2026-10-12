@@ -1,3 +1,4 @@
+import {Link} from 'react-router-dom';
 import {useEffect,useRef,useState,type FormEvent} from 'react';
 import * as api from './api/client';
 import {text,link,loginRedirect,errorText,type Lang} from './i18n';
@@ -61,13 +62,13 @@ export function ClientReminders({lang,accountID,refreshKey}:{lang:Lang;accountID
   {current&&state.message?<p role="status" aria-live="polite">{m[state.message]}</p>:null}
   {value?<><form onSubmit={save} aria-busy={state.busy}>
    <label className="check"><input type="checkbox" checked={state.enabled} disabled={state.busy||!value.email_available&&!state.enabled} onChange={e=>setState(s=>({...s,enabled:e.target.checked,message:''}))} aria-describedby="reminder-email-help"/>{m.email}</label>
-   <p className="help" id="reminder-email-help">{m.help}{!value.email_available?<> {m.unavailable} <a href={link('/cabinet/identity',lang)}>{m.identity}</a></>:null}</p>
+   <p className="help" id="reminder-email-help">{m.help}{!value.email_available?<> {m.unavailable} <Link to={link('/cabinet/identity',lang)}>{m.identity}</Link></>:null}</p>
    <button disabled={state.busy||state.enabled===value.email_enabled}>{state.busy?t.sending:m.save}</button>
   </form>{!value.reminders.length?<p role="status">{m.empty}</p>:<ul className="support-list">{value.reminders.map(r=><li className="notice" key={r.id}>
    <h3>{m[r.kind]}</h3>
    {r.kind==='expiry'?<p>{m.expiryHelp} {m.expires}: {date(r.expires_at!)}</p>:r.kind==='traffic'?<p>{m.trafficHelp}: {r.threshold}%. {m.used}: {r.traffic_used_bytes} / {r.traffic_limit_bytes} {m.bytes}.</p>:<p>{m.starsHelp} {m.paid}: {date(r.paid_until!)}</p>}
    <p className="help">{m.observed}: {date(r.observed_at)}</p>
-   <div className="purchase-actions"><a href={link(r.route==='renew'?'/cabinet/renew':'/cabinet',lang)}>{r.route==='renew'?m.renew:r.kind==='stars_lapsed'?m.stars:m.open}</a><button type="button" disabled={state.busy} aria-label={m.close+': '+m[r.kind]} onClick={()=>void dismiss(r.id)}>{m.close}</button></div>
+   <div className="purchase-actions"><Link to={link(r.route==='renew'?'/cabinet/renew':'/cabinet',lang)}>{r.route==='renew'?m.renew:r.kind==='stars_lapsed'?m.stars:m.open}</Link><button type="button" disabled={state.busy} aria-label={m.close+': '+m[r.kind]} onClick={()=>void dismiss(r.id)}>{m.close}</button></div>
   </li>)}</ul>}</>:null}
  </section>;
 }

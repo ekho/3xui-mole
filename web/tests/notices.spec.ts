@@ -1,4 +1,5 @@
 import {test,expect,type Page,type Route} from '@playwright/test';
+import {finishQueryRead} from './query-timers';
 import type {components} from '../src/api/schema.gen';
 type Model<K extends keyof components['schemas']>=components['schemas'][K];
 const id='20000000-0000-4000-8000-000000000001',noticeID='30000000-0000-4000-8000-000000000001',previewID='40000000-0000-4000-8000-000000000001';
@@ -181,7 +182,7 @@ test('account change aborts an earlier message preference save',async({page})=>{
   if(path==='/api/v1/notices'){await r.fulfill({json:current.account.account_id===id?inbox:{...inbox,total:0,notices:[]}});return true;}
   if(path==='/api/v1/notices/preferences'){saves++;await hold;await r.fulfill({json:{...inbox,email_enabled:true}});return true;}return false;
  }});
- await page.goto('/cabinet?lang=en');const region=page.getByRole('region',{name:'Messages',exact:true});await region.getByRole('checkbox').check();await region.getByRole('button',{name:'Save message settings'}).click();await expect.poll(()=>saves).toBe(1);current={...profile,account:{...profile.account,account_id:'60000000-0000-4000-8000-000000000001',email:'new-owner@example.test'}};await page.clock.runFor(5000);await expect(page.getByRole('heading',{name:'new-owner@example.test'})).toBeVisible();await expect(region.getByText('No messages.')).toBeVisible();release();await expect(region.getByRole('checkbox')).not.toBeChecked();await expect(region.getByRole('listitem')).toHaveCount(0);
+ const initial=page.waitForResponse(r=>r.url().endsWith('/subscription'));await page.goto('/cabinet?lang=en');await finishQueryRead(page,initial);const region=page.getByRole('region',{name:'Messages',exact:true});await region.getByRole('checkbox').check();await region.getByRole('button',{name:'Save message settings'}).click();await expect.poll(()=>saves).toBe(1);current={...profile,account:{...profile.account,account_id:'60000000-0000-4000-8000-000000000001',email:'new-owner@example.test'}};const response=page.waitForResponse(r=>r.url().endsWith('/subscription'));await page.clock.runFor(5000);await finishQueryRead(page,response);await expect(page.getByRole('heading',{name:'new-owner@example.test'})).toBeVisible();await expect(region.getByText('No messages.')).toBeVisible();release();await expect(region.getByRole('checkbox')).not.toBeChecked();await expect(region.getByRole('listitem')).toHaveCount(0);
 });
 
 test('logout clears the inbox while a prior save and logout reply are pending',async({page})=>{

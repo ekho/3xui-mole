@@ -1,4 +1,4 @@
-import {useEffect,useRef,useState,type FormEvent} from 'react';
+import {useEffectEvent,useEffect,useRef,useState,type FormEvent} from 'react';
 import * as api from './api/client';
 import {NoticeBody,noticeNodes,noticeID,noticeInteger,invalidNotice} from './NoticeBody';
 import {text,errorText,type Lang} from './i18n';
@@ -50,7 +50,8 @@ export function AdminNotices({lang,onForbidden}:{lang:Lang;onForbidden:()=>void}
    setClients(out.clients);setSearchPage(page);setSearchTotal(out.total);setSearched(true);
   }catch(failure){failed(failure,c);}finally{if(!c.signal.aborted)setSearchBusy(false);}
  }
- useEffect(()=>{if(noticeID(initial))void find();void refreshLast();return()=>{request.current?.abort();lastRequest.current?.abort();searchRequest.current?.abort();};},[]);
+ const initialize=useEffectEvent(()=>{if(noticeID(initial))void find();void refreshLast();});
+ useEffect(()=>{initialize();return()=>{request.current?.abort();lastRequest.current?.abort();searchRequest.current?.abort();};},[]);
  useEffect(()=>{if(error)errorRef.current?.focus();},[error]);
  useEffect(()=>{if(!preview)return;previewRef.current?.focus();const timer=setTimeout(()=>render(n=>n+1),Math.min(2147483647,Math.max(0,Date.parse(preview.expires_at)-Date.now())));return()=>clearTimeout(timer);},[preview]);
  async function prepare(event:FormEvent){

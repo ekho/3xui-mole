@@ -1,4 +1,4 @@
-import {useEffect,useRef,useState} from 'react';
+import {useEffectEvent,useEffect,useRef,useState} from 'react';
 import * as api from './api/client';
 import {text,errorText,type Lang} from './i18n';
 
@@ -15,8 +15,10 @@ export function AccessOperations({clientId,subscription,lang,onForbidden,onChang
  useEffect(()=>{setResetCost(false);setReconcileConfirm(false);reconcileAttempt.current=undefined;},[operation]);
  useEffect(()=>()=>{writeRequest.current?.abort();operationRequest.current?.abort();},[clientId]);
  useEffect(()=>{if(error)errorRef.current?.focus();},[error]);
- useEffect(()=>{if(!summaryId)return;const controller=new AbortController();operationRequest.current=controller;setStatusBusy(true);void api.getAccessOperation(clientId,summaryId,controller.signal).then(result=>{if(!controller.signal.aborted&&operationRequest.current===controller){setOperation(result);setStatusError('');if(result.status==='applied')onChange();}}).catch(failure=>{if(controller.signal.aborted)return;if(isForbidden(failure))onForbidden();else setStatusError(errorText(failure,lang));}).finally(()=>{if(operationRequest.current===controller){operationRequest.current=undefined;setStatusBusy(false);}});return()=>controller.abort();},[clientId,summaryId]);
- useEffect(()=>{if(kind!=='assign_plan')return;const controller=new AbortController();setPlanLoading(true);void api.getOperatorCatalogue(page,controller.signal).then(result=>{if(!controller.signal.aborted){setPlans(result);setPlanError('');}}).catch(failure=>{if(controller.signal.aborted)return;if(isForbidden(failure))onForbidden();else setPlanError(errorText(failure,lang));}).finally(()=>{if(!controller.signal.aborted)setPlanLoading(false);});return()=>controller.abort();},[clientId,kind,page,planReload,lang]);
+ const operationLoaded=useEffectEvent((result:api.AccessOperation)=>{setOperation(result);setStatusError('');if(result.status==='applied')onChange();});
+ const operationFailed=useEffectEvent((failure:unknown)=>{if(isForbidden(failure))onForbidden();else setStatusError(errorText(failure,lang));});
+ useEffect(()=>{if(!summaryId)return;const controller=new AbortController();operationRequest.current=controller;setStatusBusy(true);void api.getAccessOperation(clientId,summaryId,controller.signal).then(result=>{if(!controller.signal.aborted&&operationRequest.current===controller){operationLoaded(result);}}).catch(failure=>{if(controller.signal.aborted)return;operationFailed(failure);}).finally(()=>{if(operationRequest.current===controller){operationRequest.current=undefined;setStatusBusy(false);}});return()=>controller.abort();},[clientId,summaryId]);
+ useEffect(()=>{if(kind!=='assign_plan')return;const controller=new AbortController();setPlanLoading(true);void api.getOperatorCatalogue(page,controller.signal).then(result=>{if(!controller.signal.aborted){setPlans(result);setPlanError('');}}).catch(failure=>{if(controller.signal.aborted)return;if(isForbidden(failure))onForbidden();else setPlanError(errorText(failure,lang));}).finally(()=>{if(!controller.signal.aborted)setPlanLoading(false);});return()=>controller.abort();},[clientId,kind,page,planReload,lang,onForbidden]);
  function changeKind(next:Kind){setKind(next);setConfirming(false);setError('');createAttempt.current=undefined;if(next!=='assign_plan'){setSelectedPlan(undefined);setPeriod(0);}else setPage(1);}
  function changeReason(value:string){setReason(value);setError('');setConfirming(false);createAttempt.current=undefined;}
  function changeDays(value:string){setDays(value);setError('');setConfirming(false);createAttempt.current=undefined;}
