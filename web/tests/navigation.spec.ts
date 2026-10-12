@@ -44,12 +44,14 @@ test('customer links and browser history preserve the document and language', as
   await markDocument(page);
   await page.locator('a[href="/catalogue?lang=en"]').first().click();
   await expect(page.getByRole('heading', {name:'Plans',exact:true})).toBeVisible();
+  await expect(page.getByRole('heading', {name:'Plans',exact:true})).toBeFocused();
   await expectSameDocument(page);
   await page.goBack();
   await expect(page.getByRole('button', {name:'Request trial'})).toBeVisible();
   await expectSameDocument(page);
   await page.goForward();
   await expect(page.getByRole('heading', {name:'Plans',exact:true})).toBeVisible();
+  await expect(page.getByRole('heading', {name:'Plans',exact:true})).toBeFocused();
   await expectSameDocument(page);
 });
 
