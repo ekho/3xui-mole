@@ -19,7 +19,7 @@ export function AdminStatistics({lang,campaignId,onForbidden}:{lang:Lang;campaig
    if(failure instanceof api.ApiError&&(failure.status===401||failure.status===403))onForbidden();else setResult({scope,lang,error:failure});
   }).finally(()=>{if(!controller.signal.aborted)setBusy(false);});
   return()=>controller.abort();
- },[scope,lang,reload]);
+ },[scope,lang,reload,campaignId,onForbidden]);
  useEffect(()=>{if(error!==undefined)errorRef.current?.focus();},[error]);
  const count=(value:number|null)=>value===null?t.unknown:new Intl.NumberFormat(lang).format(value);
  const percentage=(value:string|null)=>value===null?t.unknown:(lang==='ru'?value.replace('.',','):value)+'%';

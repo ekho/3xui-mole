@@ -90,7 +90,7 @@ for(const lang of ['ru','en'])test('Mini App reminder transport and renewal rout
 });
 test('Mini App reminder auth loss ends the session once',async({page})=>{
  const f=await fixture(page,{extra:async(r,path)=>{if(path!=='/api/v1/reminders')return false;await r.fulfill({status:401,json:{error:{code:'INVALID_CREDENTIALS',message:'private reminder body',request_id:''}}});return true;}});
- await page.goto('/mini-app?lang=en');await expect(page.getByRole('alert')).toContainText('Session ended');await expect(page.getByRole('region',{name:'Subscription reminders'})).toHaveCount(0);expect(f.sessions()).toBe(1);await expect(page.getByText('private reminder body')).toHaveCount(0);
+ await page.goto('/mini-app?lang=en');await expect(page.getByRole('alert').filter({hasText:'Session ended'})).toBeVisible();await expect(page.getByRole('alert')).toHaveCount(1);await expect(page.getByRole('region',{name:'Subscription reminders'})).toHaveCount(0);expect(f.sessions()).toBe(1);await expect(page.getByText('private reminder body')).toHaveCount(0);
 });
 
 test('Mini App signed login preserves independent cookie and memory-only transport',async({page})=>{
@@ -232,4 +232,18 @@ for(const mode of ['missing','throws'] as const)test('Mini App other payments '+
  },mode);
  const action=page.getByRole('button',{name:'Other payment methods',exact:true});await action.focus();await page.keyboard.press('Enter');
  expect(await page.evaluate(()=>(window as any).__sdk.fallback)).toEqual([['http://127.0.0.1:'+(process.env.E2E_PORT||'4173')+'/login?lang=en','_blank','noopener,noreferrer']]);
+});
+
+
+test('Mini App language selection preserves signed launch data while SDK loads',async({page})=>{
+ const f=await fixture(page,{readLaunch:true});let release!:()=>void,started=false;
+ const hold=new Promise<void>(resolve=>{release=resolve;});
+ await page.route('https://telegram.org/js/telegram-web-app.js',async route=>{started=true;await hold;await route.fallback();});
+ try{
+  await page.goto('/mini-app#tgWebAppData='+encodeURIComponent(launch));await expect.poll(()=>started).toBe(true);
+  await page.getByRole('button',{name:'EN',exact:true}).click();
+  expect(new URL(page.url()).hash).toContain('tgWebAppData');release();
+  await expect(page.getByRole('heading',{name:'Mini client'})).toBeVisible();expect(f.sessions()).toBe(1);
+  expect(await storage(page)).not.toMatch(/owned-signed|mini_|csrf_token|__telegram__initParams/);
+ }finally{release();}
 });

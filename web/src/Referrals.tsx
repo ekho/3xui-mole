@@ -1,3 +1,4 @@
+import {Link} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
 import {useEffect,useId,useRef,useState} from 'react';
 import * as api from './api/client';
@@ -19,7 +20,7 @@ export function Referrals({lang}:{lang:Lang}){
  const empty=value&&value.unclassified_records===0&&value.levels.every(level=>level.invited===0&&level.granted_rewards===0&&level.pending_rewards===0&&level.money_records===0&&level.pending_money_records===0);
  return <section className="card" aria-labelledby={id+'-title'} aria-busy={loading}>
   <h1 id={id+'-title'} ref={heading} tabIndex={-1}>{t.referralsTitle}</h1>
-  <p><a href={link('/cabinet',lang)}>{t.referralsBack}</a></p>
+  <p><Link to={link('/cabinet',lang)}>{t.referralsBack}</Link></p>
   {loading?<p role="status">{t.loading}</p>:null}
   {error?<div className="error" role="alert"><p>{error}</p><button disabled={loading} onClick={()=>{focusAfterRetry.current=true;setRevision(value=>value+1);}}>{t.retry}</button></div>:null}
   {value&&!loading?<>

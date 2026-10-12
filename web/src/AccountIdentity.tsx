@@ -1,4 +1,5 @@
-import {useEffect,useRef,useState,type FormEvent} from 'react';
+import {Link} from 'react-router-dom';
+import {useEffectEvent,useEffect,useRef,useState,type FormEvent} from 'react';
 import * as api from './api/client';
 import {config} from './config';
 import {text,link,errorText,loginRedirect,type Lang} from './i18n';
@@ -12,14 +13,15 @@ export function AccountIdentity({lang}:{lang:Lang}){
  const password=useRef<HTMLInputElement>(null),codeInput=useRef<HTMLInputElement>(null),proofInput=useRef<HTMLInputElement>(null);
  function clearSecrets(){setCurrent('');setNext('');setRepeat('');setCode('');setProof(undefined);setTerms(false);setPrivacy(false);}
  function message(reason:unknown){if(reason instanceof api.ApiError&&reason.code==='IDENTITY_CONFLICT')return t.identityConflict;if(reason instanceof api.ApiError&&reason.code==='INVALID_VERIFICATION')return t.identityExpired;return errorText(reason,lang);}
+ const readMessage=useEffectEvent(message);
  useEffect(()=>{
   const request=new AbortController();controller.current=request;setError('');
-  void(async()=>{try{await api.getSessionContext(request.signal);const out=await api.getIdentity(request.signal);if(!request.signal.aborted){setInfo(out);if(out.pending_initial_email)setEmail(out.pending_initial_email.email);}}catch(reason){if(!request.signal.aborted)setError(message(reason));}})();
+  void(async()=>{try{await api.getSessionContext(request.signal);const out=await api.getIdentity(request.signal);if(!request.signal.aborted){setInfo(out);if(out.pending_initial_email)setEmail(out.pending_initial_email.email);}}catch(reason){if(!request.signal.aborted)setError(readMessage(reason));}})();
   const hide=()=>{request.abort();action.current?.abort();clearSecrets();setInfo(undefined);setBusy(false);};window.addEventListener('pagehide',hide);
   return()=>{request.abort();action.current?.abort();window.removeEventListener('pagehide',hide);};
  },[revision]);
  useEffect(()=>{if(!cooldown)return;const timer=setTimeout(()=>setCooldown(0),cooldown*1000);return()=>clearTimeout(timer);},[cooldown]);
- useEffect(()=>{if(!proof)return;const timer=setTimeout(()=>{setProof(undefined);setNotice(t.identityExpired);},Math.max(0,Date.parse(proof.expires_at)-Date.now()));return()=>clearTimeout(timer);},[proof]);
+ useEffect(()=>{if(!proof)return;const timer=setTimeout(()=>{setProof(undefined);setNotice(t.identityExpired);},Math.max(0,Date.parse(proof.expires_at)-Date.now()));return()=>clearTimeout(timer);},[proof,t.identityExpired]);
  function begin(){action.current?.abort();const request=new AbortController();action.current=request;setBusy(true);setError('');setNotice('');return request;}
  function active(request:AbortController){return action.current===request&&!request.signal.aborted;}
  async function sendEmail(event:FormEvent){event.preventDefault();if(busy||cooldown||!email.trim())return;const request=begin();try{const accepted=await api.requestInitialEmail({email},request.signal);if(!active(request))return;setCooldown(accepted.resend_after);setInfo(old=>old?{...old,pending_initial_email:{challenge_id:accepted.challenge_id,email,expires_at:new Date(Date.now()+600000).toISOString()}}:old);setNotice(t.mailSent);setCode('');}catch(reason){if(active(request))setError(message(reason));}finally{if(active(request))setBusy(false);}}
@@ -35,6 +37,6 @@ export function AccountIdentity({lang}:{lang:Lang}){
    {!mini&&info.independent_login?<>{!info.telegram_linked||info.can_unlink?<form aria-busy={busy} onSubmit={event=>void telegram(event,info.telegram_linked)}><label htmlFor="identity-current">{t.currentPassword}<input ref={password} id="identity-current" type="password" autoComplete="current-password" required minLength={15} maxLength={128} value={current} onChange={event=>setCurrent(event.target.value)} disabled={busy}/></label><button className="primary" disabled={busy}>{info.telegram_linked?t.identityUnlink:t.identityGetLink}</button></form>:<p>{info.unlink_blocked_reason==='INDEPENDENT_LOGIN_REQUIRED'?t.identityAddFirst:t.identityUnlinkUnavailable}</p>}
     {proof?<div><p>{t.identityLinkHelp}</p><label htmlFor="identity-link-code">{t.identityLinkCode}<input ref={proofInput} id="identity-link-code" readOnly autoComplete="off" value={proof.link_token}/></label><p><time dateTime={proof.expires_at}>{new Date(proof.expires_at).toLocaleString(lang==='ru'?'ru-RU':'en-US')}</time></p><button onClick={()=>void copy()}>{t.identityCopyLink}</button></div>:null}</>:null}
   </>}
-  <p><a href={link('/cabinet',lang)}>{t.identityBack}</a></p><a href={config.supportURL}>{t.support}</a>
+  <p><Link to={link('/cabinet',lang)}>{t.identityBack}</Link></p><a href={config.supportURL}>{t.support}</a>
  </section>;
 }

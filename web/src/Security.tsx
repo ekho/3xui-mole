@@ -1,16 +1,19 @@
-import {useEffect,useRef,useState,type FormEvent} from 'react';
+import {Link} from 'react-router-dom';
+import {useEffectEvent,useEffect,useRef,useState,type FormEvent} from 'react';
 import * as api from './api/client';
 import {config} from './config';
 import {text,link,errorText,type Lang} from './i18n';
 export function Security({lang}:{lang:Lang}){
  const t=text(lang),input=useRef<HTMLInputElement>(null),poll=useRef<AbortController>(null);
  const[newEmail,setNewEmail]=useState('');const[info,setInfo]=useState<api.AccountSecurity>();const[current,setCurrent]=useState('');const[next,setNext]=useState('');const[repeat,setRepeat]=useState('');const[busy,setBusy]=useState(false);const[error,setError]=useState('');const[saved,setSaved]=useState(false);const[uncertain,setUncertain]=useState(false);const[cooldown,setCooldown]=useState(0);
- useEffect(()=>{const controller=new AbortController();void(async()=>{try{await api.getAccount(controller.signal);const out=await api.getAccountSecurity(controller.signal);if(!controller.signal.aborted){setInfo(out);if(out.pending_email_change)setNewEmail(out.pending_email_change.new_email);}}catch(e){if(!controller.signal.aborted){setError(errorText(e,lang));if(e instanceof api.ApiError&&e.status===401)setUncertain(true);}}})();return()=>controller.abort();},[]);
+ const readError=useEffectEvent((reason:unknown)=>setError(errorText(reason,lang)));
+ const hasPendingEmail=!!info?.pending_email_change;
+ useEffect(()=>{const controller=new AbortController();void(async()=>{try{await api.getAccount(controller.signal);const out=await api.getAccountSecurity(controller.signal);if(!controller.signal.aborted){setInfo(out);if(out.pending_email_change)setNewEmail(out.pending_email_change.new_email);}}catch(e){if(!controller.signal.aborted){readError(e);if(e instanceof api.ApiError&&e.status===401)setUncertain(true);}}})();return()=>controller.abort();},[]);
  useEffect(()=>{if(cooldown){const timer=setTimeout(()=>setCooldown(0),cooldown*1000);return()=>clearTimeout(timer);}},[cooldown]);
- useEffect(()=>{if(!info?.pending_email_change||busy)return;const controller=new AbortController();poll.current=controller;let timer:ReturnType<typeof setTimeout>;
-  async function refresh(){try{const out=await api.getAccountSecurity(controller.signal);if(controller.signal.aborted)return;setInfo(out);if(!out.pending_email_change)return;}catch(e){if(controller.signal.aborted)return;setError(errorText(e,lang));if(e instanceof api.ApiError&&(e.status===401||e.status===403)){if(e.status===401){api.clearSession();setInfo(undefined);setNewEmail('');setCurrent('');setNext('');setRepeat('');setUncertain(true);}return;}}timer=setTimeout(refresh,5000);}
+ useEffect(()=>{if(!hasPendingEmail||busy)return;const controller=new AbortController();poll.current=controller;let timer:ReturnType<typeof setTimeout>;
+  async function refresh(){try{const out=await api.getAccountSecurity(controller.signal);if(controller.signal.aborted)return;setInfo(out);if(!out.pending_email_change)return;}catch(e){if(controller.signal.aborted)return;readError(e);if(e instanceof api.ApiError&&(e.status===401||e.status===403)){if(e.status===401){api.clearSession();setInfo(undefined);setNewEmail('');setCurrent('');setNext('');setRepeat('');setUncertain(true);}return;}}timer=setTimeout(refresh,5000);}
   timer=setTimeout(refresh,5000);return()=>{controller.abort();if(poll.current===controller)poll.current=null;clearTimeout(timer);};
- },[!!info?.pending_email_change,busy]);
+ },[hasPendingEmail,busy]);
  async function emailMutation(cancel:boolean){
   if(!info||busy||uncertain||(!cancel&&cooldown>0))return;setError('');setSaved(false);
   if(!cancel&&(!current||!newEmail.trim())){setError(t.required);input.current?.focus();return;}
@@ -41,6 +44,6 @@ export function Security({lang}:{lang:Lang}){
   </form>
   {info?.pending_email_change?<div className="key-panel" aria-live="polite"><p>{info.pending_email_change.new_email}</p><p>{t.expires}: {new Date(info.pending_email_change.expires_at).toLocaleString(lang==='ru'?'ru-RU':'en-US')}</p><p>{info.pending_email_change.current_email_confirmed?t.currentEmailConfirmed:t.currentEmailWaiting}</p><p>{info.pending_email_change.new_email_confirmed?t.newEmailConfirmed:t.newEmailWaiting}</p><p className="help">{t.emailReplaceWarning}</p><button type="button" disabled={!info||busy||uncertain} onClick={()=>void emailMutation(true)}>{t.cancelEmail}</button></div>:null}
   <form onSubmit={e=>{e.preventDefault();void emailMutation(false);}} noValidate aria-busy={busy}><label htmlFor="new-email">{t.newEmail}<input id="new-email" type="email" autoComplete="email" value={newEmail} onChange={e=>setNewEmail(e.target.value)} required/></label><button disabled={disabled}>{info?.pending_email_change?t.resendBoth:t.changeEmail}</button><p className="help">{t.oldMailboxHelp}</p><a href={config.supportURL}>{t.support}</a></form>
-  <nav className="auth-links"><a href={link('/cabinet',lang)}>{t.cabinet}</a></nav>
+  <nav className="auth-links"><Link to={link('/cabinet',lang)}>{t.cabinet}</Link></nav>
  </section>;
 }

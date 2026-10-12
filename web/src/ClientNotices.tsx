@@ -1,3 +1,4 @@
+import {Link} from 'react-router-dom';
 import {useEffect,useRef,useState,type FormEvent} from 'react';
 import * as api from './api/client';
 import {NoticeBody,noticeNodes,noticeID,noticeInteger,invalidNotice} from './NoticeBody';
@@ -53,7 +54,7 @@ export function ClientNotices({lang,accountID,refreshKey}:{lang:Lang;accountID:s
   {current&&state.message?<p role="status" aria-live="polite">{m[state.message]}</p>:null}
   {value?<><form onSubmit={save} aria-busy={state.busy}>
    <label className="check"><input type="checkbox" checked={state.enabled} disabled={state.busy||!value.email_available&&!state.enabled} onChange={e=>setState(s=>({...s,enabled:e.target.checked,message:''}))} aria-describedby="notice-email-help"/>{m.email}</label>
-   <p className="help" id="notice-email-help">{m.help}{!value.email_available?<> {m.unavailable} <a href={link('/cabinet/identity',lang)}>{m.identity}</a></>:null}</p>
+   <p className="help" id="notice-email-help">{m.help}{!value.email_available?<> {m.unavailable} <Link to={link('/cabinet/identity',lang)}>{m.identity}</Link></>:null}</p>
    <button disabled={state.busy||state.enabled===value.email_enabled}>{state.busy?t.sending:m.save}</button>
   </form>{!value.notices.length?<p role="status">{m.empty}</p>:<ul className="support-list">{value.notices.map(n=><li className="notice" key={n.id}>
    <p className="help"><time dateTime={n.created_at}>{new Date(n.created_at).toLocaleString(lang==='ru'?'ru-RU':'en-US')}</time></p><NoticeBody html={n.html} lang={lang}/>
