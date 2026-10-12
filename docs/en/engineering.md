@@ -414,6 +414,11 @@ Connected Go and browser checks need dedicated PostgreSQL/Redis and other test
 fixtures; the existing `deploy/acceptance/` scripts create synthetic resources.
 Do not point them at a live installation.
 
+Customer screens use React Router: internal cabinet links and order creation
+change routes without a document reload. Language is stored in the `lang=en`
+URL parameter; Russian is the default. Authentication, verification and logout
+keep document navigation so session and one-time proof state are reset.
+
 ## CI and releases
 
 Each push to `main`, including a merged pull request, runs Platform checks,

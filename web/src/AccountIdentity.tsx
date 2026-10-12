@@ -1,3 +1,4 @@
+import {Link} from 'react-router-dom';
 import {useEffectEvent,useEffect,useRef,useState,type FormEvent} from 'react';
 import * as api from './api/client';
 import {config} from './config';
@@ -36,6 +37,6 @@ export function AccountIdentity({lang}:{lang:Lang}){
    {!mini&&info.independent_login?<>{!info.telegram_linked||info.can_unlink?<form aria-busy={busy} onSubmit={event=>void telegram(event,info.telegram_linked)}><label htmlFor="identity-current">{t.currentPassword}<input ref={password} id="identity-current" type="password" autoComplete="current-password" required minLength={15} maxLength={128} value={current} onChange={event=>setCurrent(event.target.value)} disabled={busy}/></label><button className="primary" disabled={busy}>{info.telegram_linked?t.identityUnlink:t.identityGetLink}</button></form>:<p>{info.unlink_blocked_reason==='INDEPENDENT_LOGIN_REQUIRED'?t.identityAddFirst:t.identityUnlinkUnavailable}</p>}
     {proof?<div><p>{t.identityLinkHelp}</p><label htmlFor="identity-link-code">{t.identityLinkCode}<input ref={proofInput} id="identity-link-code" readOnly autoComplete="off" value={proof.link_token}/></label><p><time dateTime={proof.expires_at}>{new Date(proof.expires_at).toLocaleString(lang==='ru'?'ru-RU':'en-US')}</time></p><button onClick={()=>void copy()}>{t.identityCopyLink}</button></div>:null}</>:null}
   </>}
-  <p><a href={link('/cabinet',lang)}>{t.identityBack}</a></p><a href={config.supportURL}>{t.support}</a>
+  <p><Link to={link('/cabinet',lang)}>{t.identityBack}</Link></p><a href={config.supportURL}>{t.support}</a>
  </section>;
 }
