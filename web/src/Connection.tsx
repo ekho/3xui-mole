@@ -19,9 +19,9 @@ export function Connection({lang,subscriptionURL,busy,onReveal,onHide}:{lang:Lan
  const t=text(lang);const[platform,setPlatform]=useState<Platform>(selected??'ios');const[region,setRegion]=useState<keyof typeof ios>('global');const[copyStatus,setCopyStatus]=useState('');const[showQR,setShowQR]=useState(false);const[qrReady,setQrReady]=useState(false);const[qrError,setQrError]=useState('');const input=useRef<HTMLInputElement>(null);const canvas=useRef<HTMLCanvasElement>(null);
  useEffect(()=>{if(selected)setPlatform(selected);},[selected]);
  useEffect(()=>{setCopyStatus('');setShowQR(false);setQrReady(false);setQrError('');if(canvas.current){canvas.current.width=0;canvas.current.height=0;}},[key]);
- useEffect(()=>{if(!showQR||!key)return;let current=true;const scratch=document.createElement('canvas');setQrReady(false);setQrError('');
+ useEffect(()=>{if(!showQR||!key)return;let current=true;const target=canvas.current;const scratch=document.createElement('canvas');setQrReady(false);setQrError('');
   void QRCode.toCanvas(scratch,key,{errorCorrectionLevel:'M',margin:2,width:220}).then(()=>{const target=canvas.current;if(!current||!target)return;target.width=scratch.width;target.height=scratch.height;const context=target.getContext('2d');if(!context)throw new Error('canvas');context.drawImage(scratch,0,0);setQrReady(true);}).catch(()=>{if(current)setQrError(t.qrUnavailable);});
-  return()=>{current=false;if(canvas.current){canvas.current.width=0;canvas.current.height=0;}};
+  return()=>{current=false;if(target){target.width=0;target.height=0;}};
  },[key,showQR,t.qrUnavailable]);
  async function copy(){try{await navigator.clipboard.writeText(key);setCopyStatus(t.copied);}catch{setCopyStatus(t.manualCopy);input.current?.focus();input.current?.select();}}
  const install=platform==='ios'?ios[region]:platform==='other'?catalog:downloads[platform];
