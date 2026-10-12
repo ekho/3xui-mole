@@ -62,7 +62,7 @@ for(const lang of ['ru','en'])test('Mini App reminder transport and renewal rout
 });
 test('Mini App reminder auth loss ends the session once',async({page})=>{
  const f=await fixture(page,{extra:async(r,path)=>{if(path!=='/api/v1/reminders')return false;await r.fulfill({status:401,json:{error:{code:'INVALID_CREDENTIALS',message:'private reminder body',request_id:''}}});return true;}});
- await page.goto('/mini-app?lang=en');await expect(page.getByRole('alert')).toContainText('Session ended');await expect(page.getByRole('region',{name:'Subscription reminders'})).toHaveCount(0);expect(f.sessions()).toBe(1);await expect(page.getByText('private reminder body')).toHaveCount(0);
+ await page.goto('/mini-app?lang=en');await expect(page.getByRole('alert').filter({hasText:'Session ended'})).toBeVisible();await expect(page.getByRole('alert')).toHaveCount(1);await expect(page.getByRole('region',{name:'Subscription reminders'})).toHaveCount(0);expect(f.sessions()).toBe(1);await expect(page.getByText('private reminder body')).toHaveCount(0);
 });
 
 test('Mini App signed login preserves independent cookie and memory-only transport',async({page})=>{
