@@ -12,7 +12,8 @@
     "dev": "vite --host 127.0.0.1",
     "lint": "eslint src --max-warnings 0",
     "format": "prettier --write src scripts tests *.ts *.js *.json",
-    "test:dev": "node scripts/check-dev.mjs"
+    "test:dev": "node scripts/check-dev.mjs",
+    "check:bundle": "node scripts/check-bundle.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "5.104.2",

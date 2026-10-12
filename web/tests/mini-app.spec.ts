@@ -1,4 +1,5 @@
 import {test,expect,type Page,type Route} from '@playwright/test';
+import {readFileSync} from 'node:fs';
 import type {components} from '../src/api/schema.gen';
 type Model<K extends keyof components['schemas']>=components['schemas'][K];
 const profile:Model<'MiniAppAccountResult'>={account:{account_id:'11111111-1111-4111-8111-111111111111',email:null,email_verified:false,display_name:'Mini client',telegram_id:444,telegram_linked:true,locale:'en'},csrf_token:'c'.repeat(43),capabilities:{trial_available:false}};
@@ -46,6 +47,15 @@ async function fixture(page:Page,options:Options={}){
  return {calls,sessions:()=>sessions,sdk:async(mode:Options['sdk'])=>{sdkMode=mode;await pendingSDK?.abort();pendingSDK=undefined;}};
 }
 const storage=async(page:Page)=>page.evaluate(()=>JSON.stringify(localStorage)+JSON.stringify(sessionStorage));
+
+test('a failed Mini App page returns to the cabinet without losing the signed session',async({page})=>{
+ const manifest=JSON.parse(readFileSync('dist/.vite/manifest.json','utf8'));let sdkLoads=0;page.on('request',request=>{if(request.url()==='https://telegram.org/js/telegram-web-app.js')sdkLoads++;});
+ await page.route('**/'+manifest['src/PaymentHistory.tsx'].file,route=>route.abort());
+ const f=await fixture(page,{readLaunch:true});await page.goto('/mini-app?lang=en#tgWebAppData='+encodeURIComponent(launch));await expect(page.getByRole('heading',{name:'Mini client',exact:true})).toBeVisible();
+ await page.getByRole('link',{name:'Payment history',exact:true}).click();await expect(page.getByRole('button',{name:'Back to account',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Back to account',exact:true}).click();await expect(page.getByRole('heading',{name:'Mini client',exact:true})).toBeVisible();
+ expect(f.sessions()).toBe(1);expect(sdkLoads).toBe(1);expect(f.calls.filter(call=>call.path.endsWith('/mini-app/account')).every(call=>call.authorization&&!call.cookie)).toBe(true);expect(new URL(page.url()).hash).toBe('');expect(await storage(page)).not.toMatch(/owned-signed|mini_|csrf_token|__telegram__initParams/);
+});
 
 test('Mini App returning to the cabinet reads fresh account data in the same session',async({page})=>{
  let reads=0;

@@ -176,8 +176,9 @@ for(const action of ['read','save'])test('old language reply cannot restore clie
 });
 
 test('account change aborts an earlier message preference save',async({page})=>{
- await page.clock.install({time:new Date('2030-01-01T10:00:00Z')});await page.clock.pauseAt(new Date('2030-01-01T10:00:01Z'));let current=profile,saves=0,release!:()=>void;const hold=new Promise<void>(r=>release=r);
+ await page.clock.install({time:new Date('2030-01-01T10:00:00Z')});let paused=false,current=profile,saves=0,release!:()=>void;const hold=new Promise<void>(r=>release=r);
  await fixture(page,{profile:()=>current,subscription:{...none,status:'provisioning'},extra:async(r,path)=>{
+  if(path==='/api/v1/me'&&!paused){paused=true;await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now())+1000));}
   if(path==='/api/v1/notices'){await r.fulfill({json:current.account.account_id===id?inbox:{...inbox,total:0,notices:[]}});return true;}
   if(path==='/api/v1/notices/preferences'){saves++;await hold;await r.fulfill({json:{...inbox,email_enabled:true}});return true;}return false;
  }});

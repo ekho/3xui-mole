@@ -26,6 +26,7 @@ function serveLocalConfig(server: ViteDevServer | PreviewServer) {
 
 export default defineConfig({
   build: {
+    manifest: true,
     sourcemap: false,
     rolldownOptions: {
       input: {

@@ -419,6 +419,13 @@ change routes without a document reload. Language is stored in the `lang=en`
 URL parameter; Russian is the default. Authentication, verification and logout
 keep document navigation so session and one-time proof state are reset.
 
+Customer pages are loaded on demand; QR generation is loaded only after the
+user requests a QR code. After building, run `npm --prefix web run check:bundle`
+to check route separation and the startup/login JavaScript size budgets. CI
+runs the same check. Failed browser page loads offer an explicit reload; in
+Mini App, another page remains available without ending the session. QR failures
+retain the subscription link for manual import.
+
 Customer cabinet, catalogue and referrals reads use TanStack Query with an
 instance per mounted customer session. Queries forward cancellation signals and
 keep data in memory only; inactive reads are discarded immediately. Session ending
