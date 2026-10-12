@@ -47,6 +47,34 @@ async function fixture(page:Page,options:Options={}){
 }
 const storage=async(page:Page)=>page.evaluate(()=>JSON.stringify(localStorage)+JSON.stringify(sessionStorage));
 
+test('Mini App returning to the cabinet reads fresh account data in the same session',async({page})=>{
+ let reads=0;
+ const f=await fixture(page,{extra:async(route,path)=>{
+  if(path!=='/api/v1/telegram/mini-app/account')return false;
+  reads++;await route.fulfill({json:{...profile,account:{...profile.account,display_name:reads===1?'Mini client':'Updated Mini client'}}});return true;
+ }});
+ await page.goto('/mini-app?lang=en');await expect(page.getByRole('heading',{name:'Mini client',exact:true})).toBeVisible();
+ await page.getByRole('link',{name:'Plans',exact:true}).click();await expect(page.getByRole('heading',{name:'Plans',exact:true})).toBeVisible();
+ await page.getByRole('link',{name:'Back to account',exact:true}).click();await expect(page.getByRole('heading',{name:'Updated Mini client',exact:true})).toBeVisible();
+ expect(reads).toBe(2);expect(f.sessions()).toBe(1);expect(await storage(page)).not.toMatch(/Updated Mini|owned-signed|mini_|csrf_token/);
+});
+
+test('Mini App ending cancels a pending cabinet read and discards its late response',async({page})=>{
+ let release!:()=>void;const held=new Promise<void>(resolve=>{release=resolve;});
+ let finished!:()=>void;const completed=new Promise<void>(resolve=>{finished=resolve;});
+ const f=await fixture(page,{extra:async(route,path)=>{
+  if(path!=='/api/v1/telegram/mini-app/account')return false;
+  await held;await route.fulfill({json:profile});finished();return true;
+ }});
+ const requested=page.waitForRequest(request=>request.url().endsWith('/telegram/mini-app/account'));
+ await page.goto('/mini-app?lang=en');await requested;
+ const cancelled=page.waitForEvent('requestfailed',request=>request.url().endsWith('/telegram/mini-app/account'));
+ await page.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pagehide')));await cancelled;
+ await expect(page.getByRole('alert')).toContainText('Session ended');release();await completed;
+ await expect(page.getByRole('heading',{name:'Mini client',exact:true})).toHaveCount(0);
+ expect(f.sessions()).toBe(1);expect(await storage(page)).not.toMatch(/owned-signed|mini_|csrf_token/);
+});
+
 for(const lang of ['ru','en'])test('Mini App reminder transport and renewal route '+lang,async({page})=>{
  const id='22222222-2222-4222-8222-222222222222';let closed=false;
  const reminder:Model<'Reminder'>={id,kind:'expiry',threshold:1,observed_at:'2030-01-01T10:00:00Z',expires_at:'2030-01-02T10:00:00Z',traffic_used_bytes:null,traffic_limit_bytes:null,paid_until:null,route:'renew'};

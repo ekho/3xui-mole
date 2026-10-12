@@ -1,3 +1,4 @@
+import {useQuery} from '@tanstack/react-query';
 import {useCallback,useEffect,useRef,useState,type FormEvent} from 'react';
 import * as api from './api/client';
 import {config} from './config';
@@ -18,20 +19,37 @@ function validKey(value:string){if(value.length>2048||value.trim()!==value||/[\u
 
 export function Cabinet({lang}:{lang:Lang}){
  const maintenance=useMaintenance();
- const t=text(lang);const[canLogout,setCanLogout]=useState(false);const[account,setAccount]=useState<api.AccountResult>();const[request,setRequest]=useState<api.TrialRequest|null>(null);const[sub,setSub]=useState<api.Subscription>();const[order,setOrder]=useState<api.PurchaseOrder|null>(null);const[error,setError]=useState('');const[busy,setBusy]=useState(false);const[keyBusy,setKeyBusy]=useState(false);const[comment,setComment]=useState('');const[attempt,setAttempt]=useState<{key:string;comment:string;mode:'request'|'activate'}>();const[key,setKey]=useState('');const[revision,setRevision]=useState(0);const controller=useRef<AbortController>(null);const keyRequest=useRef<AbortController|undefined>(undefined);const keyTimer=useRef<ReturnType<typeof setTimeout>|undefined>(undefined);
+ const t=text(lang);const[canLogout,setCanLogout]=useState(false);const[account,setAccount]=useState<api.AccountResult>();const[request,setRequest]=useState<api.TrialRequest|null>(null);const[sub,setSub]=useState<api.Subscription>();const[error,setError]=useState('');const[trialBusy,setTrialBusy]=useState(false);const[loggingOut,setLoggingOut]=useState(false);const[keyBusy,setKeyBusy]=useState(false);const[comment,setComment]=useState('');const[attempt,setAttempt]=useState<{key:string;comment:string;mode:'request'|'activate'}>();const[key,setKey]=useState('');const[revision,setRevision]=useState(0);const controller=useRef<AbortController>(null);const owner=useRef<string|undefined>(undefined);const keyRequest=useRef<AbortController|undefined>(undefined);const keyTimer=useRef<ReturnType<typeof setTimeout>|undefined>(undefined);
+ const busy=trialBusy||loggingOut;
  const clearKey=useCallback(()=>{keyRequest.current?.abort();keyRequest.current=undefined;if(keyTimer.current)clearTimeout(keyTimer.current);keyTimer.current=undefined;setKey('');setKeyBusy(false);},[]);
- useEffect(()=>{const c=new AbortController();controller.current=c;let timer:ReturnType<typeof setTimeout>|undefined;
-  async function refresh(){if(c.signal.aborted)return;try{const a=await api.getAccount(c.signal);const[r,s]=await Promise.all([api.getCurrentTrialRequest(c.signal),api.getSubscription(c.signal)]);if(c.signal.aborted)return;setAccount(a);setCanLogout(true);setRequest(r.request);setSub(s);setError('');if(!allowsKey(s))clearKey();if(['pending','provisioning'].includes(s.access_operation_status??'')||(!['active','expired','banned','disabled','exhausted'].includes(s.status)&&r.request?.status!=='rejected'&&(r.request||['provisioning','needs_review'].includes(s.status))))timer=setTimeout(refresh,5000);
-   }catch(e){if(c.signal.aborted)return;clearKey();if(e instanceof api.ApiError&&e.status===401){loginRedirect(lang);return;}setError(errorText(e,lang));if(e instanceof api.ApiError&&e.code==='ACCOUNT_RESTRICTED'){try{await api.getSessionContext(c.signal);if(!c.signal.aborted)setCanLogout(true);}catch{if(!c.signal.aborted)setCanLogout(false);}}if(!(e instanceof api.ApiError)||e.status===503||e.status===429)timer=setTimeout(refresh,5000);}}
-  void refresh();return()=>{c.abort();clearTimeout(timer);};
- },[revision,clearKey,lang]);
+ useEffect(()=>{const c=new AbortController();controller.current=c;setTrialBusy(false);return()=>{c.abort();controller.current?.abort();};},[revision,lang]);
+ const snapshot=useQuery({
+  queryKey:['customer','cabinet',lang,revision],
+  queryFn:async({signal})=>{const account=await api.getAccount(signal);const[trial,subscription]=await Promise.all([api.getCurrentTrialRequest(signal),api.getSubscription(signal)]);return {account,trial:trial.request,subscription};},
+  refetchInterval:query=>{
+   if(query.state.fetchStatus==='fetching')return false;
+   const error=query.state.error;
+   if(error)return !(error instanceof api.ApiError)||error.status===503||error.status===429?5000:false;
+   const value=query.state.data;if(!value)return false;
+   const s=value.subscription,r=value.trial;
+   return ['pending','provisioning'].includes(s.access_operation_status??'')||(!['active','expired','banned','disabled','exhausted'].includes(s.status)&&r?.status!=='rejected'&&(r||['provisioning','needs_review'].includes(s.status)))?5000:false;
+  },
+ });
+ useEffect(()=>{if(!snapshot.data)return;const{account,trial,subscription}=snapshot.data;if(owner.current&&owner.current!==account.account.account_id){clearKey();controller.current?.abort();controller.current=new AbortController();setAttempt(undefined);setComment('');setTrialBusy(false);}owner.current=account.account.account_id;setAccount(account);setCanLogout(true);setRequest(trial);setSub(subscription);setError('');if(!allowsKey(subscription))clearKey();},[snapshot.data,snapshot.dataUpdatedAt,clearKey]);
+ useEffect(()=>{
+  const e=snapshot.error;if(!e)return;clearKey();if(e instanceof api.ApiError&&e.status===401){loginRedirect(lang);return;}setError(errorText(e,lang));
+  const c=new AbortController();
+  if(e instanceof api.ApiError&&e.code==='ACCOUNT_RESTRICTED')void api.getSessionContext(c.signal).then(()=>{if(!c.signal.aborted)setCanLogout(true);}).catch(()=>{if(!c.signal.aborted)setCanLogout(false);});
+  return()=>c.abort();
+ },[snapshot.error,snapshot.errorUpdatedAt,clearKey,lang]);
  useEffect(()=>{const hide=()=>clearKey();const visibility=()=>{if(document.visibilityState==='hidden')clearKey();};window.addEventListener('pagehide',hide);document.addEventListener('visibilitychange',visibility);return()=>{window.removeEventListener('pagehide',hide);document.removeEventListener('visibilitychange',visibility);keyRequest.current?.abort();if(keyTimer.current)clearTimeout(keyTimer.current);};},[clearKey]);
- useEffect(()=>{if(!account)return;const c=new AbortController();void api.getCurrentPurchaseOrder(c.signal).then(result=>{if(!c.signal.aborted)setOrder(result.order);}).catch(()=>{});return()=>c.abort();},[account,revision]);
+ const currentOrder=useQuery({queryKey:['customer','current-order',account?.account.account_id,lang,revision],queryFn:({signal})=>api.getCurrentPurchaseOrder(signal),enabled:!!account});
+ const order=currentOrder.data?.order??null;
  function handle(e:unknown){if(controller.current?.signal.aborted)return;clearKey();setError(errorText(e,lang));if(e instanceof api.ApiError&&e.status===401)loginRedirect(lang);}
  function retry(){clearKey();setRevision(r=>r+1);}
- async function create(event:FormEvent){event.preventDefault();if(busy||(maintenance.status?.enabled&&!attempt))return;if(Array.from(comment).length>1000){setError(t.commentHelp);return;}const current=attempt??{key:crypto.randomUUID(),comment,mode:account?.capabilities.trial_mode??('request' as const)};setAttempt(current);setBusy(true);setError('');try{const out=await (current.mode==='activate'?api.activateTelegramTrial(current.key,controller.current?.signal):api.createTrialRequest({comment:current.comment},current.key,controller.current?.signal));if(controller.current?.signal.aborted)return;setRequest(out);setRevision(r=>r+1);}catch(e){if(e instanceof api.ApiError&&e.code==='MAINTENANCE')maintenance.refresh();handle(e);}finally{setBusy(false);}}
+ async function create(event:FormEvent){event.preventDefault();if(busy||(maintenance.status?.enabled&&!attempt))return;if(Array.from(comment).length>1000){setError(t.commentHelp);return;}const current=attempt??{key:crypto.randomUUID(),comment,mode:account?.capabilities.trial_mode??('request' as const)};setAttempt(current);setTrialBusy(true);setError('');const signal=controller.current?.signal;try{const out=await (current.mode==='activate'?api.activateTelegramTrial(current.key,signal):api.createTrialRequest({comment:current.comment},current.key,signal));if(signal?.aborted)return;setRequest(out);setRevision(r=>r+1);}catch(e){if(signal?.aborted)return;if(e instanceof api.ApiError&&e.code==='MAINTENANCE')maintenance.refresh();handle(e);}finally{if(!signal?.aborted)setTrialBusy(false);}}
  async function reveal(){if(keyBusy)return;clearKey();const request=new AbortController();keyRequest.current=request;setKeyBusy(true);setError('');try{const out=await api.getSubscriptionKey(request.signal);if(request.signal.aborted||keyRequest.current!==request)return;if(!validKey(out.subscription_url))throw new api.ApiError(409,'SUBSCRIPTION_UNAVAILABLE','');setKey(out.subscription_url);keyTimer.current=setTimeout(clearKey,60000);}catch(e){if(!request.signal.aborted)handle(e);}finally{if(keyRequest.current===request){keyRequest.current=undefined;setKeyBusy(false);}}}
- async function logout(){clearKey();controller.current?.abort();setBusy(true);try{await api.logoutAccount();loginRedirect(lang);}catch(e){setError(errorText(e,lang));setRevision(r=>r+1);}finally{setBusy(false);}}
+ async function logout(){clearKey();controller.current?.abort();setLoggingOut(true);try{await api.logoutAccount();loginRedirect(lang);}catch(e){setError(errorText(e,lang));setRevision(r=>r+1);}finally{setLoggingOut(false);}}
  const status=sub?.status==='none'&&request?.status==='rejected'?'rejected':sub?.status==='none'&&request?.status==='pending'?'pending':sub?.status??'none';
  const automatic=(attempt?.mode??account?.capabilities.trial_mode)==='activate';
  const descriptions={none:t.none,pending:t.pending,rejected:t.rejected,provisioning:t.provisioning,needs_review:t.needsReview,active:t.active,expired:t.expired,banned:t.banned,disabled:t.disabled,exhausted:t.exhausted};
@@ -52,10 +70,10 @@ export function Cabinet({lang}:{lang:Lang}){
    {panelMessage?<div className="warning" role="alert"><p>{panelMessage}</p><button onClick={retry} disabled={busy}>{t.retry}</button></div>:null}
    {keyStatuses.has(sub.status)&&allowsKey(sub)?<Connection lang={lang} subscriptionURL={key} busy={keyBusy} onReveal={reveal} onHide={clearKey}/>:null}
   </>}
-  {account?<ClientPromocode lang={lang} onActivationChange={()=>setRevision(r=>r+1)}/>:null}
+  {account?<ClientPromocode key={'promocode-'+account.account.account_id} lang={lang} onActivationChange={()=>setRevision(r=>r+1)}/>:null}
   {account&&canLogout&&!busy&&!error?<ClientNotices key={account.account.account_id+'-'+lang} lang={lang} accountID={account.account.account_id} refreshKey={revision}/>:null}
   {account&&canLogout&&!busy&&!error?<ClientReminders lang={lang} accountID={account.account.account_id} refreshKey={revision}/>:null}
-  {account&&(isMiniApp()||('telegram_linked' in account.account&&account.account.telegram_linked)||order?.payment_method==='telegram_stars')?<StarsSubscription lang={lang} refreshKey={revision}/>:null}
+  {account&&(isMiniApp()||('telegram_linked' in account.account&&account.account.telegram_linked)||order?.payment_method==='telegram_stars')?<StarsSubscription key={'stars-'+account.account.account_id} lang={lang} refreshKey={revision}/>:null}
   {account?<p className="account-links"><a href={link('/catalogue',lang)}>{t.plans}</a>{sub&&['regular','euru'].includes(sub.access_profile)&&!sub.vpn_banned&&['active','expired','exhausted'].includes(sub.status)?<><a href={link('/cabinet/renew',lang)}>{t.renewalTitle}</a><a href={link('/cabinet/change-plan',lang)}>{t.changePlanTitle}</a></>:null}{order?<a href={link('/orders/'+order.order_id,lang)}>{t.currentOrder}</a>:null}<a href={link('/cabinet/history',lang)}>{t.paymentHistory}</a><a href={link('/cabinet/referrals',lang)}>{t.referralsTitle}</a><a href={link('/cabinet/identity',lang)}>{t.identityTitle}</a>{!isMiniApp()?<a href={link('/cabinet/security',lang)}>{t.security}</a>:null}<a href={link('/cabinet/support',lang)}>{t.supportMessages}</a></p>:null}<a className="support" href={config.supportURL}>{t.support}</a>
  </section>;
 }
