@@ -1,16 +1,18 @@
-import {useEffect,useRef,useState,type FormEvent} from 'react';
+import {useEffectEvent,useEffect,useRef,useState,type FormEvent} from 'react';
 import * as api from './api/client';
 import {config} from './config';
 import {text,link,errorText,type Lang} from './i18n';
 export function Security({lang}:{lang:Lang}){
  const t=text(lang),input=useRef<HTMLInputElement>(null),poll=useRef<AbortController>(null);
  const[newEmail,setNewEmail]=useState('');const[info,setInfo]=useState<api.AccountSecurity>();const[current,setCurrent]=useState('');const[next,setNext]=useState('');const[repeat,setRepeat]=useState('');const[busy,setBusy]=useState(false);const[error,setError]=useState('');const[saved,setSaved]=useState(false);const[uncertain,setUncertain]=useState(false);const[cooldown,setCooldown]=useState(0);
- useEffect(()=>{const controller=new AbortController();void(async()=>{try{await api.getAccount(controller.signal);const out=await api.getAccountSecurity(controller.signal);if(!controller.signal.aborted){setInfo(out);if(out.pending_email_change)setNewEmail(out.pending_email_change.new_email);}}catch(e){if(!controller.signal.aborted){setError(errorText(e,lang));if(e instanceof api.ApiError&&e.status===401)setUncertain(true);}}})();return()=>controller.abort();},[]);
+ const readError=useEffectEvent((reason:unknown)=>setError(errorText(reason,lang)));
+ const hasPendingEmail=!!info?.pending_email_change;
+ useEffect(()=>{const controller=new AbortController();void(async()=>{try{await api.getAccount(controller.signal);const out=await api.getAccountSecurity(controller.signal);if(!controller.signal.aborted){setInfo(out);if(out.pending_email_change)setNewEmail(out.pending_email_change.new_email);}}catch(e){if(!controller.signal.aborted){readError(e);if(e instanceof api.ApiError&&e.status===401)setUncertain(true);}}})();return()=>controller.abort();},[]);
  useEffect(()=>{if(cooldown){const timer=setTimeout(()=>setCooldown(0),cooldown*1000);return()=>clearTimeout(timer);}},[cooldown]);
- useEffect(()=>{if(!info?.pending_email_change||busy)return;const controller=new AbortController();poll.current=controller;let timer:ReturnType<typeof setTimeout>;
-  async function refresh(){try{const out=await api.getAccountSecurity(controller.signal);if(controller.signal.aborted)return;setInfo(out);if(!out.pending_email_change)return;}catch(e){if(controller.signal.aborted)return;setError(errorText(e,lang));if(e instanceof api.ApiError&&(e.status===401||e.status===403)){if(e.status===401){api.clearSession();setInfo(undefined);setNewEmail('');setCurrent('');setNext('');setRepeat('');setUncertain(true);}return;}}timer=setTimeout(refresh,5000);}
+ useEffect(()=>{if(!hasPendingEmail||busy)return;const controller=new AbortController();poll.current=controller;let timer:ReturnType<typeof setTimeout>;
+  async function refresh(){try{const out=await api.getAccountSecurity(controller.signal);if(controller.signal.aborted)return;setInfo(out);if(!out.pending_email_change)return;}catch(e){if(controller.signal.aborted)return;readError(e);if(e instanceof api.ApiError&&(e.status===401||e.status===403)){if(e.status===401){api.clearSession();setInfo(undefined);setNewEmail('');setCurrent('');setNext('');setRepeat('');setUncertain(true);}return;}}timer=setTimeout(refresh,5000);}
   timer=setTimeout(refresh,5000);return()=>{controller.abort();if(poll.current===controller)poll.current=null;clearTimeout(timer);};
- },[!!info?.pending_email_change,busy]);
+ },[hasPendingEmail,busy]);
  async function emailMutation(cancel:boolean){
   if(!info||busy||uncertain||(!cancel&&cooldown>0))return;setError('');setSaved(false);
   if(!cancel&&(!current||!newEmail.trim())){setError(t.required);input.current?.focus();return;}

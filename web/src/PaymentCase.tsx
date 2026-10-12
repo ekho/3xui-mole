@@ -1,4 +1,4 @@
-import {useEffect,useId,useRef,useState,type FormEvent} from 'react';
+import {useEffectEvent,useEffect,useId,useRef,useState,type FormEvent} from 'react';
 import * as api from './api/client';
 import {OperatorPurchase} from './OperatorPurchase';
 import {displayPrice} from './catalogueMoney';
@@ -9,7 +9,8 @@ export function PaymentCase({clientId,orderId,receiptId,lang,onDenied,onChanged,
  const read=useRef<AbortController|undefined>(undefined),write=useRef<AbortController|undefined>(undefined),attempt=useRef<{payload:string;key:string}|undefined>(undefined),heading=useRef<HTMLHeadingElement>(null),errorNode=useRef<HTMLParagraphElement>(null);
  const receipt=data?.receipt;const refund=data?.refund??(saved?.receipt_operation_id===receipt?.operation_id?saved:undefined);const native=receipt?.payment_method==='telegram_stars',nativeState=data?.stars_refund_state??nativeObserved;const refundable=native?data?.can_refund_stars===true&&!nativeState:data?.can_confirm_refund;const isCrypto=receipt?.payment_method==='cryptomus'||receipt?.payment_method==='heleket';
  async function load(){read.current?.abort();const c=new AbortController();read.current=c;setLoading(true);setError('');try{const out=await api.getOperatorPaymentCase(clientId,orderId,receiptId,c.signal);if(c.signal.aborted||read.current!==c)return;if(out.order?.order_id!==orderId||typeof out.can_confirm_refund!=='boolean'||typeof out.financial_review_open!=='boolean'||out.receipt&&(out.receipt.order_id!==orderId||receiptId&&out.receipt.operation_id!==receiptId)||out.refund&&(out.refund.order_id!==orderId||out.refund.receipt_operation_id!==out.receipt?.operation_id||out.refund.source!=='operator'&&(out.refund.source!=='telegram'||out.refund.payment_method!=='telegram_stars')))throw new api.ApiError(503,'SERVICE_UNAVAILABLE','');if(out.receipt?.operation_id!==data?.receipt?.operation_id){setReference('');setReason('');setAmount('');setFull(false);setKeep(false);setSaved(undefined);setNativeObserved(undefined);attempt.current=undefined;}setData(out);setConflict(false);setRevision(value=>value+1);}catch(failure){if(c.signal.aborted)return;if(failure instanceof api.ApiError&&(failure.status===401||failure.status===403&&failure.code!=='OPERATOR_ACCOUNT_PROTECTED')){setData(undefined);setSaved(undefined);onDenied();}else{if(failure instanceof api.ApiError&&failure.status===404)setData(undefined);setError(errorText(failure,lang));}}finally{if(read.current===c&&!c.signal.aborted)setLoading(false);}}
- useEffect(()=>{heading.current?.focus();void load();return()=>{read.current?.abort();write.current?.abort();};},[clientId,orderId,receiptId,lang]);
+ const initialLoad=useEffectEvent(load);
+ useEffect(()=>{heading.current?.focus();void initialLoad();return()=>{read.current?.abort();write.current?.abort();};},[clientId,orderId,receiptId,lang]);
  useEffect(()=>{if(error)errorNode.current?.focus();},[error]);
  function change(){attempt.current=undefined;setError('');}
 

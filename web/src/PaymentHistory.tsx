@@ -1,4 +1,4 @@
-import {useEffect,useId,useRef,useState,type ReactNode} from 'react';
+import {useEffectEvent,useEffect,useId,useRef,useState,type ReactNode} from 'react';
 import {useLocation,useNavigate} from 'react-router-dom';
 import {PaymentCase} from './PaymentCase';
 import * as api from './api/client';
@@ -42,7 +42,8 @@ export function PaymentHistory({lang,clientId,onDenied,onChanged}:{lang:Lang;cli
   }
  }
  useEffect(()=>{if(!clientId)setKind(urlKind);},[urlKind,clientId]);
- useEffect(()=>{setSelection(undefined);void load();return()=>request.current?.abort();},[clientId,kind,lang,source]);
+ const initialLoad=useEffectEvent(load);
+ useEffect(()=>{setSelection(undefined);void initialLoad();return()=>request.current?.abort();},[clientId,kind,lang,source]);
  const field=(name:string,value:ReactNode)=><div key={name}><dt>{name}</dt><dd>{value}</dd></div>;
  const date=(value:string)=><time dateTime={value}>{new Date(value).toLocaleString(lang==='ru'?'ru-RU':'en-US')}</time>;
  const money=(value:string,currency:Currency|null)=>currency?displayPrice(value,currency,lang):value+' '+t.historyMinorUnits;

@@ -1,4 +1,4 @@
-import {useEffect,useRef,useState,type FormEvent} from 'react';
+import {useMemo,useEffect,useRef,useState,type FormEvent} from 'react';
 import * as api from './api/client';
 import {text,link,errorText,type Lang} from './i18n';
 
@@ -9,7 +9,7 @@ const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 export function AdminAudit({lang,accountId,onForbidden}:{lang:Lang;accountId?:string;onForbidden:()=>void}){
  const t=text(lang),[kind,setKind]=useState<Kind>('native'),[account,setAccount]=useState(accountId??''),[target,setTarget]=useState('');
  const[filter,setFilter]=useState({account:accountId??'',target:''}),[pages,setPages]=useState<Cursor[]>([{}]),[reload,setReload]=useState(0),[busy,setBusy]=useState(true);
- const input:api.AuditHistoryInput={kind,...(kind!=='system'&&filter.account?{account_id:filter.account}:{}),...(kind==='legacy'&&filter.target?{legacy_target_tg_id:filter.target}:{}),...pages.at(-1)};
+ const input=useMemo<api.AuditHistoryInput>(()=>({kind,...(kind!=='system'&&filter.account?{account_id:filter.account}:{}),...(kind==='legacy'&&filter.target?{legacy_target_tg_id:filter.target}:{}),...pages.at(-1)}),[kind,filter,pages]);
  const scope=JSON.stringify({lang,input});
  const[result,setResult]=useState<{scope:string;report?:api.AuditHistory;error?:unknown}>();
  const current=result?.scope===scope?result:undefined,report=current?.report,error=current?.error;
@@ -26,7 +26,7 @@ export function AdminAudit({lang,accountId,onForbidden}:{lang:Lang;accountId?:st
    if(failure instanceof api.ApiError&&(failure.status===401||failure.status===403))onForbidden();else setResult({scope,error:failure});
   }).finally(()=>{if(!controller.signal.aborted)setBusy(false);});
   return()=>controller.abort();
- },[scope,reload]);
+ },[scope,reload,input,kind,onForbidden]);
  useEffect(()=>{if(error!==undefined)errorRef.current?.focus();},[error]);
  function source(value:Kind){setKind(value);setFilter({account:accountId??'',target:''});setAccount(accountId??'');setTarget('');setPages([{}]);}
  function apply(event:FormEvent){
