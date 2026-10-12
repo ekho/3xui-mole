@@ -1,3 +1,4 @@
+import {Link} from 'react-router-dom';
 import {useEffect,useRef,useState,type FormEvent} from 'react';
 import * as api from './api/client';
 import {config} from './config';
@@ -41,6 +42,6 @@ export function Security({lang}:{lang:Lang}){
   </form>
   {info?.pending_email_change?<div className="key-panel" aria-live="polite"><p>{info.pending_email_change.new_email}</p><p>{t.expires}: {new Date(info.pending_email_change.expires_at).toLocaleString(lang==='ru'?'ru-RU':'en-US')}</p><p>{info.pending_email_change.current_email_confirmed?t.currentEmailConfirmed:t.currentEmailWaiting}</p><p>{info.pending_email_change.new_email_confirmed?t.newEmailConfirmed:t.newEmailWaiting}</p><p className="help">{t.emailReplaceWarning}</p><button type="button" disabled={!info||busy||uncertain} onClick={()=>void emailMutation(true)}>{t.cancelEmail}</button></div>:null}
   <form onSubmit={e=>{e.preventDefault();void emailMutation(false);}} noValidate aria-busy={busy}><label htmlFor="new-email">{t.newEmail}<input id="new-email" type="email" autoComplete="email" value={newEmail} onChange={e=>setNewEmail(e.target.value)} required/></label><button disabled={disabled}>{info?.pending_email_change?t.resendBoth:t.changeEmail}</button><p className="help">{t.oldMailboxHelp}</p><a href={config.supportURL}>{t.support}</a></form>
-  <nav className="auth-links"><a href={link('/cabinet',lang)}>{t.cabinet}</a></nav>
+  <nav className="auth-links"><Link to={link('/cabinet',lang)}>{t.cabinet}</Link></nav>
  </section>;
 }

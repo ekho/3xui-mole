@@ -205,3 +205,17 @@ for(const mode of ['missing','throws'] as const)test('Mini App other payments '+
  const action=page.getByRole('button',{name:'Other payment methods',exact:true});await action.focus();await page.keyboard.press('Enter');
  expect(await page.evaluate(()=>(window as any).__sdk.fallback)).toEqual([['http://127.0.0.1:'+(process.env.E2E_PORT||'4173')+'/login?lang=en','_blank','noopener,noreferrer']]);
 });
+
+
+test('Mini App language selection preserves signed launch data while SDK loads',async({page})=>{
+ const f=await fixture(page,{readLaunch:true});let release!:()=>void,started=false;
+ const hold=new Promise<void>(resolve=>{release=resolve;});
+ await page.route('https://telegram.org/js/telegram-web-app.js',async route=>{started=true;await hold;await route.fallback();});
+ try{
+  await page.goto('/mini-app#tgWebAppData='+encodeURIComponent(launch));await expect.poll(()=>started).toBe(true);
+  await page.getByRole('button',{name:'EN',exact:true}).click();
+  expect(new URL(page.url()).hash).toContain('tgWebAppData');release();
+  await expect(page.getByRole('heading',{name:'Mini client'})).toBeVisible();expect(f.sessions()).toBe(1);
+  expect(await storage(page)).not.toMatch(/owned-signed|mini_|csrf_token|__telegram__initParams/);
+ }finally{release();}
+});
