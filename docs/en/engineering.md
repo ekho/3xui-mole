@@ -405,6 +405,13 @@ Connected Go and browser checks need dedicated PostgreSQL/Redis and other test
 fixtures; the existing `deploy/acceptance/` scripts create synthetic resources.
 Do not point them at a live installation.
 
+Customer pages are loaded on demand; QR generation is loaded only after the
+user requests a QR code. After building, run `npm --prefix web run check:bundle`
+to check route separation and the startup/login JavaScript size budgets. CI
+runs the same check. Failed browser page loads offer an explicit reload; in
+Mini App, another page remains available without ending the session. QR failures
+retain the subscription link for manual import.
+
 ## CI and releases
 
 Each push to `main`, including a merged pull request, runs Platform checks,

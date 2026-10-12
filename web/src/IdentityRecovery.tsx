@@ -5,7 +5,8 @@ import {text,link,errorText,type Lang} from './i18n';
 
 export function IdentityRecovery({lang}:{lang:Lang}){
  const t=text(lang),request=useRef<AbortController|undefined>(undefined),alive=useRef(true),pw=useRef<HTMLInputElement>(null);
- const[token,setToken]=useState(()=>{const value=window.__emailToken;delete window.__emailToken;return value&&/^[A-Za-z0-9_-]{43}$/.test(value)?value:undefined;});
+ const[token,setToken]=useState(()=>{const value=window.__emailToken;return value&&/^[A-Za-z0-9_-]{43}$/.test(value)?value:undefined;});
+ useEffect(()=>{delete window.__emailToken;},[]);
  const[challenge,setChallenge]=useState(''),[code,setCode]=useState(''),[password,setPassword]=useState(''),[repeat,setRepeat]=useState(''),[terms,setTerms]=useState(false),[privacy,setPrivacy]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[done,setDone]=useState(false),[closed,setClosed]=useState(false);
  function clear(){setToken(undefined);setChallenge('');setCode('');setPassword('');setRepeat('');setTerms(false);setPrivacy(false);}
  useEffect(()=>{alive.current=true;const hide=()=>{alive.current=false;request.current?.abort();clear();setBusy(false);setClosed(true);};window.addEventListener('pagehide',hide);return()=>{alive.current=false;request.current?.abort();window.removeEventListener('pagehide',hide);};},[]);

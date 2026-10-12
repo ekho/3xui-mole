@@ -8,7 +8,7 @@ import {StarsSubscription} from './StarsSubscription';
 import {ClientReminders} from './ClientReminders';
 import {ClientNotices} from './ClientNotices';
 import {ClientPromocode} from './ClientPromocode';
-import {miniText} from './MiniApp';
+import {miniText} from './miniText';
 import {useMaintenance} from './Maintenance';
 
 const keyStatuses=new Set<api.Subscription['status']>(['active','expired']);

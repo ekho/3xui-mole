@@ -128,9 +128,10 @@ test('old-language delayed save cannot replace new consent',async({page})=>{
  await page.getByRole('button',{name:'EN',exact:true}).click();const section=page.getByRole('region',{name:'Subscription reminders'});await expect(section.getByRole('status')).toContainText('No current reminders');release();await expect(section.getByRole('checkbox')).not.toBeChecked();await expect(section.getByRole('listitem')).toHaveCount(0);
 });
 test('changing account aborts the prior account save',async({page})=>{
- await page.clock.install({time:new Date(observed)});await page.clock.pauseAt(new Date('2030-01-01T10:00:01Z'));
- let current=account,saves=0,reads=0,release!:()=>void;const hold=new Promise<void>(r=>release=r);
+ await page.clock.install({time:new Date(observed)});
+ let paused=false,current=account,saves=0,reads=0,release!:()=>void;const hold=new Promise<void>(r=>release=r);
  await fixture(page,{profile:()=>current,subscription:{...none,status:'provisioning'},extra:async(r,path)=>{
+  if(path==='/api/v1/me'&&!paused){paused=true;await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now())+1000));}
   if(path==='/api/v1/reminders/preferences'){saves++;await hold;await r.fulfill({json:{...reminders,email_enabled:true}});return true;}
   if(path==='/api/v1/reminders'){reads++;await r.fulfill({json:empty});return true;}return false;
  }});

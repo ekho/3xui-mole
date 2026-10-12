@@ -1,4 +1,5 @@
 import {test,expect,type Page} from '@playwright/test';
+import {readFileSync} from 'node:fs';
 import type {components} from '../src/api/schema.gen';
 
 type Subscription=components['schemas']['Subscription'];
@@ -19,6 +20,32 @@ async function mock(page:Page,getSub:()=>Subscription=()=>active,key:()=>Promise
   return route.fulfill({json:{}});
  });
 }
+
+function qrAsset(){
+ const manifest=JSON.parse(readFileSync('dist/.vite/manifest.json','utf8'));
+ return '/'+manifest['node_modules/qrcode/lib/browser.js'].file;
+}
+
+test('QR loads only on request and a hidden key is not rendered after the module arrives',async({page})=>{
+ const asset=qrAsset(),requests:string[]=[];page.on('request',request=>requests.push(new URL(request.url()).pathname));
+ let release!:()=>void;const held=new Promise<void>(resolve=>{release=resolve;});
+ await page.route('**'+asset,async route=>{await held;await route.continue();});
+ await page.addInitScript(()=>{const original=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(...args:any[]){(window as any).__qrCalls=((window as any).__qrCalls??0)+1;return Reflect.apply(original,this,args);};});
+ await mock(page);await page.goto('/cabinet?lang=en');await page.getByRole('button',{name:'Show subscription link',exact:true}).click();await expect(page.getByLabel('Subscription link',{exact:true})).toHaveValue(ownURL);expect(requests).not.toContain(asset);
+ const requested=page.waitForRequest(request=>new URL(request.url()).pathname===asset);
+ await page.getByRole('button',{name:'Show QR code',exact:true}).click();await requested;await page.getByRole('button',{name:'Hide connection details',exact:true}).click();
+ const loaded=page.waitForResponse(response=>new URL(response.url()).pathname===asset);release();await (await loaded).finished();
+ await expect(page.getByRole('img',{name:'Subscription QR code',exact:true})).toHaveCount(0);await expect(page.getByLabel('Subscription link',{exact:true})).toHaveCount(0);expect(await page.evaluate(()=>(window as any).__qrCalls??0)).toBe(0);
+ await page.getByRole('button',{name:'Show subscription link',exact:true}).click();await page.getByRole('button',{name:'Show QR code',exact:true}).click();await expect(page.getByRole('img',{name:'Subscription QR code',exact:true})).toBeVisible();
+ await page.locator('canvas').evaluate(node=>{(window as any).__qrTarget=node;});await page.getByRole('button',{name:'Hide connection details',exact:true}).click();
+ expect(await page.evaluate(()=>[(window as any).__qrTarget.width,(window as any).__qrTarget.height])).toEqual([0,0]);expect(requests.filter(path=>path===asset)).toHaveLength(1);
+});
+
+test('QR module failure keeps the subscription link available for manual import',async({page})=>{
+ await page.route('**'+qrAsset(),route=>route.abort());await mock(page);await page.goto('/cabinet?lang=en');
+ await page.getByRole('button',{name:'Show subscription link',exact:true}).click();await page.getByRole('button',{name:'Show QR code',exact:true}).click();
+ await expect(page.getByRole('alert')).toContainText('QR code is unavailable');await expect(page.getByLabel('Subscription link',{exact:true})).toHaveValue(ownURL);
+});
 
 test('five platforms, iOS region and install fallbacks work at mobile width',async({page})=>{
  await page.setViewportSize({width:375,height:812});await mock(page);await page.goto('/cabinet?lang=en');

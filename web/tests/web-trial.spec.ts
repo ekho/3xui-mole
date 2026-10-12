@@ -4,9 +4,9 @@ type Model<K extends keyof components['schemas']> = components['schemas'][K];
 const account:Model<'AccountResult'>={account:{account_id:'b496e45c-4e80-47d6-a868-e3c1da4e4f35',email:'client@example.test',email_verified:true,locale:'ru',telegram_linked:false},csrf_token:'x'.repeat(43),capabilities:{trial_available:true}};
 const trial:Model<'TrialRequest'>={request_id:'425e3641-912b-4e50-b4d2-6b4a21598890',status:'pending',created_at:'2026-10-01T00:00:00Z',decided_at:null,operation_id:null,previous_request_id:null};
 const none:Model<'Subscription'>={status:'none',devices:0,traffic_limit_bytes:0,traffic_used_bytes:null,observed_at:null,data_stale:true,expires_at:null,access_profile:'unknown',vpn_banned:false,access_operation_id:null,access_operation_status:null};
-async function mock(page:Page,current:Model<'CurrentTrialRequest'>={request:null},sub:Model<'Subscription'>=none){
+async function mock(page:Page,current:Model<'CurrentTrialRequest'>={request:null},sub:Model<'Subscription'>=none,pauseClock=false){
  await page.route('**/api/v1/**',async route=>{
-  const p=new URL(route.request().url()).pathname;const body=p.endsWith('/reminders')?{version:'reminders-v1',email_enabled:false,email_available:true,reminders:[]}:p.endsWith('/me')?account:p.endsWith('/current')?current:p.endsWith('/subscription')?sub:p.endsWith('/key')?{subscription_url:'https://subscriptions.example.test/sub/fixtureprivate000'}:{};
+  const p=new URL(route.request().url()).pathname;if(p.endsWith('/me')&&pauseClock){pauseClock=false;await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now())+1000));}const body=p.endsWith('/reminders')?{version:'reminders-v1',email_enabled:false,email_available:true,reminders:[]}:p.endsWith('/me')?account:p.endsWith('/current')?current:p.endsWith('/subscription')?sub:p.endsWith('/key')?{subscription_url:'https://subscriptions.example.test/sub/fixtureprivate000'}:{};
   await route.fulfill({json:body});
  });
 }
@@ -26,8 +26,8 @@ test.describe('Web trial',()=>{
   expect(await page.evaluate(()=>Object.keys(window).filter(k=>k==='__emailToken'))).toEqual([]);
  });
  test('pending poll exact spacing; terminal stop; private key and clipboard fallback',async({page})=>{
-  await page.clock.install({time:new Date('2026-10-01T00:00:00Z')});await page.clock.pauseAt(new Date('2026-10-01T00:00:01Z'));let state:Model<'Subscription'>={...none,status:'provisioning'};const times:number[]=[];let keyReads=0;
-  await mock(page,{request:trial});await page.route('**/api/v1/subscription',async r=>{times.push(await page.evaluate(()=>Date.now()));await r.fulfill({json:state})});await page.route('**/api/v1/subscription/key',async r=>{keyReads++;await r.fulfill({json:{subscription_url:'https://subscriptions.example.test/sub/fixtureprivate000'},headers:{'Cache-Control':'no-store'}})});
+  await page.clock.install({time:new Date('2026-10-01T00:00:00Z')});let state:Model<'Subscription'>={...none,status:'provisioning'};const times:number[]=[];let keyReads=0;
+  await mock(page,{request:trial},none,true);await page.route('**/api/v1/subscription',async r=>{times.push(await page.evaluate(()=>Date.now()));await r.fulfill({json:state})});await page.route('**/api/v1/subscription/key',async r=>{keyReads++;await r.fulfill({json:{subscription_url:'https://subscriptions.example.test/sub/fixtureprivate000'},headers:{'Cache-Control':'no-store'}})});
   await page.goto('/cabinet');await expect(page.getByText('Заявка отправлена. Ожидаем решения поддержки')).toBeVisible();expect(keyReads).toBe(0);
   await page.clock.runFor(5000);await expect.poll(()=>times.length).toBe(2);state={...none,status:'active',devices:1,traffic_limit_bytes:15*1024**3,expires_at:'2026-10-04T00:00:00Z',traffic_used_bytes:1234,observed_at:'2026-10-01T00:00:10Z',data_stale:false};
   await page.clock.runFor(5000);await expect(page.getByText('Триал активен')).toBeVisible();expect(times.slice(1).map((t,i)=>t-times[i])).toEqual([5000,5000]);await page.clock.runFor(20000);expect(times.length).toBe(3);
@@ -48,16 +48,16 @@ test.describe('Web trial',()=>{
   await page.unroute('**/api/v1/**');await page.route('**/api/v1/**',r=>r.fulfill({status:401,json:{error:{code:'INVALID_CREDENTIALS',message:'provider stacktrace private',request_id:trial.request_id}}}));await page.goto('/cabinet');await expect(page).toHaveURL(/\/login/);await expect(page.getByText('provider stacktrace private')).toHaveCount(0);
  });
  test('slow polls do not overlap; leaving cancels polling',async({page})=>{
-  await page.clock.install({time:new Date('2026-10-01T00:00:00Z')});await page.clock.pauseAt(new Date('2026-10-01T00:00:01Z'));
+  await page.clock.install({time:new Date('2026-10-01T00:00:00Z')});
   let calls=0;let release!:()=>void;const wait=new Promise<void>(resolve=>{release=resolve});
-  await mock(page,{request:trial},{...none,status:'provisioning'});await page.route('**/api/v1/subscription',async r=>{calls++;if(calls===1)await wait;await r.fulfill({json:{...none,status:'provisioning'}})});
+  await mock(page,{request:trial},{...none,status:'provisioning'},true);await page.route('**/api/v1/subscription',async r=>{calls++;if(calls===1)await wait;await r.fulfill({json:{...none,status:'provisioning'}})});
   await page.goto('/cabinet');await expect.poll(()=>calls).toBe(1);await page.clock.runFor(10000);expect(calls).toBe(1);release();await expect(page.getByText('Заявка отправлена. Ожидаем решения поддержки')).toBeVisible();await page.clock.runFor(4999);expect(calls).toBe(1);await page.clock.runFor(1);await expect.poll(()=>calls).toBe(2);
   await page.goto('/login');await page.clock.runFor(20000);expect(calls).toBe(2);
  });
  test('pending without an operation has one status message',async({page})=>{await mock(page,{request:trial},none);await page.goto('/cabinet');await expect(page.getByText('Заявка отправлена. Ожидаем решения поддержки')).toHaveCount(1);});
  test('temporary read error resumes pending polling',async({page})=>{
-  await page.clock.install({time:new Date('2026-10-01T00:00:00Z')});await page.clock.pauseAt(new Date('2026-10-01T00:00:01Z'));
-  let calls=0;await mock(page,{request:trial});await page.route('**/api/v1/subscription',async r=>{calls++;if(calls===1)await r.fulfill({status:503,json:{error:{code:'SERVICE_UNAVAILABLE',message:'private panel error',request_id:trial.request_id}}});else await r.fulfill({json:{...none,status:'active',devices:1,traffic_limit_bytes:15*1024**3,expires_at:'2026-10-04T00:00:00Z'}})});
+  await page.clock.install({time:new Date('2026-10-01T00:00:00Z')});
+  let calls=0;await mock(page,{request:trial},none,true);await page.route('**/api/v1/subscription',async r=>{calls++;if(calls===1)await r.fulfill({status:503,json:{error:{code:'SERVICE_UNAVAILABLE',message:'private panel error',request_id:trial.request_id}}});else await r.fulfill({json:{...none,status:'active',devices:1,traffic_limit_bytes:15*1024**3,expires_at:'2026-10-04T00:00:00Z'}})});
   await page.goto('/cabinet');await expect(page.getByRole('alert')).toContainText('временно недоступен');await page.clock.runFor(5000);await expect(page.getByText('Триал активен')).toBeVisible();expect(calls).toBe(2);await expect(page.getByText('private panel error')).toHaveCount(0);
  });
  test('login rate limit respects Retry-After',async({page})=>{
