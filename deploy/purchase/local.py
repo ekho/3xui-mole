@@ -350,11 +350,11 @@ def check(manual=False):
         assert manual_decision(operator, actor, login, purchase)[0] == 409
         create_order(opener, login, plan, True)
         assert not panel(login['account']['account_id'])['exists'], 'rejection provisioned access'
-    private(prefix + 'native-report.json', {'panel_version': '3.7.0', 'results': results,
+    private(prefix + 'native-report.json', {'panel_version': local.panel_version(), 'results': results,
                                   'real_payment': False, 'live_vpn_changed': False})
     assert all(r['paid'] and r['applied'] and r['one_access_operation'] for r in results)
     print('PASS: ' + ('synthetic operator-confirmed manual' if manual else 'signed local') +
-          ' payment -> real 3X-UI 3.7.0 for new and trial accounts; repeat unchanged')
+          ' payment -> real 3X-UI '+local.panel_version()+' for new and trial accounts; repeat unchanged')
 
 
 def financial_snapshot(db=None):

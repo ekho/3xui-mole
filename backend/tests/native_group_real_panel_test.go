@@ -104,9 +104,17 @@ func TestNativeGroupReconciliationRealPanel(t *testing.T) {
 	t.Cleanup(func() {
 		stop()
 		if restoreOriginal {
-			original["enable"] = true
-			if _, err := panelCall(fmt.Sprintf("panel/api/inbounds/update/%d", originalID), original); err != nil {
+			if _, err := panelCall(fmt.Sprintf("panel/api/inbounds/setEnable/%d", originalID), map[string]bool{"enable": true}); err != nil {
 				t.Errorf("owned inbound restore failed: %v", err)
+			}
+			found := false
+			for _, row := range rows() {
+				if int64(row["id"].(float64)) == originalID {
+					found = row["enable"] == true
+				}
+			}
+			if !found {
+				t.Error("owned inbound restore was not confirmed")
 			}
 		}
 		for _, key := range createdClients {
@@ -149,14 +157,17 @@ func TestNativeGroupReconciliationRealPanel(t *testing.T) {
 	// Seed only the owned provider counter so an unintended reset is observable.
 	call("panel/api/clients/updateTraffic/"+owned.PanelKey, map[string]int64{"upload": 42, "download": 24})
 	newID := addInbound("local-group-regular-"+uuid.NewString(), 24446)
+	restoreOriginal = true
+	call(fmt.Sprintf("panel/api/inbounds/setEnable/%d", originalID), map[string]bool{"enable": false})
+	disabled := false
 	for _, row := range rows() {
 		if int64(row["id"].(float64)) == originalID {
-			original = row
+			disabled = row["enable"] == false
 		}
 	}
-	original["enable"] = false
-	restoreOriginal = true
-	call(fmt.Sprintf("panel/api/inbounds/update/%d", originalID), original)
+	if !disabled {
+		t.Fatal("owned inbound disable was not confirmed")
+	}
 	before, err = p.GetClient(ctx, owned.PanelKey)
 	foreignBefore, foreignErr := p.GetClient(ctx, foreign.PanelKey)
 	up, down, trafficErr := p.Traffic(ctx, owned.PanelKey, owned.VPNID, owned.SubID)
@@ -219,5 +230,5 @@ func TestNativeGroupReconciliationRealPanel(t *testing.T) {
 		t.Fatal("restart repeated real group operation or changed its frozen target")
 	}
 	assertPreserved()
-	t.Log("PASS: freshly compiled HTTP/River with real isolated TLS 3X-UI3.7.0 attach/detach, disabled known and preserved unknown memberships, stable UUID/subID/expiry/quota/limitIP=1/nonzero seeded traffic, untouched foreign client and no-op restart; Bot API and SMTP are fixtures, no VPN data-plane traffic generated")
+	t.Log("PASS: freshly compiled HTTP/River with real isolated TLS 3X-UI attach/detach, confirmed disabled known and preserved unknown memberships, stable UUID/subID/expiry/quota/limitIP=1/nonzero seeded traffic, untouched foreign client and no-op restart; Bot API and SMTP are fixtures, no VPN data-plane traffic generated")
 }

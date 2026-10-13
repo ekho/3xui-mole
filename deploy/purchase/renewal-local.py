@@ -65,9 +65,9 @@ def prepare():
     configured = json.loads(compose('config', '--format', 'json'))
     env = configured['services']['backend']['environment']
     assert env['TELEGRAM_ENABLED'] == 'false'
-    assert configured['services']['panel']['image'] == 'ghcr.io/mhsanaei/3x-ui:3.7.0@sha256:3b3131f1876e6bf35063a9ec4dd1c594e4525180bfc2e1c477dcc8a3c9550ca1'
+    local.panel_version(configured)
     purchase.private('image-source.json', {'revision': revision})
-    print('PASS: own c16 identity, local pinned3.7.0, file credentials and synthetic YooMoney')
+    print('PASS: own c16 identity, local pinned '+local.panel_version(configured)+', file credentials and synthetic YooMoney')
 
 
 def up():
@@ -86,8 +86,8 @@ def up():
     assert all(i['Config']['Labels']['org.opencontainers.image.revision'] == source for i in images[:2])
     assert containers[0]['Config']['Cmd'] == ['serve']
     purchase.private('images.json', {'revision': source, 'ids': [c['Image'] for c in containers],
-        'one_backend': True, 'native_version': '3.7.0'})
-    print('PASS: own Go/web source labels and native3.7.0; one backend, no external provider')
+        'one_backend': True, 'native_version': local.panel_version()})
+    print('PASS: own Go/web source labels and native '+local.panel_version()+'; one backend, no external provider')
 
 
 def native(account):
@@ -294,7 +294,7 @@ def check():
                 {}, login['csrf_token'], str(uuid4()))[0] == 200
             report.append({'case': name, **result, 'next_renewal_permitted': True, 'server_preserved': True})
         print('PASS: native renewal ' + name)
-    purchase.private('native-report.json', {'panel_version': '3.7.0', 'results': report,
+    purchase.private('native-report.json', {'panel_version': local.panel_version(), 'results': report,
         'real_payment': False, 'live_vpn_changed': False})
 
 

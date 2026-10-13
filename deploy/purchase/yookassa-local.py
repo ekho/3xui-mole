@@ -189,7 +189,7 @@ def check():
         results.append({'fixture': name, 'paid': True, 'applied': True, 'one_receipt_job_access': True,
                         'identity_preserved': before is not None, 'replay_unchanged': True,
                         'same_bytes_after_restart': name == 'new'})
-    purchase.private('native-report.json', {'panel_version': '3.7.0', 'results': results,
+    purchase.private('native-report.json', {'panel_version': local.panel_version(), 'results': results,
         'api_stub': True, 'real_payment': False, 'live_vpn_changed': False})
     print('PASS: own API/River/native3X-UI new/trial, ambiguous500/backend+stub restart, exact bytes, replay and unknown net')
 

@@ -11,6 +11,38 @@ from deploy.acceptance import local
 
 
 class PaidRecoveryAcceptanceTests(unittest.TestCase):
+    def test_provider_override_reaches_panels_client_and_version_guard(self):
+        images = {
+            '3.7.0': 'ghcr.io/mhsanaei/3x-ui:3.7.0@sha256:3b3131f1876e6bf35063a9ec4dd1c594e4525180bfc2e1c477dcc8a3c9550ca1',
+            '3.10.0': 'ghcr.io/mhsanaei/3x-ui:3.10.0@sha256:ef90d07ea00cf3b76bcd37e7c5025d73788dc188894c6a741c22776a83c2c556',
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            state = Path(directory)
+            with patch.multiple(local, STATE=state, ENV=state / 'public.env'):
+                local.prepare()
+                args = ['docker', 'compose', '--env-file', str(local.ENV), '--profile', 'vpn']
+                for name in ('acceptance', 'local', 'native'):
+                    args += ['-f', 'deploy/acceptance/compose.' + name + '.yml']
+                args += ['config', '--format', 'json']
+                for version, image in images.items():
+                    with self.subTest(version=version):
+                        result = subprocess.run(args, cwd=local.ROOT,
+                            env={**os.environ, 'LOCAL_PANEL_IMAGE': image},
+                            capture_output=True, text=True, timeout=30)
+                        self.assertEqual(result.returncode, 0, 'owned Compose config must resolve')
+                        config = json.loads(result.stdout)
+                        for name in ('panel', 'panel-second', 'vpn-client'):
+                            self.assertEqual(config['services'][name]['image'], image,
+                                'panel and VPN client must run the selected pinned provider')
+                        self.assertEqual(local.panel_version(config), version)
+
+    def test_version_guard_rejects_unpinned_or_unowned_provider(self):
+        for image in ('ghcr.io/mhsanaei/3x-ui:3.10.0', 'ghcr.io/mhsanaei/3x-ui:latest',
+                      'unowned/panel:3.10.0@sha256:' + '1' * 64,
+                      'ghcr.io/mhsanaei/3x-ui:3.10.0@sha256:invalid'):
+            with self.subTest(image=image), self.assertRaises(AssertionError):
+                local.panel_version({'services': {'panel': {'image': image}}})
+
     def test_prepare_resumed_state_creates_private_fixture_secret(self):
         with tempfile.TemporaryDirectory() as directory:
             state = Path(directory)

@@ -194,7 +194,7 @@ def check():
         results.append({'fixture': name, 'paid_status': settled_status, 'applied': True, 'one_receipt_job_access': True,
                         'identity_preserved': before is not None, 'same_bytes_after_restart': name == 'new',
                         'same_job_info_replay_unchanged': True})
-    purchase.private('native-report.json', {'provider': PROVIDER, 'panel_version': '3.7.0', 'results': results, 'api_stub': True,
+    purchase.private('native-report.json', {'provider': PROVIDER, 'panel_version': local.panel_version(), 'results': results, 'api_stub': True,
         'native_vendor_webhook': False, 'real_payment': False, 'live_vpn_changed': False})
     print('PASS: API/River/info/native3X-UI new/paid and trial/paid_over, restart, same bytes/invoice, one receipt/job/access', flush=True)
 

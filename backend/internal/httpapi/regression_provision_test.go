@@ -46,6 +46,8 @@ type fakePanel struct {
 	strictNativeUpdate                                                               bool
 	refuseActivation                                                                 bool
 	loseAdd, emptyRead, failRead, partial, noRegular, noEuru, sharedRegularUnlimited bool
+	mutationError, incompleteAttach                                                  bool
+	partialUpdateInbounds                                                            map[int64]map[string]any
 }
 
 func panelFixture(t *testing.T, s *regressionFixture) *fakePanel {
@@ -212,15 +214,17 @@ func (p *fakePanel) serve(w http.ResponseWriter, r *http.Request) {
 			}
 			return
 		}
-		reply(map[string]any{"success": true, "obj": nil})
+		reply(map[string]any{"success": !p.mutationError, "msg": "inbound 2: fixture apply failure", "obj": nil})
 	case r.Method == "POST" && strings.HasSuffix(r.URL.Path, "/attach"):
 		p.attaches++
 		var body struct {
 			InboundIDs []int64 `json:"inboundIds"`
 		}
 		json.NewDecoder(r.Body).Decode(&body)
-		p.ids = append(p.ids, body.InboundIDs...)
-		reply(map[string]any{"success": true, "obj": nil})
+		if !p.incompleteAttach {
+			p.ids = append(p.ids, body.InboundIDs...)
+		}
+		reply(map[string]any{"success": !p.mutationError, "msg": "inbound 2: fixture apply failure", "obj": nil})
 	case r.Method == "POST" && strings.Contains(r.URL.Path, "/update/"):
 		p.updates++
 		var body map[string]any
@@ -241,6 +245,11 @@ func (p *fakePanel) serve(w http.ResponseWriter, r *http.Request) {
 		}
 		if p.refuseActivation && body["enable"] == true {
 			body["enable"] = false
+		}
+		if p.partialUpdateInbounds != nil {
+			p.partialUpdateInbounds[p.ids[0]] = body
+			reply(map[string]any{"success": false, "msg": "inbound 2: fixture apply failure", "obj": nil})
+			return
 		}
 		p.client = body
 		reply(map[string]any{"success": true, "obj": nil})
@@ -368,20 +377,40 @@ func TestRegressionProvisionReconciliation(t *testing.T) {
 	}
 }
 func TestRegressionProvisionReconciliationPartial(t *testing.T) {
-	s, e := fixture(t)
-	p := panelFixture(t, s)
-	p.partial = true
-	_, operation := approved(t, s, e, "partial@example.test")
-	if err := s.provision(context.Background(), operation); err != nil {
-		t.Fatal(err)
-	}
-	if p.adds != 1 || p.attaches != 1 || len(p.ids) != 2 || p.client["password"] != "fixture protocol value" || p.otherWrites != 0 {
-		t.Fatal("partial membership or protocol fields changed")
-	}
-	for _, id := range p.ids {
-		if id != 1 && id != 2 {
-			t.Fatal("unknown group modified")
-		}
+	for _, tc := range []struct {
+		name                      string
+		mutationError, incomplete bool
+		status                    string
+		memberships               int
+	}{
+		{"confirmed", false, false, "applied", 2},
+		{"error-after-partial-create", true, false, "applied", 2},
+		{"error-with-incomplete-attach", true, true, "needs_review", 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			s, e := fixture(t)
+			p := panelFixture(t, s)
+			p.partial, p.mutationError, p.incompleteAttach = true, tc.mutationError, tc.incomplete
+			_, operation := approved(t, s, e, "partial@example.test")
+			if err := s.provision(context.Background(), operation); err != nil {
+				t.Fatal(err)
+			}
+			var status string
+			if e.Pool.QueryRow(context.Background(), "SELECT status FROM trial_operations WHERE id=$1", operation).Scan(&status) != nil || status != tc.status {
+				t.Fatal("partial provider response falsely confirmed the operation", status)
+			}
+			if p.adds != 1 || p.attaches != 1 || len(p.ids) != tc.memberships || p.client["password"] != "fixture protocol value" || p.otherWrites != 0 {
+				t.Fatal("partial membership or protocol fields changed")
+			}
+			if err := s.provision(context.Background(), operation); err != nil || p.adds != 1 || p.attaches != 1 {
+				t.Fatal("replay repeated an applied or ambiguous provider write")
+			}
+			for _, id := range p.ids {
+				if id != 1 && id != 2 {
+					t.Fatal("unknown group modified")
+				}
+			}
+		})
 	}
 }
 func TestRegressionProvisionReconciliationNoRegular(t *testing.T) {

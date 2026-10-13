@@ -71,6 +71,17 @@ panel or unknown observation does not prove that a subscription is inactive.
 After an uncertain traffic reset, check the panel before confirming another
 attempt: repeating it can reset traffic again.
 
+3X-UI 3.10.0 can apply an operation to some inbounds and still return an
+error. For `needs_review`, compare the client's actual expiry, limits,
+ban and memberships before retrying. An error response alone does not
+prove that nothing changed. Keep the existing UUID and subId.
+
+After a panel upgrade, check the published subscription: a fresh panel's
+random path and `excludeFromSub` can hide links to a working inbound.
+When **Restart Xray After Client Disable** is enabled, manually disabling
+or deleting a client can restart the core and interrupt other connections.
+The administrator should choose that setting with this effect in mind.
+
 ## Plans and payments
 
 In **Catalogue**, create or edit a plan's duration, device limit, traffic,

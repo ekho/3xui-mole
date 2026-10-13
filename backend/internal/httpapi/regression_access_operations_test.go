@@ -6,6 +6,7 @@ import (
 	"example.com/cabinet/backend/internal/testkit"
 	"example.com/cabinet/backend/internal/wire"
 	"github.com/google/uuid"
+	"maps"
 	"testing"
 	"time"
 )
@@ -184,6 +185,48 @@ func TestRegressionAccessUpdateConvertsNativeClientRecord(t *testing.T) {
 	current, err := s.getAccessOperation(ctx, actor, target, op.OperationId)
 	if err != nil || current.Status != "applied" || p.updates != 1 || p.client["id"] != id || p.client["comment"] != "manual note" || p.client["limitHwid"] != json.Number("4") {
 		t.Fatalf("native ClientRecord update rejected or lost raw fields: %v", err)
+	}
+}
+
+func TestRegressionAccessPartialUpdateWithStaleClientRecord(t *testing.T) {
+	s, _, p, actor, target, _ := accessActors(t)
+	ctx := context.Background()
+	before := maps.Clone(p.client)
+	p.partialUpdateInbounds = make(map[int64]map[string]any)
+	for _, id := range p.ids {
+		p.partialUpdateInbounds[id] = maps.Clone(before)
+	}
+	key := uuid.New()
+	input := wire.AccessOperationInput{Kind: "compensate", Reason: "partial provider update", Days: ptrInt(1)}
+	op, err := s.createAccessOperation(ctx, actor, target, key, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for range 2 {
+		if err = s.applyAccess(ctx, op.OperationId); err != nil {
+			t.Fatal(err)
+		}
+		current, err := s.getAccessOperation(ctx, actor, target, op.OperationId)
+		if err != nil || current.Status != "needs_review" || current.Desired.ExpiresAt == nil || !current.Desired.ExpiresAt.Equal(*op.Desired.ExpiresAt) {
+			t.Fatalf("partial update was falsely applied or replaced its target: %v", err)
+		}
+		replay, err := s.createAccessOperation(ctx, actor, target, key, input)
+		if err != nil || replay.OperationId != op.OperationId {
+			t.Fatalf("replay replaced the ambiguous operation: %v", err)
+		}
+	}
+	if p.updates != 1 || p.adds != 1 || p.attaches != 0 || p.detaches != 0 || p.resets != 0 || p.up != 1234 || !maps.Equal(p.client, before) {
+		t.Fatal("partial update retried or changed the stale record, traffic or memberships")
+	}
+	if len(p.ids) != 2 || integer(t, p.partialUpdateInbounds[p.ids[0]]["expiryTime"]) != op.Desired.ExpiresAt.UnixMilli() || !maps.Equal(p.partialUpdateInbounds[p.ids[1]], before) {
+		t.Fatal("fixture did not leave exactly one inbound updated")
+	}
+	for _, client := range p.partialUpdateInbounds {
+		for _, field := range []string{"id", "subId", "email", "limitIp", "totalGB", "password"} {
+			if client[field] != before[field] {
+				t.Fatalf("partial update lost %s", field)
+			}
+		}
 	}
 }
 

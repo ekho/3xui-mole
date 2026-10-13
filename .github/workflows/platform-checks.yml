@@ -97,7 +97,17 @@ jobs:
           docker compose --env-file deploy/acceptance/.env.example -f deploy/acceptance/compose.acceptance.yml config --quiet
           docker compose --env-file deploy/acceptance/.env.example -f deploy/acceptance/compose.acceptance.yml build backend gateway
           python deploy/acceptance/smoke.py
-      - name: Native process with 3X-UI 3.7.0 and TLS SMTP
+      - name: 3X-UI 3.7.0 API compatibility control
+        env:
+          LOCAL_PANEL_IMAGE: ghcr.io/mhsanaei/3x-ui:3.7.0@sha256:3b3131f1876e6bf35063a9ec4dd1c594e4525180bfc2e1c477dcc8a3c9550ca1
+          LOCAL_STATE_DIR: ${{ runner.temp }}/panel-3.7.0-control
+        run: |
+          umask 077
+          mkdir -p "$LOCAL_STATE_DIR"
+          printf '{"project":"cabinet-native-3-7-control"}\n' > "$LOCAL_STATE_DIR/runtime.json"
+          trap 'python deploy/acceptance/local.py down' EXIT
+          python deploy/acceptance/local.py up --reuse-images
+      - name: Native process with 3X-UI 3.10.0 and TLS SMTP
         run: |
           python deploy/acceptance/local.py up --reuse-images
           python deploy/acceptance/local.py check

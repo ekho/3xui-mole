@@ -22,7 +22,7 @@ func TestPanelUpdateNativePayload(t *testing.T) {
 		switch r.URL.Path {
 		case "/fixture/panel/api/clients/get/acct_fixture":
 			json.NewEncoder(w).Encode(map[string]any{"success": true, "obj": map[string]any{
-				"client":     map[string]any{"id": 7, "uuid": id, "email": "acct_fixture", "subId": "fixture", "expiryTime": 1800000000000, "limitIp": 2, "totalGB": 1024, "enable": true, "allowedIPs": "127.0.0.1, ::1", "customField": "preserved"},
+				"client":     map[string]any{"id": 7, "uuid": id, "email": "acct_fixture", "subId": "fixture", "expiryTime": 1800000000000, "limitIp": 2, "totalGB": 1024, "enable": true, "allowedIPs": "127.0.0.1, ::1", "customField": "preserved", "resetWeekday": 3, "resetMax": 4, "keepAlive": 25, "password": "fixture-password", "reverse": map[string]any{"tag": "fixture-reverse"}},
 				"inboundIds": []int{1}, "usedTraffic": 0,
 			}})
 		case "/fixture/panel/api/clients/update/acct_fixture":
@@ -52,6 +52,7 @@ func TestPanelUpdateNativePayload(t *testing.T) {
 	body := <-updates
 	for field, literal := range map[string]string{
 		"id": `"11111111-1111-4111-8111-111111111111"`, "limitIp": "3", "expiryTime": "1800000000000", "totalGB": "2048", "enable": "false", "customField": `"preserved"`,
+		"resetWeekday": "3", "resetMax": "4", "keepAlive": "25", "password": `"fixture-password"`, "reverse": `{"tag":"fixture-reverse"}`,
 	} {
 		if string(body[field]) != literal {
 			t.Errorf("native update changed %s", field)
@@ -60,6 +61,57 @@ func TestPanelUpdateNativePayload(t *testing.T) {
 	var ips []string
 	if json.Unmarshal(body["allowedIPs"], &ips) != nil || !reflect.DeepEqual(ips, []string{"127.0.0.1", "::1"}) {
 		t.Fatal("ClientRecord CSV not translated to native update array")
+	}
+}
+
+func TestPanelUpdateKeepAlivePresence(t *testing.T) {
+	id := uuid.MustParse("11111111-1111-4111-8111-111111111111")
+	for _, raw := range []string{"", "0"} {
+		t.Run("keepAlive="+raw, func(t *testing.T) {
+			var updated map[string]json.RawMessage
+			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != "POST" || r.URL.Path != "/panel/api/clients/update/acct_fixture" {
+					t.Error("unexpected native update request")
+				}
+				if json.NewDecoder(r.Body).Decode(&updated) != nil {
+					t.Error("invalid native update JSON")
+				}
+				json.NewEncoder(w).Encode(map[string]any{"success": true})
+			}))
+			defer server.Close()
+			roots := x509.NewCertPool()
+			roots.AddCert(server.Certificate())
+			p := NewPanelClient(Config{PanelURL: server.URL, PanelToken: "fixture", PanelRootCAs: roots})
+			defer p.Close()
+			view := &PanelClientView{PanelKey: "acct_fixture", VPNID: id, SubID: "fixture", Raw: map[string]json.RawMessage{"uuid": json.RawMessage(`"11111111-1111-4111-8111-111111111111"`)}}
+			if raw != "" {
+				view.Raw["keepAlive"] = json.RawMessage(raw)
+			}
+			if err := p.UpdateAccess(context.Background(), view, AccessTarget{PanelKey: view.PanelKey, VPNID: id, SubID: view.SubID}); err != nil {
+				t.Fatal(err)
+			}
+			if string(updated["keepAlive"]) != raw {
+				t.Fatal("absent keepAlive and explicit zero must remain distinct")
+			}
+		})
+	}
+}
+
+func TestPanelAuthenticationFailureIsNotAbsence(t *testing.T) {
+	for _, status := range []int{http.StatusUnauthorized, http.StatusNotFound} {
+		server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(status)
+			json.NewEncoder(w).Encode(map[string]any{"success": false, "msg": "Obtain (record not found)", "obj": nil})
+		}))
+		roots := x509.NewCertPool()
+		roots.AddCert(server.Certificate())
+		p := NewPanelClient(Config{PanelURL: server.URL, PanelToken: "invalid", PanelRootCAs: roots})
+		view, err := p.GetClient(context.Background(), "acct_fixture")
+		p.Close()
+		server.Close()
+		if view != nil || !errors.Is(err, ErrPanel) {
+			t.Fatal("HTTP auth/base-path failure must not permit client creation", status)
+		}
 	}
 }
 

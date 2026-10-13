@@ -206,6 +206,36 @@ Prepare enabled 3X-UI inbounds with a hyphen-separated tag segment `regular`,
 regular inbounds. A profile with no matching enabled inbound cannot be applied;
 verify the panel integration before offering that profile in the catalogue.
 
+### 3X-UI compatibility
+
+The native fixture uses **3X-UI 3.10.0 / Xray 26.10.10**, pinned by digest.
+CI also checks the 3.7.0 API with the same integration code. For a local
+control run, set `LOCAL_PANEL_IMAGE` to the pinned 3.7.0 reference in CI.
+The fixture's private `panel-runtime.json` records the observed panel and
+Xray versions and the selected pinned image.
+
+Fresh panels use random subscription paths. Match `SUBSCRIPTION_BASE_URL`
+to the actual `subPath` or published `subURI`; settings discovery uses the
+panel's URL. Upgrades retain existing URLs. Synthetic fixtures explicitly
+set `/sub/` for their gateways. Keep inbounds intended for client
+subscriptions visible: `excludeFromSub=true` keeps an inbound serving but
+removes its links from subscriptions.
+
+Back up the panel database and keep the old image digest before upgrading.
+Wait for migrations, then verify identities, limits, traffic and a real
+connection. SQLite directories require `0700`, DB/WAL/SHM files `0600`, and
+the correct owner. Roll back with the old database and image together;
+do not run an old panel against an upgraded database. In master/node
+deployments upgrade the nodes too: some 3.10.0 fixes run on the node.
+
+The Bearer token needs permission for the client endpoints and settings;
+check its scope and expiry. Invalid tokens return 401; a wrong base path
+may return 404. Username/password authentication uses cookies and CSRF.
+HTTPS certificate verification remains enabled. Xray 26.10.10 outbounds
+using a private CA require **Use system CA** or explicit trust. Client
+apps using xdns/udphop need a compatible core; the 3.10.0 xdns shape needs
+Xray 26.10.10+. [Upstream requirements](https://github.com/MHSanaei/3x-ui/releases/tag/v3.10.0).
+
 ### Telegram and audit
 
 | Settings | Meaning / default |
