@@ -1,5 +1,53 @@
 import {test,expect} from '@playwright/test';
 const id='425e3641-912b-4e50-b4d2-6b4a21598890',token='z'.repeat(43),password='A new long password';
+test.describe('Auth field validation',()=>{
+ for(const lang of ['ru','en'] as const){
+  const en=lang==='en',required=en?'Complete the required fields.':'Заполните обязательные поля.';
+  test('missing login password focuses and describes only that field '+lang,async({page})=>{
+   let calls=0;await page.route('**/api/v1/auth/login',route=>{calls++;return route.abort();});
+   await page.goto('/login?lang='+lang);const email=page.getByLabel('Email',{exact:true}),secret=page.getByLabel(en?'Password':'Пароль',{exact:true});
+   await email.fill('client@example.test');await page.getByRole('button',{name:en?'Sign in':'Войти',exact:true}).click();
+   await expect(secret).toBeFocused();await expect(secret).toHaveAttribute('aria-invalid','true');await expect(email).not.toHaveAttribute('aria-invalid','true');
+   await expect(secret).toHaveAccessibleDescription(required);await expect(secret.locator('xpath=../following-sibling::*[1]')).toHaveText(required);
+   await expect(page.getByText(en?'15–128 characters. Spaces and Unicode are allowed.':'15–128 символов. Разрешены пробелы и Unicode.')).toHaveCount(0);
+   await secret.fill('short existing password');await expect(secret).not.toHaveAttribute('aria-invalid','true');expect(calls).toBe(0);
+  });
+  test('missing login email never marks a filled password invalid '+lang,async({page})=>{
+   await page.goto('/login?lang='+lang);const email=page.getByLabel('Email',{exact:true}),secret=page.getByLabel(en?'Password':'Пароль',{exact:true});
+   await secret.fill('existing password');await page.getByRole('button',{name:en?'Sign in':'Войти',exact:true}).click();
+   await expect(email).toBeFocused();await expect(email).toHaveAttribute('aria-invalid','true');await expect(email).toHaveAccessibleDescription(required);
+   await expect(secret).not.toHaveAttribute('aria-invalid','true');await expect(secret).not.toHaveAttribute('aria-describedby',/error/);
+  });
+  test('registration consent errors stay beside unchecked consent '+lang,async({page})=>{
+   let calls=0;await page.route('**/api/v1/auth/register',route=>{calls++;return route.abort();});
+   await page.goto('/register?lang='+lang);const email=page.getByLabel('Email',{exact:true}),terms=page.getByRole('checkbox',{name:en?/terms of use/i:/условия использования/i}),privacy=page.getByRole('checkbox',{name:en?/privacy/i:/обработки данных/i});
+   await email.fill('client@example.test');const submit=page.getByRole('button',{name:en?'Continue':'Продолжить',exact:true});await submit.click();
+   await expect(terms).toBeFocused();await expect(email).not.toHaveAttribute('aria-invalid','true');
+   for(const consent of [terms,privacy]){await expect(consent).toHaveAttribute('aria-invalid','true');await expect(consent).toHaveAccessibleDescription(required);await expect(consent.locator('xpath=../following-sibling::*[1]')).toHaveText(required);}
+   await terms.check();await expect(terms).not.toHaveAttribute('aria-invalid','true');await expect(privacy).toHaveAttribute('aria-invalid','true');await submit.click();await expect(privacy).toBeFocused();expect(calls).toBe(0);
+  });
+ }
+ test('manual verification focuses the first missing proof instead of password',async({page})=>{
+  let calls=0;await page.route('**/api/v1/auth/verify-email',route=>{calls++;return route.abort();});
+  await page.goto('/verify-email?lang=en');const challenge=page.getByLabel('Challenge ID from the email'),code=page.getByLabel('Code from the email'),secret=page.getByLabel('Password',{exact:true});
+  await secret.fill(password);const submit=page.getByRole('button',{name:'Verify email',exact:true});await submit.click();
+  await expect(challenge).toBeFocused();await expect(challenge).toHaveAttribute('aria-invalid','true');await expect(code).toHaveAttribute('aria-invalid','true');await expect(secret).not.toHaveAttribute('aria-invalid','true');
+  await challenge.fill(id);await submit.click();await expect(code).toBeFocused();await expect(challenge).not.toHaveAttribute('aria-invalid','true');expect(calls).toBe(0);
+ });
+ test('password confirmation focuses repeat without blaming a valid new password',async({page})=>{
+  await page.goto('/reset-password?lang=en#token='+token);const secret=page.getByLabel('Password',{exact:true}),repeat=page.getByLabel('Repeat password');
+  await secret.fill(password);await repeat.fill('different');await page.getByRole('button',{name:'Save password'}).click();
+  await expect(repeat).toBeFocused();await expect(repeat).toHaveAttribute('aria-invalid','true');await expect(repeat).toHaveAccessibleDescription('Passwords do not match.');await expect(secret).not.toHaveAttribute('aria-invalid','true');
+  await expect(secret).toHaveAccessibleDescription('15–128 characters. Spaces and Unicode are allowed.');await repeat.fill(password);await expect(repeat).not.toHaveAttribute('aria-invalid','true');
+ });
+ test('server login failure stays general and accepts an existing short password',async({page})=>{
+  let calls=0;await page.route('**/api/v1/auth/login',route=>{calls++;expect(route.request().postDataJSON()).toEqual({email:'client@example.test',password:'old'});return route.fulfill({status:401,json:{error:{code:'INVALID_CREDENTIALS',message:'PRIVATE_AUTH_DETAIL'}}});});
+  await page.goto('/login?lang=en');await page.getByLabel('Email',{exact:true}).fill('client@example.test');await page.getByLabel('Password',{exact:true}).fill('old');await page.getByRole('button',{name:'Sign in',exact:true}).click();
+  await expect(page.getByRole('alert')).toContainText('Check your email and password');expect(calls).toBe(1);
+  await expect(page.getByLabel('Password',{exact:true})).not.toHaveAttribute('aria-invalid','true');await expect(page.getByLabel('Email',{exact:true})).not.toHaveAttribute('aria-invalid','true');await expect(page.locator('body')).not.toContainText('PRIVATE_AUTH_DETAIL');
+ });
+});
+
 test.describe('Password reset',()=>{
  for(const lang of ['ru','en'])test('request accepted and cooldown '+lang,async({page})=>{
   await page.clock.install();let calls=0;

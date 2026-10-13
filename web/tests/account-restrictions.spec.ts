@@ -53,7 +53,7 @@ test('unrestricting is explicit, keeps VPN status separate, and works by keyboar
 test('legacy snapshot renders unknown dates and actors, and pages using decimal source ID',async({page})=>{
  const inputs:unknown[]=[];await routes(page,async(route,path)=>{if(path.endsWith('/history')){inputs.push(route.request().postDataJSON());await route.fulfill({json:{kind:'legacy',legacy_events:[{...event,source_id:'9223372036854775805',actor_type:'telegram',actor_id:'123456789',actor_name:'Old operator'}],has_more:false}});return true;}return false;});
  await page.goto('/admin/clients/'+clientId+'/show?lang=en');const history=page.getByRole('region',{name:'Legacy registration history'});
- await expect(history.getByText('rejected',{exact:true})).toBeVisible();await expect(history.getByText('Unknown',{exact:true}).first()).toBeVisible();await expect(history.getByText(event.source_id,{exact:true})).toBeVisible();
+ await expect(history.getByText('Rejected',{exact:true})).toBeVisible();await expect(history.getByText('Unknown',{exact:true}).first()).toBeVisible();await expect(history.getByText(event.source_id,{exact:true})).toBeVisible();
  await expect(history.getByRole('button',{name:/Approve|Reject/})).toHaveCount(0);await history.getByRole('button',{name:'Load older registration events'}).click();
  expect(inputs).toEqual([{kind:'legacy',before_created_at:event.created_at,before_source_id:event.source_id}]);await expect(history.getByText('telegram · Old operator · 123456789')).toBeVisible();await expect(history.getByRole('button',{name:'Load older registration events'})).toHaveCount(0);
 });

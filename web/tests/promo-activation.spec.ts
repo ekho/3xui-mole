@@ -60,10 +60,10 @@ for(const initial of ['none','expired'] as const)test('subscription refreshes fr
  const form=page.getByRole('region',{name:'Активировать промокод'});
  await form.getByLabel('Промокод').fill('A1');await form.getByRole('button',{name:'Активировать'}).click();
  await expect.poll(()=>reads).toBe(2);
- await expect(page.locator('.stats-grid')).toContainText(new Date(firstExpiry).toLocaleString('ru-RU'));
+ await expect(page.locator('.cabinet-summary')).toContainText(new Date(firstExpiry).toLocaleString('ru-RU'));
  await expect(page.getByRole('button',{name:'Показать ссылку'})).toBeVisible();
  await form.getByRole('button',{name:'Обновить статус'}).click();await expect.poll(()=>reads).toBe(3);
- await expect(page.locator('.stats-grid')).toContainText(new Date(secondExpiry).toLocaleString('ru-RU'));
+ await expect(page.locator('.cabinet-summary')).toContainText(new Date(secondExpiry).toLocaleString('ru-RU'));
  await expect(page.getByRole('button',{name:'Показать ссылку'})).toBeVisible();
 });
 

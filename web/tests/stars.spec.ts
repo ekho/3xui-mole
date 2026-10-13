@@ -48,6 +48,20 @@ async function fixture(page:Page,options:{sdk?:'missing'|'throw';url?:string;cur
  return {calls,invoiceReads:()=>invoiceReads,reads:()=>reads,set:(v:Model<'PurchaseOrder'>)=>{current=v;},setSubscription:(v:Model<'StarsSubscription'>)=>{subscription=v;}};
 }
 
+test('UX: MiniApp offers only priced Stars periods even when other payment methods are returned',async({page})=>{
+ await fixture(page,{plan:{...plan,periods:[30,60,90],prices:[{period_days:30,currency:'RUB',amount_minor:'12345'},{period_days:60,currency:'USD',amount_minor:'1200'},{period_days:90,currency:'XTR',amount_minor:'100'}]}});
+ await page.route('**/api/v1/payment-methods',route=>route.fulfill({json:{methods:[{id:'yoomoney',currency:'RUB'},{id:'cryptomus',currency:'USD'},{id:'telegram_stars',currency:'XTR'}]}}));
+ await page.goto('/mini-app/catalogue?lang=en');await page.getByRole('button',{name:'Select plan'}).click();const chosen=page.getByRole('region',{name:'Selected offer'});
+ await expect(chosen.getByLabel('Currency').locator('option')).toHaveText(['XTR']);await expect(chosen.getByLabel('Period').locator('option')).toHaveText(['90 days']);
+ await expect(chosen.getByLabel('Period')).toHaveValue('90');await expect(chosen.getByRole('radio')).toHaveCount(1);await expect(chosen.getByRole('radio',{name:'Telegram Stars'})).toBeChecked();
+ await expect(chosen.getByText('Price: 100 XTR',{exact:true})).toBeVisible();await expect(chosen.getByRole('button',{name:'Buy plan'})).toBeEnabled();await expect(chosen.getByRole('checkbox')).toHaveCount(0);
+});
+
+test('UX: MiniApp explains a plan with no Stars price without offering external currency',async({page})=>{
+ await fixture(page,{plan:{...plan,prices:[{period_days:30,currency:'RUB',amount_minor:'12345'}]}});await page.goto('/mini-app/catalogue?lang=en');await page.getByRole('button',{name:'Select plan'}).click();
+ const chosen=page.getByRole('region',{name:'Selected offer'});await expect(chosen.getByText('No payment method is available for this plan.')).toBeVisible();await expect(chosen.getByLabel('Currency').locator('option')).toHaveCount(0);await expect(chosen.getByLabel('Currency')).toBeDisabled();await expect(chosen.getByRole('button',{name:'Buy plan'})).toHaveCount(0);await expect(chosen.getByText('No data',{exact:false})).toHaveCount(0);
+});
+
 for(const lang of ['en','ru'] as const)test('Mini Stars catalogue and invoice '+lang,async({page})=>{
  const f=await fixture(page);await page.setViewportSize({width:375,height:812});await page.goto('/mini-app/catalogue?lang='+lang);
  await page.getByRole('button',{name:lang==='en'?'Select plan':'Выбрать тариф'}).click();

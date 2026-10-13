@@ -23,7 +23,7 @@ test('finite limits remain finite for an unlimited access profile',async({page})
  await mock(page,()=>({...base,access_profile:'unlimited'}));await page.goto('/cabinet?lang=en');
  await expect(page.getByRole('heading',{name:'client@example.test'})).toBeVisible();
  await expect(value(page,'Email')).toHaveText('client@example.test');await expect(value(page,'Language')).toHaveText('English');
- await expect(page.getByText('Trial active',{exact:true})).toBeVisible();await expect(value(page,'Access profile')).toHaveText('Unlimited');
+ await expect(page.getByText('Access active',{exact:true})).toBeVisible();await expect(value(page,'Access profile')).toHaveText('Unlimited');
  await expect(value(page,'Upload')).toHaveText('100 B');await expect(value(page,'Download')).toHaveText('200 B');await expect(value(page,'Used')).toHaveText('300 B');await expect(value(page,'Remaining')).toHaveText('724 B');await expect(value(page,'Traffic limit')).toHaveText('1 KiB');
 });
 

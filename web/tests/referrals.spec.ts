@@ -73,10 +73,9 @@ for(const mini of [false,true])test('loading, safe error, keyboard retry and emp
  await expect(screen.getByRole('status')).toContainText('Loading');await expect(screen.getByRole('textbox')).toHaveCount(0);
  release();await expect(screen.getByRole('alert')).toBeVisible();await expect(page.locator('body')).not.toContainText('PRIVATE_PROVIDER_DETAIL');
  await screen.getByRole('button',{name:'Retry'}).focus();await page.keyboard.press('Enter');
- await expect(screen.getByRole('status')).toHaveText('No invitations or reward records yet.');await expect(screen.getByRole('heading',{level:1})).toBeFocused();
- await expect(screen.getByRole('textbox',{name:'Personal invitation link'})).toHaveValue(result.web_url);await expect(screen.locator('dd')).toHaveCount(14);
- for(const cell of await screen.locator('dd').all())await expect(cell).toHaveText('0');
- await expect(screen.getByRole('region')).toHaveCount(2);await expect(screen.getByRole('alert')).toHaveCount(0);expect(reads).toBe(2);
+ await expect(screen.getByRole('status').filter({hasText:'No invitations or reward records yet.'})).toBeVisible();await expect(screen.getByRole('heading',{level:1})).toBeFocused();
+ await expect(screen.getByRole('textbox',{name:'Personal invitation link'})).toHaveValue(result.web_url);await expect(screen.locator('dd')).toHaveCount(0);
+ await expect(screen.getByRole('region')).toHaveCount(0);await expect(screen.getByRole('button',{name:'Copy',exact:true})).toBeEnabled();await expect(screen.getByRole('alert')).toHaveCount(0);expect(reads).toBe(2);
 });
 
 for(const mini of [false,true])test('unauthorized referrals end the existing '+(mini?'Mini App session':'web session'),async({page})=>{
@@ -112,6 +111,27 @@ for(const variant of ['days','fractional-days','negative-days','levels'])test('m
 
 test('unclassified legacy records remain outside both zero levels',async({page})=>{
  await fixture(page,{result:{...empty,unclassified_records:3}});await page.goto('/cabinet/referrals?lang=en');const screen=page.getByRole('region',{name:'Invitations',exact:true});
- await expect(screen).toContainText('Reward records without a saved level: 3');await expect(screen.getByRole('status')).toHaveCount(0);
+ await expect(screen).toContainText('Reward records without a saved level: 3');await expect(screen.getByText('No invitations or reward records yet.')).toHaveCount(0);
  for(const section of await screen.getByRole('region').all()){await expect(section).not.toContainText('without a saved level');for(const cell of await section.locator('dd').all())await expect(cell).toHaveText('0');}
+});
+
+for(const mini of [false,true])for(const lang of ['ru','en'] as const)test('copying the own invitation announces clipboard success in '+(mini?'Mini App ':'web ')+lang,async({page})=>{
+ await fixture(page,{result:empty});await page.addInitScript(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:(value:string)=>{(window as Window&{copied?:string}).copied=value;return Promise.resolve();}}}));
+ await page.goto((mini?'/mini-app':'')+'/cabinet/referrals?lang='+lang);const screen=page.getByRole('region',{name:lang==='en'?'Invitations':'Приглашения',exact:true});
+ const copy=screen.getByRole('button',{name:lang==='en'?'Copy':'Скопировать',exact:true});await expect(copy).toBeVisible();await copy.focus();await page.keyboard.press('Enter');
+ await expect(screen.getByRole('status').filter({hasText:lang==='en'?'Copied':'Скопировано'})).toBeVisible();expect(await page.evaluate(()=>(window as Window&{copied?:string}).copied)).toBe(result.web_url);
+ expect(await page.evaluate(()=>JSON.stringify(localStorage)+JSON.stringify(sessionStorage))).not.toMatch(/r_aaaaaaaa|mini_bbbb|referrals@example/);
+});
+
+for(const mini of [false,true])test('clipboard denial selects the invitation for manual copying in '+(mini?'Mini App':'web'),async({page})=>{
+ await fixture(page);await page.addInitScript(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:()=>Promise.reject(new Error('PRIVATE_CLIPBOARD_DETAIL'))}}));
+ await page.goto((mini?'/mini-app':'')+'/cabinet/referrals?lang=en');const screen=page.getByRole('region',{name:'Invitations',exact:true}),share=screen.getByRole('textbox',{name:'Personal invitation link'});
+ const copy=screen.getByRole('button',{name:'Copy',exact:true});await expect(copy).toBeVisible();await copy.click();await expect(screen.getByRole('status').filter({hasText:'Select the link and copy it manually.'})).toBeVisible();await expect(share).toBeFocused();
+ expect(await share.evaluate(element=>{const input=element as HTMLInputElement;return [input.selectionStart,input.selectionEnd];})).toEqual([0,result.web_url.length]);await expect(share).toHaveValue(result.web_url);await expect(page.locator('body')).not.toContainText('PRIVATE_CLIPBOARD_DETAIL');
+});
+
+test('nonzero exact day totals keep details even when record counts are zero',async({page})=>{
+ await fixture(page,{result:{...empty,levels:[{...empty.levels[0],granted_days:'9007199254740993'},empty.levels[1]]}});await page.goto('/cabinet/referrals?lang=en');const screen=page.getByRole('region',{name:'Invitations',exact:true});
+ await expect(screen.getByRole('textbox',{name:'Personal invitation link'})).toHaveValue(result.web_url);
+ await expect(screen.getByText('No invitations or reward records yet.')).toHaveCount(0);await expect(screen.getByRole('region',{name:'First level'})).toContainText('9007199254740993');await expect(screen.locator('dd')).toHaveCount(14);
 });

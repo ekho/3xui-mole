@@ -106,6 +106,22 @@ def run():
             assert "frame-ancestors 'none'" in one_header(headers,'Content-Security-Policy')
             assert one_header(headers,'X-Content-Type-Options')=='nosniff'
             assert one_header(headers,'Cache-Control')=='no-store'
+            # Production Caddy generates a fresh style nonce for every owned
+            # cabinet document; the meta policy and response header must agree.
+            nonces=[]
+            for path in ('/cabinet', '/cabinet', '/admin/clients'):
+                html_status, html_headers, html_body = get(path)
+                assert html_status == 200 and b'{{' not in html_body
+                nonce = re.search(rb'property="csp-nonce" nonce="([A-Za-z0-9+/=_-]{24,})"', html_body)
+                assert nonce, 'Missing document nonce'
+                value = nonce.group(1).decode()
+                html_policy = one_header(html_headers, 'Content-Security-Policy')
+                assert "style-src 'self' 'nonce-"+value+"'" in html_policy
+                assert ("'nonce-"+value+"'").encode() in html_body
+                assert "frame-ancestors 'none'" in html_policy
+                assert 'unsafe-inline' not in html_policy and 'unsafe-eval' not in html_policy
+                nonces.append(value)
+            assert len(set(nonces)) == len(nonces), 'Nonce reused between responses'
             # Same image, dedicated Mini HTML/CSP; ordinary web/admin cannot be framed.
             for path in ('/mini-app', '/mini-app/cabinet/history'):
                 mini_status, mini_headers, mini_body = get(path)

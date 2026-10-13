@@ -8,7 +8,7 @@ test('Web trial real HTTP + River + Go decision + browser',async({page})=>{
  await page.getByRole('link',{name:'Sign in',exact:true}).first().click();await page.getByLabel('Email',{exact:true}).fill('browser@example.test');await page.getByLabel('Password',{exact:true}).fill('browser fixture password with ✨');await page.getByRole('button',{name:'Sign in',exact:true}).click();await expect(page).toHaveURL(/cabinet/);
  await page.getByRole('button',{name:'Request trial',exact:true}).click();await expect(page.getByText('Request sent. Waiting for support')).toBeVisible();const response=await page.request.get('/api/v1/trial-requests/current');const current:components['schemas']['CurrentTrialRequest']=await response.json();
  expect(response.status()).toBe(200);expect(current.request?.request_id).toMatch(/^[0-9a-f-]{36}$/);
- await expect(page.getByText('Trial active',{exact:true})).toBeVisible({timeout:15000});const keyResponse=page.waitForResponse(r=>r.url().endsWith('/subscription/key'));await page.getByRole('button',{name:'Show subscription link'}).click();expect((await keyResponse).headers()['cache-control']).toBe('no-store');await expect(page.getByLabel('Subscription link',{exact:true})).toHaveValue(/^https:\/\/subscriptions\.example\.test\/sub\/[0-9a-z]{16}$/);
+ await expect(page.getByText('Access active',{exact:true})).toBeVisible({timeout:15000});const keyResponse=page.waitForResponse(r=>r.url().endsWith('/subscription/key'));await page.getByRole('button',{name:'Show subscription link'}).click();expect((await keyResponse).headers()['cache-control']).toBe('no-store');await expect(page.getByLabel('Subscription link',{exact:true})).toHaveValue(/^https:\/\/subscriptions\.example\.test\/sub\/[0-9a-z]{16}$/);
  expect(await page.evaluate(()=>JSON.stringify(localStorage)+JSON.stringify(sessionStorage))).not.toContain(token);const cookie=(await page.context().cookies()).find(c=>c.name==='__Host-session');expect(cookie?.httpOnly&&cookie.secure).toBe(true);
  const internal=await page.request.post('/internal/v1/telegram/jobs/claim',{data:{limit:1}});expect(internal.status()).toBe(404);
  await page.getByRole('button',{name:'Sign out'}).click();await expect(page).toHaveURL(/login/);expect((await page.request.get('/api/v1/subscription/key')).status()).toBe(401);
@@ -25,7 +25,7 @@ if(process.env.TEST_MINI_INIT_FILE){
   await page.goto('/mini-app/cabinet?lang=en');checkpoint='consent';await page.getByRole('checkbox',{name:/terms of use/i}).check();await page.getByRole('checkbox',{name:/privacy/i}).check();await page.getByRole('button',{name:'Continue',exact:true}).click();checkpoint='capability';
   const activate=page.getByRole('button',{name:'Activate trial',exact:true});await expect(activate).toBeVisible();await expect(page.getByRole('textbox',{name:'Comment for support',exact:true})).toHaveCount(0);await expect(page.getByRole('textbox',{name:'Promocode',exact:true})).toBeVisible();
   checkpoint='activation';const response=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/v1/trials/activate');await activate.focus();await page.keyboard.press('Enter');const result=await response;expect(result.status()).toBe(201);expect(result.headers()['cache-control']).toBe('no-store');expect(result.request().postDataJSON()).toEqual({});expect(result.request().headers().authorization).toMatch(/^Bearer mini_/);expect(result.request().headers()['x-csrf-token']).toBeTruthy();checkpoint='provision';
-  await expect(page.getByText('Trial active',{exact:true})).toBeVisible({timeout:20000});await expect(activate).toHaveCount(0);expect(keys).toHaveLength(1);
+  await expect(page.getByText('Access active',{exact:true})).toBeVisible({timeout:20000});await expect(activate).toHaveCount(0);expect(keys).toHaveLength(1);
   expect(await page.evaluate(()=>JSON.stringify(localStorage)+JSON.stringify(sessionStorage))).not.toMatch(/mini_|init_data|tgWebAppData|subscription_url/);
   checkpoint='connection';await page.getByRole('button',{name:'Show subscription link'}).click();await expect(page.getByLabel('Subscription link',{exact:true})).toHaveValue(/^https:\/\/.+\/sub\/[0-9a-z]{16}$/);
   await page.getByRole('button',{name:'Hide connection details'}).click();await expect(page.getByLabel('Subscription link',{exact:true})).toHaveCount(0);
@@ -68,10 +68,11 @@ if(process.env.TEST_BROWSER_PAYMENTS_FILE){
    const session=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/v1/telegram/mini-app/session'&&r.status()===200);
    await page.getByRole('button',{name:'Continue',exact:true}).click();const auth=await(await session).json();
    expect(auth.account.account_id).not.toBe(input.other_account_id);checkpoint='trial';
-   await page.getByRole('button',{name:'Activate trial',exact:true}).click();await expect(page.getByText('Trial active',{exact:true})).toBeVisible({timeout:20000});
+   await page.getByRole('button',{name:'Activate trial',exact:true}).click();await expect(page.getByText('Access active',{exact:true})).toBeVisible({timeout:20000});
    const miniSubscription=await page.evaluate(async token=>{const r=await fetch('/api/v1/subscription',{credentials:'omit',headers:{Authorization:'Bearer '+token}});return{status:r.status,body:await r.json()};},auth.session_token);
    expect(miniSubscription.status).toBe(200);checkpoint='public_navigation';
-   const action=page.getByRole('button',{name:'Other payment methods',exact:true});await action.focus();await page.keyboard.press('Enter');
+   await expect(page.getByRole('button',{name:'Other payment methods',exact:true})).toHaveCount(0);
+   const action=page.getByRole('link',{name:'Open cabinet in browser',exact:true});await action.focus();await page.keyboard.press('Enter');
    const opened=await page.evaluate(()=>(window as any).__ownedBrowserPayments.opened);
    expect(opened).toEqual([new URL(page.url()).origin+'/login?lang=en']);
    const web=await external.newPage();let sdkLoads=0;
@@ -87,9 +88,9 @@ if(process.env.TEST_BROWSER_PAYMENTS_FILE){
    await page.getByLabel('New password',{exact:true}).fill(input.password);await page.getByLabel(/Repeat.*password/i).fill(input.password);
    await page.getByRole('checkbox',{name:/terms of use/i}).check();await page.getByRole('checkbox',{name:/privacy/i}).check();checkpoint='identity';
    await page.getByRole('button',{name:'Enable email sign-in',exact:true}).click();await expect(page.getByRole('alert')).toContainText('Email sign-in enabled');
-   await expect(page.getByRole('button',{name:'Other payment methods',exact:true})).toHaveCount(0);
+   await expect(page.getByRole('button',{name:'Other payment methods',exact:true})).toBeVisible();
    expect(await page.evaluate(async token=>(await fetch('/api/v1/telegram/mini-app/account',{credentials:'omit',headers:{Authorization:'Bearer '+token}})).status,auth.session_token)).toBe(401);
-   await page.getByRole('link',{name:'Open cabinet in browser',exact:true}).click();
+   await page.getByRole('button',{name:'Other payment methods',exact:true}).click();
    expect(await page.evaluate(()=>(window as any).__ownedBrowserPayments.opened)).toEqual([opened[0],opened[0]]);
    expect((await page.context().cookies()).find(c=>c.name==='__Host-session')?.value).toBe(input.other_cookie.value);
    expect(await page.evaluate(()=>JSON.stringify(localStorage)+JSON.stringify(sessionStorage))).not.toMatch(/mini_|init_data|tgWebAppData|csrf_token|subscription_url/);

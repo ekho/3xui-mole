@@ -18,6 +18,7 @@ async function fixture(page:Page,options:Options={}){
   const req=r.request(),path=new URL(req.url()).pathname;
   if(options.extra&&await options.extra(r,path))return;
   if(path==='/api/v1/me')return r.fulfill({json:options.profile?.()??account});
+  if(path==='/api/v1/me/identity')return r.fulfill({json:{email:account.account.email,source_kind:'telegram',independent_login:true,telegram_linked:true,can_unlink:true,unlink_blocked_reason:null,pending_initial_email:null}});
   if(path==='/api/v1/notices')return r.fulfill({json:{version:'operator-notices-v1',email_enabled:false,email_available:options.profile?.().account.email_verified??account.account.email_verified,page:1,per_page:20,total:0,notices:[]}});
   if(path==='/api/v1/subscription')return r.fulfill({json:options.subscription??none});
   if(path==='/api/v1/trial-requests/current')return r.fulfill({json:{request:null}});
