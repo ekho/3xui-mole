@@ -12,23 +12,29 @@ function checked(value:api.ReferralsResult){
 }
 
 export function Referrals({lang}:{lang:Lang}){
- const t=text(lang),id=useId();const[revision,setRevision]=useState(0);const heading=useRef<HTMLHeadingElement>(null),focusAfterRetry=useRef(false);
+ const t=text(lang),id=useId();const[revision,setRevision]=useState(0);const[copyStatus,setCopyStatus]=useState('');const input=useRef<HTMLInputElement>(null),heading=useRef<HTMLHeadingElement>(null),focusAfterRetry=useRef(false);
  const query=useQuery({queryKey:['customer','referrals',lang,revision],queryFn:async({signal})=>checked(await api.getReferrals(signal))});
  const value=query.data,loading=query.isPending||query.isFetching,error=query.error?errorText(query.error,lang):'';
  useEffect(()=>{if(query.error instanceof api.ApiError&&query.error.status===401)loginRedirect(lang);},[query.error,lang]);
  useEffect(()=>{if(!loading&&focusAfterRetry.current){heading.current?.focus();focusAfterRetry.current=false;}},[loading]);
- const empty=value&&value.unclassified_records===0&&value.levels.every(level=>level.invited===0&&level.granted_rewards===0&&level.pending_rewards===0&&level.money_records===0&&level.pending_money_records===0);
- return <section className="card" aria-labelledby={id+'-title'} aria-busy={loading}>
+ useEffect(()=>{setCopyStatus('');},[value?.web_url,lang]);
+ async function copy(){const target=input.current;if(!value||loading||!target)return;const url=value.web_url;
+  try{await navigator.clipboard.writeText(url);if(input.current===target&&target.value===url)setCopyStatus(t.copied);}
+  catch{if(input.current===target&&target.value===url){setCopyStatus(t.manualCopy);target.focus();target.select();}}
+ }
+ const empty=value&&value.unclassified_records===0&&value.levels.every(level=>level.invited===0&&level.granted_days==='0'&&level.pending_days==='0'&&level.granted_rewards===0&&level.pending_rewards===0&&level.money_records===0&&level.pending_money_records===0);
+ return <section className="card referrals" aria-labelledby={id+'-title'} aria-busy={loading}>
   <h1 id={id+'-title'} ref={heading} tabIndex={-1}>{t.referralsTitle}</h1>
   <p><Link to={link('/cabinet',lang)}>{t.referralsBack}</Link></p>
   {loading?<p role="status">{t.loading}</p>:null}
   {error?<div className="error" role="alert"><p>{error}</p><button disabled={loading} onClick={()=>{focusAfterRetry.current=true;setRevision(value=>value+1);}}>{t.retry}</button></div>:null}
   {value&&!loading?<>
-   <label htmlFor={id+'-link'}>{t.referralsLink}<input id={id+'-link'} readOnly value={value.web_url} aria-describedby={id+'-link-help'}/></label>
+   <label htmlFor={id+'-link'}>{t.referralsLink}<input ref={input} id={id+'-link'} readOnly value={value.web_url} aria-describedby={id+'-link-help'}/></label>
    <p className="help" id={id+'-link-help'}>{t.referralsLinkHelp}</p>
+   <div className="referral-actions"><button type="button" className="primary" onClick={copy}>{t.copy}</button><p role="status" className="help">{copyStatus}</p></div>
    <p>{t.referralsFacts}</p>
    {empty?<p role="status">{t.referralsEmpty}</p>:null}
-   {value.levels.map(level=><section key={level.level} aria-labelledby={id+'-level-'+level.level}>
+   {empty?null:value.levels.map(level=><section key={level.level} aria-labelledby={id+'-level-'+level.level}>
     <h2 id={id+'-level-'+level.level}>{level.level===1?t.referralsLevelOne:t.referralsLevelTwo}</h2>
     <dl className="stats-grid">
      <div><dt>{t.referralsInvited}</dt><dd>{level.invited}</dd></div>
@@ -40,7 +46,7 @@ export function Referrals({lang}:{lang:Lang}){
      <div><dt>{t.referralsPendingMoneyRecords}</dt><dd>{level.pending_money_records}</dd></div>
     </dl>
    </section>)}
-   <p className="help">{t.referralsMoneyHelp}</p>
+   {empty?null:<p className="help">{t.referralsMoneyHelp}</p>}
    {value.unclassified_records>0?<p className="notice">{t.referralsUnclassified}: {value.unclassified_records}</p>:null}
   </>:null}
  </section>;

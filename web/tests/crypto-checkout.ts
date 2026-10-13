@@ -39,7 +39,7 @@ for(const lang of ['en','ru'] as const)test(`keyboard ${lang}: preparing then ve
  await page.setViewportSize({width:375,height:812});await page.goto('/catalogue?lang='+lang);
  await page.getByRole('button',{name:words.select}).focus();await page.keyboard.press('Enter');
  const choice=page.getByRole('radio',{name});await choice.focus();await page.keyboard.press('Space');await expect(choice).toBeChecked();
- await expect(page.getByLabel(lang==='en'?'Currency':'Валюта')).toHaveValue('USD');await expect(page.getByText(lang==='en'?'123.45 USD':'123,45 USD')).toBeVisible();
+ await expect(page.getByLabel(lang==='en'?'Currency':'Валюта')).toHaveValue('USD');await expect(page.getByRole('region',{name:lang==='en'?'Selected offer':'Выбранное предложение'}).getByText(lang==='en'?'123.45 USD':'123,45 USD')).toBeVisible();
  await page.getByRole('button',{name:words.buy}).focus();await page.keyboard.press('Enter');await page.getByRole('button',{name:words.confirm}).focus();await page.keyboard.press('Enter');
  await expect(page).toHaveURL(new RegExp('/orders/'+orderId));expect(calls[0].body).toEqual({action:'purchase',plan_id:planId,revision:3,period_days:30,payment_method:provider,payment_type:paymentType});expect(calls[0].key).toMatch(/^[0-9a-f-]{36}$/i);
  await expect(page.getByText(words.preparing,{exact:true})).toBeVisible();await expect(page.getByRole('button',{name:words.pay})).toHaveCount(0);
@@ -80,9 +80,9 @@ test('currency and provider selection stay aligned when switching back to RUB',a
  await page.goto('/catalogue?lang=en');await page.getByRole('button',{name:'Select plan'}).click();
  await page.getByRole('radio',{name}).check();await expect(page.getByLabel('Currency')).toHaveValue('USD');await page.getByRole('button',{name:'Buy plan'}).click();
  await expect(page.getByText(/Review the terms.*123\.45 USD/)).toBeVisible();await page.getByRole('button',{name:'Back to plans'}).click();
- await page.getByRole('radio',{name:'Bank card'}).check();await expect(page.getByLabel('Currency')).toHaveValue('RUB');await expect(page.getByText('555.55 RUB')).toBeVisible();
+ await page.getByRole('radio',{name:'Bank card'}).check();await expect(page.getByLabel('Currency')).toHaveValue('RUB');await expect(page.getByRole('region',{name:'Selected offer'}).getByText('555.55 RUB')).toBeVisible();
  await page.getByLabel('Currency').selectOption('USD');await expect(page.getByRole('radio',{name})).toBeChecked();
- await page.getByLabel('Currency').selectOption('XTR');await expect(page.getByRole('button',{name:'Buy plan'})).toBeDisabled();
+ await expect(page.getByLabel('Currency').locator('option')).toHaveText(['RUB','USD']);await expect(page.getByLabel('Currency').locator('option[value="XTR"]')).toHaveCount(0);
 });
 
 if(provider==='heleket'){

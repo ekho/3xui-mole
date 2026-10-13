@@ -29,7 +29,7 @@ test('renewal uses one own plan and a frozen retry',async({page})=>{
  await page.setViewportSize({width:375,height:812});await page.goto('/cabinet/renew?lang=en');
  await expect(page.getByRole('heading',{name:'Renew subscription'})).toBeVisible();
  await expect(page.getByRole('button',{name:'Select plan'})).toHaveCount(0);
- await expect(page.getByLabel('Currency')).toHaveValue('RUB');expect(await page.getByLabel('Currency').locator('option').count()).toBe(2);
+ await expect(page.getByLabel('Currency')).toHaveValue('RUB');await expect(page.getByLabel('Currency').locator('option')).toHaveText(['RUB','USD']);
  await page.getByRole('combobox',{name:'Period',exact:true}).selectOption('90');await page.getByLabel('Wallet', {exact:true}).check();
  await expect(page.getByLabel('Manual transfer', {exact:true})).toBeVisible();await expect(page.getByLabel('Cryptomus', {exact:true})).toBeVisible();
  await page.getByRole('button',{name:'Renew subscription',exact:true}).click();expect(calls).toHaveLength(0);

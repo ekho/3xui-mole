@@ -433,6 +433,13 @@ local backend or mocks. React Fast Refresh preserves component state while editi
 Use `npm --prefix web run lint` for React Hooks checks,
 `npm --prefix web run format` for formatting (generated API types are excluded),
 and `npm --prefix web run test:dev` to check development CSP and Fast Refresh.
+Built cabinet HTML uses Caddy templates to generate a fresh style nonce for each
+response. Emotion reads that nonce from the `csp-nonce` meta tag; the HTML policy
+and response header both allow only styles with that nonce. Keep `templates`
+restricted to the owned static cabinet handler, outside API proxies and the
+Telegram Mini App handler. Use `npm --prefix web run preview` for a local built
+app: it renders the same nonce placeholders. Serving `dist/index.html` directly
+with a generic static server does not render them.
 TypeScript stays on 5.9 while `openapi-typescript` requires its 5.x peer dependency.
 
 

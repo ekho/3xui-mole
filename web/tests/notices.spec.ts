@@ -24,6 +24,7 @@ async function fixture(page:Page,options:Options={}){
   if(path==='/api/v1/telegram/mini-app/session')return r.fulfill({json:{...miniProfile,session_token:'mini_'+'b'.repeat(43)}});
   if(path==='/api/v1/telegram/mini-app/account')return r.fulfill({json:miniProfile});
   if(path==='/api/v1/me')return r.fulfill({json:options.profile?.()??profile});
+  if(path==='/api/v1/me/identity'&&req.method()==='GET')return r.fulfill({json:{email:null,source_kind:'telegram',independent_login:false,telegram_linked:true,can_unlink:false,unlink_blocked_reason:'INDEPENDENT_LOGIN_REQUIRED',pending_initial_email:null}});
   if(path.endsWith('/operator/session')||path.endsWith('/auth/session'))return r.fulfill({json:operator});
   if(path==='/api/v1/subscription')return r.fulfill({json:options.subscription??none});
   if(path==='/api/v1/trial-requests/current')return r.fulfill({json:{request:null}});
@@ -194,7 +195,53 @@ test('logout clears the inbox while a prior save and logout reply are pending',a
 for(const action of ['locale','unmount'])test('operator scope change drops a late preview '+action,async({page})=>{
  let previews=0,release!:()=>void;const hold=new Promise<void>(r=>release=r);
  const f=await fixture(page,{extra:async(r,path)=>{if(!path.endsWith('/notices/previews'))return false;previews++;await hold;await r.fulfill({status:201,json:preview(r.request().postDataJSON())});return true;}});await page.goto('/admin/notices?account_id='+id+'&lang=en');await page.getByLabel('Message text').fill('Owned notice');await page.getByLabel('Operation reason').fill('Owned reason');await page.getByRole('button',{name:'Prepare preview'}).click();await expect.poll(()=>previews).toBe(1);
-  if(action==='locale'){await page.getByRole('button',{name:'RU',exact:true}).click();await expect(page.getByRole('heading',{name:'Уведомления',exact:true})).toBeVisible();}else{await page.getByRole('menuitem',{name:'Clients',exact:true}).click();await expect(page.getByRole('heading',{name:'Clients',exact:true})).toBeVisible();}release();await expect(page.getByRole('region',{name:/^(Preview|Предпросмотр)$/})).toHaveCount(0);expect(f.writes.filter(w=>w.path.endsWith('/confirm'))).toHaveLength(0);
+  if(action==='locale'){await page.getByRole('button',{name:'RU',exact:true}).click();await expect(page.getByRole('heading',{name:'Уведомления',exact:true})).toBeVisible();}else{page.once('dialog',dialog=>dialog.accept());await page.getByRole('menuitem',{name:'Clients',exact:true}).click();await expect(page.getByRole('heading',{name:'Clients',exact:true})).toBeVisible();}release();await expect(page.getByRole('region',{name:/^(Preview|Предпросмотр)$/})).toHaveCount(0);expect(f.writes.filter(w=>w.path.endsWith('/confirm'))).toHaveLength(0);
+});
+
+for(const audience of ['personal','all'] as const)test('notice language switch preserves its draft and recipient '+audience,async({page})=>{
+ const f=await fixture(page);await page.goto('/admin/notices?account_id='+id+'&lang=en');await page.getByLabel('Recipients',{exact:true}).selectOption(audience);
+ await page.getByLabel('Message text').fill('Owned draft');await page.getByLabel('Operation reason').fill('Owned draft reason');await page.getByRole('button',{name:'Prepare preview'}).click();await expect(page.getByRole('region',{name:'Preview',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'RU',exact:true}).click();await expect(page.getByLabel('Текст сообщения')).toHaveValue('Owned draft');await expect(page.getByLabel('Комментарий операции')).toHaveValue('Owned draft reason');await expect(page.getByLabel('Получатели',{exact:true})).toHaveValue(audience);await expect(page.getByRole('region',{name:'Предпросмотр',exact:true})).toHaveCount(0);
+ await expect(page.getByRole('button',{name:'Профиль',exact:true})).toContainText('Кабинет оператора');
+ if(audience==='personal')await expect(page.getByText('Выбранный клиент: notices@example.test',{exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'EN',exact:true}).click();await expect(page.getByLabel('Message text')).toHaveValue('Owned draft');await page.getByRole('button',{name:'Prepare preview'}).click();await expect(page.getByRole('button',{name:'Confirm send'})).toBeVisible();
+ await expect(page.getByRole('button',{name:'Profile',exact:true})).toContainText('Operator cabinet');
+ expect(f.writes.map(w=>w.body)).toEqual([audience==='personal'?{mode:'send',audience:'personal',account_id:id,body:'Owned draft',reason:'Owned draft reason'}:{mode:'send',audience:'all',body:'Owned draft',reason:'Owned draft reason'},audience==='personal'?{mode:'send',audience:'personal',account_id:id,body:'Owned draft',reason:'Owned draft reason'}:{mode:'send',audience:'all',body:'Owned draft',reason:'Owned draft reason'}]);
+});
+
+for(const mode of ['edit','delete'] as const)test('notice language switch preserves an existing notice operation '+mode,async({page})=>{
+ const inputs:unknown[]=[];await fixture(page,{extra:async(r,path)=>{if(path.endsWith('/notices/last')){await r.fulfill({json:batch(preview())});return true;}if(path.endsWith('/notices/previews')){const input=r.request().postDataJSON();inputs.push(input);await r.fulfill({status:201,json:preview(input)});return true;}return false;}});
+ await page.goto('/admin/notices?lang=en');await page.getByRole('button',{name:mode==='edit'?'Edit last notice':'Delete last notice',exact:true}).click();if(mode==='edit')await page.getByLabel('Message text').fill('Owned edit draft');await page.getByLabel('Operation reason').fill('Owned existing reason');
+ await page.getByRole('button',{name:'RU',exact:true}).click();await expect(page.getByRole('heading',{name:mode==='edit'?'Изменение последней отправки':'Удаление последней отправки',exact:true})).toBeVisible();await expect(page.getByLabel('Комментарий операции')).toHaveValue('Owned existing reason');if(mode==='edit')await expect(page.getByLabel('Текст сообщения')).toHaveValue('Owned edit draft');
+ await page.getByRole('button',{name:'EN',exact:true}).click();await page.getByRole('button',{name:'Prepare preview'}).click();await expect(page.getByRole('button',{name:mode==='edit'?'Confirm edit':'Confirm deletion',exact:true})).toBeVisible();expect(inputs).toEqual([mode==='edit'?{mode:'edit',body:'Owned edit draft',expected_revision:1,reason:'Owned existing reason'}:{mode:'delete',expected_revision:1,reason:'Owned existing reason'}]);
+});
+
+test('a notice draft warns before navigation and cancellation preserves it',async({page})=>{
+ await fixture(page);await page.goto('/admin/notices?account_id='+id+'&lang=en');await page.getByLabel('Message text').fill('Owned navigation draft');await page.getByLabel('Operation reason').fill('Owned navigation reason');
+ let warnings=0;await page.evaluate(()=>{window.confirm=()=>false;});
+ page.on('dialog',async dialog=>{warnings++;await dialog.dismiss();});
+ await page.getByRole('menuitem',{name:'Clients',exact:true}).click();await expect(page.getByLabel('Message text')).toHaveValue('Owned navigation draft');await expect(page).toHaveURL(/\/admin\/notices/);
+ const guarded=await page.evaluate(()=>{const event=new Event('beforeunload',{cancelable:true});window.dispatchEvent(event);return event.defaultPrevented;});expect(guarded).toBe(true);
+ await page.evaluate(()=>{window.confirm=()=>true;});await page.getByRole('menuitem',{name:'Clients',exact:true}).click();await expect(page.getByRole('heading',{name:'Clients',exact:true})).toBeVisible();
+ expect(warnings).toBe(0);expect(await page.evaluate(()=>{const event=new Event('beforeunload',{cancelable:true});window.dispatchEvent(event);return event.defaultPrevented;})).toBe(false);
+});
+
+for(const direction of ['back','forward','jump'] as const)test('notice draft can cancel browser history navigation '+direction,async({page})=>{
+ await fixture(page);await page.goto('/admin/clients?lang=en');await page.getByRole('menuitem',{name:'Notices',exact:true}).click();await expect(page.getByLabel('Message text')).toBeVisible();
+ if(direction!=='back'){
+  await page.getByRole('menuitem',{name:'Clients',exact:true}).click();await expect(page.getByRole('heading',{name:'Clients',exact:true})).toBeVisible();
+  if(direction==='forward'){await page.goBack();await expect(page.getByLabel('Message text')).toBeVisible();}
+  else{await page.getByRole('menuitem',{name:'Notices',exact:true}).click();await expect(page.getByLabel('Message text')).toBeVisible();}
+ }
+ await page.getByLabel('Message text').fill('Owned history draft');await page.getByLabel('Operation reason').fill('Owned history reason');
+ await page.evaluate(()=>{const state={prompts:0,leave:false};(window as unknown as {noticeNavigation:typeof state}).noticeNavigation=state;window.confirm=()=>{state.prompts++;return state.leave;};});
+ const go=async()=>{if(direction==='back')await page.goBack();else if(direction==='forward')await page.goForward();else await page.evaluate(()=>history.go(-3));};
+ await go();await expect.poll(()=>page.evaluate(()=>(window as unknown as {noticeNavigation:{prompts:number}}).noticeNavigation.prompts)).toBe(1);
+ await expect(page).toHaveURL(/\/admin\/notices$/);await expect(page.getByLabel('Message text')).toHaveValue('Owned history draft');await expect(page.getByLabel('Operation reason')).toHaveValue('Owned history reason');
+ await page.evaluate(()=>(window as unknown as {noticeNavigation:{leave:boolean}}).noticeNavigation.leave=true);await go();await expect(page.getByRole('heading',{name:'Clients',exact:true})).toBeVisible();
+ await expect.poll(()=>page.evaluate(()=>(window as unknown as {noticeNavigation:{prompts:number}}).noticeNavigation.prompts)).toBe(2);
+ if(direction==='back')await page.goForward();else if(direction==='forward')await page.goBack();else await page.evaluate(()=>history.go(3));
+ await expect(page.getByLabel('Message text')).toHaveValue('');await expect(page.getByLabel('Operation reason')).toHaveValue('');expect(await page.evaluate(()=>(window as unknown as {noticeNavigation:{prompts:number}}).noticeNavigation.prompts)).toBe(2);
 });
 
 test('raw Unicode character limit never silently truncates the message',async({page})=>{

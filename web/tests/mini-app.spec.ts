@@ -30,8 +30,10 @@ async function fixture(page:Page,options:Options={}){
    return r.fulfill({json:{...profile,session_token:token},headers:{'Cache-Control':'no-store'}});
   }
   if(path==='/api/v1/telegram/mini-app/account')return r.fulfill({json:profile});
+  if(path==='/api/v1/maintenance')return r.fulfill({json:{enabled:false,revision:0,changed_at:null}});
   if(path==='/api/v1/reminders')return r.fulfill({json:{version:'reminders-v1',email_enabled:false,email_available:false,reminders:[]}});
   if(path==='/api/v1/auth/session')return r.fulfill({json:{csrf_token:profile.csrf_token}});
+  if(path==='/api/v1/me/identity')return r.fulfill({json:{email:'browser@example.test',source_kind:'telegram',independent_login:true,telegram_linked:true,can_unlink:true,unlink_blocked_reason:null,pending_initial_email:null}});
   if(path==='/api/v1/telegram/mini-app/logout'||path==='/api/v1/support/read')return r.fulfill({status:204});
   if(path==='/api/v1/subscription')return r.fulfill({json:options.sub??none});
   if(path==='/api/v1/subscription/key')return r.fulfill({json:{subscription_url:'https://subscriptions.example.test/sub/owned-private-link'}});
@@ -47,6 +49,43 @@ async function fixture(page:Page,options:Options={}){
  return {calls,sessions:()=>sessions,sdk:async(mode:Options['sdk'])=>{sdkMode=mode;await pendingSDK?.abort();pendingSDK=undefined;}};
 }
 const storage=async(page:Page)=>page.evaluate(()=>JSON.stringify(localStorage)+JSON.stringify(sessionStorage));
+
+for(const lang of ['ru','en'] as const)test('Mini App branded header and key actions fit the first mobile screen '+lang,async({page})=>{
+ await page.route('**/config.json',route=>route.fulfill({json:{...JSON.parse(readFileSync('scripts/local-public-config.json','utf8')),productName:'3xui-mole'}}));
+ await fixture(page,{sub:{...none,status:'active',devices:1,access_profile:'regular',connection_available:true,data_stale:false,traffic_used_bytes:512,traffic_remaining_bytes:512,traffic_limit_bytes:1024,expires_at:'2030-01-01T00:00:00Z'}});
+ await page.setViewportSize({width:375,height:812});await page.goto('/mini-app/cabinet?lang='+lang);
+ await expect(page.getByRole('heading',{name:'Mini client',exact:true})).toBeVisible();
+ expect((await page.locator('.app-header .brand').boundingBox())!.width).toBeGreaterThan(100);
+ const navigation=page.getByRole('navigation',{name:lang==='ru'?'Действия с подпиской':'Subscription actions'});
+ await expect(navigation.getByRole('link',{name:lang==='ru'?'Подключить устройство':'Connect a device',exact:true})).toBeInViewport({ratio:1});
+ await expect(navigation.getByRole('link',{name:lang==='ru'?'Продлить подписку':'Renew subscription',exact:true})).toBeInViewport({ratio:1});
+ await expect(page.getByRole('button',{name:lang==='ru'?'Показать ссылку':'Show subscription link',exact:true})).toBeInViewport({ratio:1});
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});
+
+test('Mini App connection action keeps same-document fragment navigation',async({page})=>{
+ await fixture(page,{sub:{...none,status:'active',devices:1,access_profile:'regular',connection_available:true,data_stale:false,expires_at:'2030-01-01T00:00:00Z'}});
+ await page.setViewportSize({width:375,height:812});await page.goto('/mini-app/cabinet?lang=en');
+ const heading=page.getByRole('heading',{name:'Connect a device',exact:true});await expect(heading).toBeVisible();
+ const before=(await heading.boundingBox())!.y;
+ await page.getByRole('navigation',{name:'Subscription actions'}).getByRole('link',{name:'Connect a device',exact:true}).click();
+ await expect(page).toHaveURL(/#connection-title$/);await expect(heading).toBeInViewport({ratio:1});
+ expect((await heading.boundingBox())!.y).toBeLessThan(before);
+});
+
+for(const theme of ['light','dark'] as const)test('Mini App selection and text contrast remain accessible in '+theme+' theme',async({page})=>{
+ await fixture(page);await page.goto('/mini-app?lang=en');await expect(page.getByRole('heading',{name:'Mini client',exact:true})).toBeVisible();
+ await page.evaluate(theme=>{const app=window.Telegram!.WebApp!;app.themeParams={bg_color:theme==='light'?'#ffffff':'#17212b',text_color:theme==='light'?'#222222':'#ffffff',secondary_bg_color:theme==='light'?'#f1f1f1':'#242f3d',button_color:'#2481cc',button_text_color:'#ffffff',link_color:theme==='light'?'#2481cc':'#6ab3f3'};(window as any).__sdk.handlers.themeChanged();},theme);
+ const selected=page.getByRole('button',{name:'EN',exact:true}),other=page.getByRole('button',{name:'RU',exact:true});
+ const selectedColor=await selected.evaluate(element=>getComputedStyle(element).backgroundColor);
+ expect(await other.evaluate(element=>getComputedStyle(element).backgroundColor)).not.toBe(selectedColor);
+ const contrast=await page.locator('.mini-app button.primary').first().evaluate(element=>{
+  const luminance=(value:string)=>{const channels=value.match(/\d+(?:\.\d+)?/g)!.slice(0,3).map(Number).map(channel=>{const s=channel/255;return s<=.04045?s/12.92:((s+.055)/1.055)**2.4;});return channels[0]*.2126+channels[1]*.7152+channels[2]*.0722;};
+  const style=getComputedStyle(element),a=luminance(style.color),b=luminance(style.backgroundColor);return (Math.max(a,b)+.05)/(Math.min(a,b)+.05);
+ });
+ expect(contrast).toBeGreaterThanOrEqual(4.5);
+ await other.click();await expect(other).toHaveAttribute('aria-pressed','true');await expect(selected).toHaveAttribute('aria-pressed','false');
+});
 
 test('a failed Mini App page returns to the cabinet without losing the signed session',async({page})=>{
  const manifest=JSON.parse(readFileSync('dist/.vite/manifest.json','utf8'));let sdkLoads=0;page.on('request',request=>{if(request.url()==='https://telegram.org/js/telegram-web-app.js')sdkLoads++;});
@@ -195,7 +234,7 @@ const plan:Model<'CataloguePlanSnapshot'>={plan_id:'70000000-0000-4000-8000-0000
 test('Mini App catalogue shows common prices without external checkout requests',async({page})=>{
  const f=await fixture(page,{extra:async(r,path)=>{if(path==='/api/v1/catalogue'){await r.fulfill({json:{plans:[plan]}});return true}return false}});
  await page.setViewportSize({width:375,height:812});await page.goto('/mini-app/catalogue?lang=en');
- await page.getByRole('button',{name:'Select plan'}).click();await expect(page.getByText('Price: 123.45 RUB')).toBeVisible();
+ await page.getByRole('button',{name:'Select plan'}).click();await expect(page.getByRole('region',{name:'Selected offer'}).getByText('Price: 1 XTR')).toBeVisible();
  await expect(page.getByRole('button',{name:'Buy plan'})).toHaveCount(0);expect(f.calls.some(c=>c.path==='/api/v1/orders')).toBe(false);expect(f.calls.filter(c=>c.path.endsWith('/payment-methods'))).toHaveLength(1);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
@@ -220,8 +259,9 @@ for(const lang of ['ru','en'] as const)for(const path of ['/','/cabinet','/catal
   await expect(action).toBeVisible();await expect(action).toHaveAccessibleDescription(/email/i);
   const writes=f.calls.filter(c=>!['GET','HEAD','OPTIONS'].includes(c.method)).length;
   await action.focus();await page.keyboard.press('Enter');await action.focus();await page.keyboard.press('Space');
-  const url='http://127.0.0.1:'+(process.env.E2E_PORT||'4173')+'/login'+(lang==='en'?'?lang=en':'');
-  expect(await page.evaluate(()=>(window as any).__sdk.opened)).toEqual([url,url]);
+  const opened=await page.evaluate(()=>(window as any).__sdk.opened);expect(opened).toHaveLength(2);expect(opened[0]).toBe(opened[1]);const url=new URL(opened[0]);
+  expect(url.origin).toBe('http://127.0.0.1:'+(process.env.E2E_PORT||'4173'));expect(url.pathname).toBe('/login');expect(url.searchParams.get('lang')).toBe(lang==='en'?'en':null);
+  expect(url.searchParams.get('return_to')).toBe(['/','/cabinet'].includes(path)?null:path+(lang==='en'?'?lang=en':''));expect(JSON.stringify(opened)).not.toMatch(/owned-query|account_id|tgWebAppData|mini_|owned-signed/);
   expect(f.calls.filter(c=>!['GET','HEAD','OPTIONS'].includes(c.method))).toHaveLength(writes);expect(f.sessions()).toBe(1);
   expect(await storage(page)).not.toMatch(/owned-signed|mini_|csrf_token|__telegram__initParams/);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
@@ -233,6 +273,28 @@ test('Mini App other payments setup link uses the existing first email screen',a
  await page.goto('/mini-app/cabinet?lang=en');await page.getByRole('region',{name:'Other payment methods'}).getByRole('link',{name:'Set up email sign-in',exact:true}).click();
  await expect(page.getByRole('heading',{name:'Sign-in methods',exact:true})).toBeVisible();await expect(page.getByLabel('Email',{exact:true})).toBeVisible();
  expect(new URL(page.url()).pathname).toBe('/mini-app/cabinet/identity');expect(f.sessions()).toBe(1);expect(await page.evaluate(()=>(window as any).__sdk.opened)).toEqual([]);
+});
+test('Mini App requires email sign-in before opening browser payments and keeps the offer context',async({page})=>{
+ await page.context().addCookies([{name:'browser-marker',value:'independent',url:'http://127.0.0.1:'+(process.env.E2E_PORT||'4173')}]);
+ const f=await fixture(page,{extra:async(r,path)=>{if(path==='/api/v1/catalogue'){await r.fulfill({json:{plans:[{...plan,plan_id:'50000000-0000-4000-8000-000000000001'}]}});return true;}if(path!=='/api/v1/me/identity')return false;await r.fulfill({json:{email:null,source_kind:'telegram',independent_login:false,telegram_linked:true,can_unlink:false,unlink_blocked_reason:'INDEPENDENT_LOGIN_REQUIRED',pending_initial_email:null}});return true;}});
+ await page.goto('/mini-app/catalogue?lang=en&plan=50000000-0000-4000-8000-000000000001&period=30&currency=XTR&token=private-query');
+ await expect(page.getByRole('region',{name:'Selected offer'})).toBeVisible();
+ await expect(page).toHaveURL(/\/mini-app\/catalogue\?/);
+ expect(f.calls.filter(call=>!call.path.endsWith('/mini-app/session')).every(call=>call.authorization&&!call.cookie)).toBe(true);
+ const region=page.getByRole('region',{name:'Other payment methods'});
+ await expect(region.getByRole('link',{name:'Set up email sign-in',exact:true})).toBeVisible();
+ await expect(region.getByRole('button',{name:'Other payment methods',exact:true})).toHaveCount(0);
+ const setup=region.getByRole('link',{name:'Set up email sign-in',exact:true});await expect(setup).toBeVisible();await setup.click();
+ const back=new URL(page.url()).searchParams.get('return_to');expect(back).toBe('/catalogue?plan=50000000-0000-4000-8000-000000000001&period=30&currency=XTR&lang=en');
+ await expect(page.getByLabel('Email',{exact:true})).toBeVisible();expect(await page.evaluate(()=>(window as any).__sdk.opened)).toEqual([]);expect(f.sessions()).toBe(1);
+});
+test('Mini App browser payment handoff preserves only the selected public offer',async({page})=>{
+ await fixture(page,{extra:async(r,path)=>{if(path!=='/api/v1/catalogue')return false;await r.fulfill({json:{plans:[{...plan,plan_id:'50000000-0000-4000-8000-000000000001'}]}});return true;}});await page.goto('/mini-app/catalogue?lang=en&plan=50000000-0000-4000-8000-000000000001&period=30&currency=XTR&token=private-query&account_id=private-account');
+ await expect(page.getByRole('region',{name:'Selected offer'})).toBeVisible();
+ await page.getByRole('button',{name:'Other payment methods',exact:true}).click();
+ const opened=await page.evaluate(()=>(window as any).__sdk.opened);expect(opened).toHaveLength(1);const url=new URL(opened[0]);
+ expect(url.pathname).toBe('/login');expect(url.searchParams.get('lang')).toBe('en');expect(url.searchParams.get('return_to')).toBe('/catalogue?plan=50000000-0000-4000-8000-000000000001&period=30&currency=XTR&lang=en');
+ expect(JSON.stringify(opened)).not.toMatch(/private-|mini_|owned-signed|csrf/);
 });
 for(const mode of ['missing','throws'] as const)test('Mini App other payments '+mode+' SDK uses the existing safe synchronous fallback',async({page})=>{
  await fixture(page);await page.goto('/mini-app/cabinet?lang=en');await expect(page.getByRole('heading',{name:'Mini client'})).toBeVisible();

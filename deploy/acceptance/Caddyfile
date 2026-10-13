@@ -15,9 +15,7 @@ https://{$CABINET_HOST}:8443 {
  tls /run/secrets/public_cert /run/secrets/public_key
  import headers
  @browserSecurity not path /mini-app /mini-app/*
- header @browserSecurity Content-Security-Policy "default-src 'self'; script-src 'self' 'sha256-PgqzSxMpLRBzUhg2SooHKWZ2oAc0yWVxeNMrpG5YqoM='; style-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self' https://yoomoney.ru; frame-ancestors 'none'" {
-  defer
- }
+ header @browserSecurity Content-Security-Policy "default-src 'self'; script-src 'self' 'sha256-PgqzSxMpLRBzUhg2SooHKWZ2oAc0yWVxeNMrpG5YqoM='; style-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self' https://yoomoney.ru; frame-ancestors 'none'"
  @maintenance {
   expression `{env.CABINET_MAINTENANCE} == "true"`
   not path /internal/* /webhooks/yoomoney /webhooks/yookassa /webhooks/cryptomus /webhooks/heleket /yoomoney /yookassa /cryptomus /heleket
@@ -67,6 +65,9 @@ https://{$CABINET_HOST}:8443 {
  handle {
   root * /srv
   try_files {path} /index.html
+  templates {
+   mime text/html
+  }
   file_server
  }
 }
