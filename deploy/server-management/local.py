@@ -76,7 +76,7 @@ def panel(port, initialize=False):
                  'streamSettings': {'network': 'tcp', 'security': 'none'},
                  'sniffing': {'enabled': False}}, csrf)
         settings = call('panel/api/setting/all', {}, csrf)
-        settings.update(subEnable=True, subURI=origin + '/sub/')
+        settings.update(subEnable=True, subPath='/sub/', subURI=origin + '/sub/')
         call('panel/api/setting/update', settings, csrf)
     rows = call('panel/api/inbounds/list')
     assert any(row.get('tag') == 'local-regular-vless' for row in rows), 'owned inbound absent'

@@ -73,6 +73,12 @@ def compose(*args, stdin=None):
     return command(['docker','compose','--project-name',PROJECT,
                     '--env-file',str(ENV),*files,*args], stdin=stdin)
 
+def panel_version(config=None):
+    image = (config or json.loads(compose('config', '--format', 'json')))['services']['panel']['image']
+    match = re.fullmatch(r'ghcr.io/mhsanaei/3x-ui:(3\.7\.0|3\.10\.0)@sha256:[a-f0-9]{64}', image)
+    assert match, 'acceptance requires an owned, pinned supported panel image'
+    return match.group(1)
+
 def prepare():
     STATE.mkdir(parents=True, exist_ok=True)
     STATE.chmod(0o700)
@@ -194,6 +200,12 @@ def up(reuse_images=False):
             time.sleep(.2)
     opener, csrf=login_panel()
     allow_test_origin(opener,csrf)
+    configured = json.loads(compose('config', '--format', 'json'))
+    version = panel_version(configured)
+    assert compose('exec', '-T', 'panel', '/app/x-ui', '-v').decode().strip() == version, 'running panel version differs from the pinned image'
+    status = panel_call(opener, 'panel/api/server/status')
+    write('panel-runtime.json', json.dumps({'panel_version': version,
+        'panel_image': configured['services']['panel']['image'], 'xray_version': status['xray']['version']}))
     inbounds=panel_call(opener,'panel/api/inbounds/list')
     if not any(row.get('tag')=='local-regular-vless' for row in inbounds):
         panel_call(opener,'panel/api/inbounds/add',{
@@ -201,6 +213,10 @@ def up(reuse_images=False):
             'settings':{'clients':[],'decryption':'none','fallbacks':[]},
             'streamSettings':{'network':'tcp','security':'tls','tlsSettings':{'serverName':'panel','certificates':[{'certificateFile':'/run/secrets/public_cert','keyFile':'/run/secrets/public_key'}]}},
             'sniffing':{'enabled':False},'allocate':{'strategy':'always','refresh':5,'concurrency':3}} ,csrf)
+    settings = panel_call(opener, 'panel/api/setting/all', {}, csrf)
+    if not settings.get('subEnable') or settings.get('subPath') != '/sub/' or settings.get('subURI') != 'https://localhost:59445/sub/':
+        settings.update(subEnable=True, subPath='/sub/', subURI='https://localhost:59445/sub/')
+        panel_call(opener, 'panel/api/setting/update', settings, csrf)
     # Preserve absence as a version-specific observation before enabling trial.
     _,_,raw=request(opener,'https://localhost:59444/panel/api/clients/get/acct_'+secrets.token_hex(16))
     absent=json.loads(raw)
@@ -215,14 +231,14 @@ def up(reuse_images=False):
                 'settings':{'clients':[],'decryption':'none','fallbacks':[]},
                 'streamSettings':{'network':'tcp','security':'none'},'sniffing':{'enabled':False}},second_csrf,port=59449)
         settings=panel_call(second,'panel/api/setting/all',{},second_csrf,port=59449)
-        if not settings.get('subEnable') or settings.get('subURI') != 'https://localhost:59449/sub/':
-            settings.update(subEnable=True,subURI='https://localhost:59449/sub/')
+        if not settings.get('subEnable') or settings.get('subPath') != '/sub/' or settings.get('subURI') != 'https://localhost:59449/sub/':
+            settings.update(subEnable=True,subPath='/sub/',subURI='https://localhost:59449/sub/')
             panel_call(second,'panel/api/setting/update',settings,second_csrf,port=59449)
     data=ENV.read_text().replace('TRIAL_ENABLED=false','TRIAL_ENABLED=true')
     write('public.env',data)
     compose('up','--no-build','-d','backend')
     wait_until(ready)
-    print('PASS: local 3X-UI3.7.0, TLS Mailpit, cabinet HTTPS; '+PROFILE+' process profile',flush=True)
+    print('PASS: local 3X-UI '+version+', TLS Mailpit, cabinet HTTPS; '+PROFILE+' process profile',flush=True)
 
 def api(opener, path, body=None, csrf=None, key=None):
     headers={'Origin':ORIGIN}
@@ -575,7 +591,7 @@ def native_check():
     assert not any(e.get('Action')=='fail' or e.get('Action')=='skip' and e.get('Test') for e in events), 'native Go test failed or skipped; see private native-go.log'
     passed=sum(e.get('Action')=='pass' and bool(e.get('Test')) for e in events)
     assert passed>0, 'native Go selection ran no tests'
-    print(f'PASS: native Go HTTP/jobs/Telegram integration ({passed} tests/subtests,0 failures/skips) with real TLS SMTP and 3X-UI3.7.0; Bot API simulated',flush=True)
+    print(f'PASS: native Go HTTP/jobs/Telegram integration ({passed} tests/subtests,0 failures/skips) with real TLS SMTP and 3X-UI {panel_version(config)}; Bot API simulated',flush=True)
     native_restart()
 
 def yoomoney_signature(fields, secret):
@@ -589,7 +605,7 @@ def native_paid_restart():
     settings = config['services']['backend']['environment']
     assert settings['TELEGRAM_ENABLED'] == 'false' and settings['SHOP_PAYMENT_YOOMONEY_ENABLED'] == 'true', 'enable only the local payment fixture'
     assert settings['YOOMONEY_WALLET_ID'] == '410000000000000', 'real wallet is outside local acceptance'
-    assert config['services']['panel']['image'].startswith('ghcr.io/mhsanaei/3x-ui:3.7.0@sha256:'), '3X-UI3.7.0 required'
+    version = panel_version(config)
     assert not set(compose('ps', '--services', '--status', 'running').decode().splitlines()).intersection({'bot', 'reconcile'}), 'one application process required'
     opener, trial, credentials = signup()
     account = sql("SELECT account_id FROM trial_requests WHERE id=:'op'::uuid;", operation=trial['request_id'])
@@ -667,8 +683,8 @@ def native_paid_restart():
         assert replay['payment'] == 'paid' and replay['fulfillment'] == 'applied'
         panel_readback(prepared['target'])
         write('paid-recovery-proof.json', json.dumps({'before': before, 'prepared': prepared, 'after': after, 'replay': replay,
-              'processes': [original_process, second_process, third_process], 'panel': '3.7.0', 'telegram': False}))
-        print('PASS: paid receipt/job and frozen target/job survived two compiled Go process restarts; same funding/access/identity/target, one receipt, real 3X-UI3.7.0 readback and duplicate notification; Telegram disabled', flush=True)
+              'processes': [original_process, second_process, third_process], 'panel': version, 'telegram': False}))
+        print('PASS: paid receipt/job and frozen target/job survived two compiled Go process restarts; same funding/access/identity/target, one receipt, real 3X-UI '+version+' readback and duplicate notification; Telegram disabled', flush=True)
     finally:
         sql('DROP TRIGGER IF EXISTS paid_hold_job ON river_job; DROP FUNCTION IF EXISTS paid_hold_job();')
         write('native-operator-account', '')

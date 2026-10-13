@@ -66,11 +66,11 @@ def prepare():
     configured = json.loads(compose('config', '--format', 'json'))
     env = configured['services']['backend']['environment']
     assert env['TELEGRAM_ENABLED'] == 'false'
-    assert configured['services']['panel']['image'] == 'ghcr.io/mhsanaei/3x-ui:3.7.0@sha256:3b3131f1876e6bf35063a9ec4dd1c594e4525180bfc2e1c477dcc8a3c9550ca1'
+    local.panel_version(configured)
     paths = subprocess.check_output(['git', 'ls-files', 'backend', 'web'], cwd=ROOT, text=True).splitlines()
     inputs = {p: sha256((ROOT / p).read_bytes()).hexdigest() for p in paths}
     purchase.private('image-source.json', {'revision': revision, 'inputs': inputs})
-    print('PASS: own c17 identity, pinned3.7.0, file credentials and synthetic YooMoney')
+    print('PASS: own c17 identity, pinned '+local.panel_version(configured)+', file credentials and synthetic YooMoney')
 
 
 def up():
@@ -98,8 +98,8 @@ def up():
         body['settings'] = {**body['settings'], 'clients': []}
         local.panel_call(panel, 'panel/api/inbounds/add', body, csrf)
     purchase.private('images.json', {'revision': source['revision'], 'ids': [c['Image'] for c in containers],
-        'one_backend': True, 'native_version': '3.7.0'})
-    print('PASS: own Go/web source labels, native3.7.0 and regular/EURU; one backend')
+        'one_backend': True, 'native_version': local.panel_version()})
+    print('PASS: own Go/web source labels, native '+local.panel_version()+' and regular/EURU; one backend')
 
 
 def native(account):
@@ -274,7 +274,7 @@ def check():
             assert purchase.account_row(account)['access_operations'] == (3 if name == 'roundtrip' else 2)
             results.append({'case': name, **result, 'server_preserved': True})
         print('PASS: native change ' + name, flush=True)
-    purchase.private('native-report.json', {'panel_version': '3.7.0', 'results': results,
+    purchase.private('native-report.json', {'panel_version': local.panel_version(), 'results': results,
         'real_payment': False, 'live_vpn_changed': False})
 
 

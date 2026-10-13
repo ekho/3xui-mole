@@ -100,7 +100,7 @@ def check():
     env = config['services']['backend']['environment']
     assert env['TELEGRAM_ENABLED'] == 'false'
     assert env['SHOP_PAYMENT_YOOMONEY_ENABLED'] == 'true' and env['YOOMONEY_WALLET_ID'] == '410000000000000'
-    assert config['services']['panel']['image'].startswith('ghcr.io/mhsanaei/3x-ui:3.7.0@sha256:')
+    local.panel_version(config)
     assert not set(purchase.compose('ps', '--services', '--status', 'running').decode().splitlines()).intersection({'bot', 'reconcile'})
     operator, actor = purchase.signup('operator')
     assert bridge.role('grant', actor['account']['account_id'])
@@ -167,7 +167,7 @@ def check():
         finally:
             bridge.query('DROP TRIGGER IF EXISTS refund_hold_access ON river_job;DROP FUNCTION IF EXISTS refund_hold_access();')
             purchase.compose('up', '--no-build', '--pull', 'never', '-d', 'backend')
-    purchase.private('refund-native-report.json', {'panel_version': '3.7.0', 'results': results,
+    purchase.private('refund-native-report.json', {'panel_version': local.panel_version(), 'results': results,
         'real_payment': False, 'live_vpn_changed': False})
     print('PASS: prepared funding retired, applied access retained; frozen target/money/nonzero traffic survive two real Go restarts each', flush=True)
 

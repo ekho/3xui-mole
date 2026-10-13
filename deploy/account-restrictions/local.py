@@ -181,7 +181,7 @@ def native_probe():
     path = STATE / 'native-probe.jsonl'
     with path.open('a') as output:
         output.write(json.dumps({'criterion': 'AC2 existing Account restriction native read-only field mapping',
-          'target': f'{local.PROJECT} pinned 3X-UI 3.7.0 /clients/get on already provisioned Account restriction test client',
+          'target': f'{local.PROJECT} pinned 3X-UI {local.panel_version()} /clients/get on already provisioned Account restriction test client',
           'command': 'python3 deploy/account-restrictions/local.py native-probe',
           'expected': 'usedTraffic root counter and client identity/expiry/limits/enable match existing trial target; VPN config hash observed',
           'actual': {'fields': fields, 'panel_digest': sha256(json.dumps(panel,sort_keys=True).encode()).hexdigest(),
@@ -204,7 +204,7 @@ def focused_invariants():
     def evidence(criterion, expected, actual, ok):
         with path.open('a') as output:
             output.write(json.dumps({'criterion': criterion,
-                'target': f'{local.PROJECT} existing Account restriction web/support and 3X-UI 3.7.0 native fixtures',
+                'target': f'{local.PROJECT} existing Account restriction web/support and 3X-UI {local.panel_version()} native fixtures',
                 'command': command_name, 'expected': expected, 'actual': actual,
                 'verdict': 'PASS' if ok else 'FAIL', 'artifacts': [str(path)]}) + '\n')
         path.chmod(0o600)
@@ -574,7 +574,7 @@ if __name__ == '__main__':
             path = STATE / ('import.jsonl' if sys.argv[1:] == ['import-acceptance'] else 'focused-invariants.jsonl')
             with path.open('a') as output:
                 output.write(json.dumps({'criterion': 'Account restriction acceptance driver interruption',
-                    'target': f'{local.PROJECT} own PostgreSQL and 3X-UI 3.7.0 fixtures',
+                    'target': f'{local.PROJECT} own PostgreSQL and 3X-UI {local.panel_version()} fixtures',
                     'command': 'python3 deploy/account-restrictions/local.py ' + sys.argv[1],
                     'expected': 'all reached checks complete',
                     'actual': 'interrupted; inspect private bounded run log',
