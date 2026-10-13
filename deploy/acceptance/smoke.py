@@ -21,6 +21,14 @@ ROOT=Path(__file__).resolve().parents[2]
 COMPOSE=ROOT/'deploy/acceptance/compose.acceptance.yml'
 REDACTIONS=[]
 
+def stable_browser_html(body):
+    # Only the per-response CSP nonce may differ in the same built document.
+    match=re.search(rb'property="csp-nonce" nonce="([A-Za-z0-9+/=_-]{24,})"',body)
+    assert match, 'Missing document nonce'
+    policy=b"style-src 'self' 'nonce-"+match.group(1)+b"'"
+    assert policy in body, 'HTML meta policies disagree on the document nonce'
+    return body.replace(match.group(0),b'property="csp-nonce" nonce="<document-nonce>"',1).replace(policy,b"style-src 'self' 'nonce-<document-nonce>'",1)
+
 def compose_environment(args):
     # Shell interpolation outranks --env-file; only owned fixture inputs may win.
     names=set(re.findall(r'\$\{([A-Z_]+)',COMPOSE.read_text()))
@@ -152,7 +160,7 @@ def run():
                     'TEST_ORIGIN':'https://cabinet.example.test:'+str(port),'EXPECTED_PRODUCT_NAME':name})
             browser_config(public_values['PRODUCT_NAME'])
             image=command(['docker','inspect','--format','{{.Image}}',command(compose+['ps','-q','gateway']).decode().strip()])
-            html=get('/cabinet')[2]
+            html=stable_browser_html(get('/cabinet')[2])
             assets={p.decode():hashlib.sha256(get(p.decode())[2]).digest() for p in re.findall(rb'"(/assets/[^\"]+)"',html)}
             assert assets, 'Built web assets missing'
             replacement={**public_values,'PRODUCT_NAME':'Second deployment','TERMS_VERSION':'next','PRIVACY_VERSION':'next',
@@ -172,9 +180,9 @@ def run():
                 'termsURL':replacement['TERMS_URL'],'privacyURL':replacement['PRIVACY_URL'],'supportURL':replacement['SUPPORT_URL']}
             assert one_header(changed[1],'Cache-Control')=='no-store'
             assert image==command(['docker','inspect','--format','{{.Image}}',command(compose+['ps','-q','gateway']).decode().strip()])
-            assert get('/cabinet')[2]==html and all(hashlib.sha256(get(p)[2]).digest()==digest for p,digest in assets.items())
+            assert stable_browser_html(get('/cabinet')[2])==html and all(hashlib.sha256(get(p)[2]).digest()==digest for p,digest in assets.items())
             browser_config(replacement['PRODUCT_NAME'])
-            print('PASS: two public deployments, same web image/HTML/assets, no-store and ready HTTP/River; Telegram off without token',flush=True)
+            print('PASS: two public deployments, same web image/HTML content/assets, no-store and ready HTTP/River; Telegram off without token',flush=True)
             denied=subprocess.run(compose+['run','--rm','--no-deps','backend','serve'],
                                   cwd=ROOT,env=compose_environment(compose),capture_output=True,timeout=30)
             assert denied.returncode==1 and b'SERVICE_UNAVAILABLE' in denied.stderr, 'Second serve did not refuse startup'

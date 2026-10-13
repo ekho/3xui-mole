@@ -358,7 +358,7 @@ func openMode(t *testing.T, native bool, miniKey ...ed25519.PublicKey) *fixture 
 			}
 			path = filepath.Join(f.root, "web", "dist", entry)
 		}
-		http.ServeFile(w, r, path)
+		serveBrowserAsset(w, r, path)
 	}))
 	t.Cleanup(f.public.Close)
 	f.cfg.HTTP.CabinetOrigin = f.public.URL
