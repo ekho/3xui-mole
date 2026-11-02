@@ -71,7 +71,7 @@ panel or unknown observation does not prove that a subscription is inactive.
 After an uncertain traffic reset, check the panel before confirming another
 attempt: repeating it can reset traffic again.
 
-3X-UI 3.10.0 can apply an operation to some inbounds and still return an
+A panel can apply an operation to some inbounds and still return an
 error. For `needs_review`, compare the client's actual expiry, limits,
 ban and memberships before retrying. An error response alone does not
 prove that nothing changed. Keep the existing UUID and subId.
@@ -81,6 +81,19 @@ random path and `excludeFromSub` can hide links to a working inbound.
 When **Restart Xray After Client Disable** is enabled, manually disabling
 or deleting a client can restart the core and interrupt other connections.
 The administrator should choose that setting with this effect in mind.
+
+Server cards show reachability, panel version, Xray version and compatibility
+separately. Only 3.10.2 and 3.11.0 are admitted; the new mole does not serve
+3.7.0/3.10.0. `unknown` needs a successful new observation; `unsupported` needs
+a panel upgrade to an admitted release. Online alone does not permit access
+provisioning. Ping/Sync refresh the facts; there is no manual version bypass.
+
+If a version changes after payment, do not create another order or repeat the
+payment: the receipt and assignment remain intact. Compare the original target
+and actual changes, restore compatibility and use the existing reconcile/recovery
+flow. Absence after uncertain creation does not authorize another automatic Add;
+the global `PANEL_DUPLICATE_GUARD_VERIFIED` bypass has been removed. See the
+[upgrade and rollback procedure](engineering.md#3x-ui-compatibility).
 
 ## Plans and payments
 
