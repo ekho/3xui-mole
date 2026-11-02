@@ -225,6 +225,8 @@ jobs:
           printf '%s' 'redis://127.0.0.1:56391/0' > "$RUNNER_TEMP/redis-url"
           chmod 600 "$RUNNER_TEMP/database-url" "$RUNNER_TEMP/redis-url"
           printf 'TEST_DATABASE_URL_FILE=%s/database-url\nTEST_REDIS_URL_FILE=%s/redis-url\n' "$RUNNER_TEMP" "$RUNNER_TEMP" >> "$GITHUB_ENV"
+      - name: Browser bundle for compiled HTTP consumers
+        run: npm --prefix web run build -- --mode test
       - name: Fresh and repeated bootstrap of supported and mixed panels
         run: |
           python deploy/acceptance/local.py up
