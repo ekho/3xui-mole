@@ -1,5 +1,6 @@
 """Rehearse panel migrations on a new owned fixture, retaining both database copies."""
 import argparse
+import base64
 import json
 import os
 from pathlib import Path
@@ -138,6 +139,7 @@ def check(state, target):
         settings = call('panel/api/setting/all', {})
         settings.update(subEnable=True, subPath='/sub/', subURI='https://localhost:62445/sub/')
         call('panel/api/setting/update', settings)
+        subscription = {k: settings[k] for k in ('subEnable','subPath','subURI','subJsonPath','subClashPath')}
         expected = []
         for kind, enabled, limit, traffic in [('active', True, 1<<30, 1024), ('quota', False, 2048, 4096), ('banned', False, 1<<30, 2048)]:
             client = {'email': 'upgrade_' + kind + '_' + uuid4().hex, 'id': str(uuid4()), 'subId': secrets.token_hex(8),
@@ -158,6 +160,10 @@ def check(state, target):
         assert status['panelVersion'] == target
         evidence['target_xray'] = status['xray']['version']
         verify(call, expected)
+        observed_settings=call('panel/api/setting/all', {})
+        assert {k:observed_settings.get(k) for k in subscription}==subscription, 'migration changed subscription URLs'
+        with local.session().open(subscription['subURI']+expected[0]['client']['subId'],timeout=15) as response:
+            assert response.status==200 and expected[0]['client']['uuid'].encode() in base64.b64decode(response.read()), 'migrated subscription URL no longer serves its identity'
         adapter(state, 'upgraded')
         # The only private destination permitted through the owned Xray is this origin.
         cid = compose('ps', '-q', 'origin').decode().strip()
@@ -194,6 +200,8 @@ def check(state, target):
         _, _, call = login()
         assert call('panel/api/server/status')['panelVersion'] == '3.10.0'
         verify(call, expected)
+        observed_settings=call('panel/api/setting/all', {})
+        assert {k:observed_settings.get(k) for k in subscription}==subscription, 'rollback changed subscription URLs'
         adapter(state, 'restored')
         evidence['stages'].append('original-image/original-DB/identity/traffic/gate PASS')
         evidence['verdict'] = 'PASS'

@@ -28,6 +28,13 @@ func TestNativePanelAccessOperations(t *testing.T) {
 	if _, err := f.env.Pool.Exec(ctx, `INSERT INTO catalogue_revisions(plan_id,revision,terms,archived,source,changed_at) SELECT $1::uuid,1,terms || jsonb_build_object('plan_id',$1::text,'profile','unlimited','hidden',true,'devices',1000),false,'legacy_import',now() FROM catalogue_revisions WHERE plan_id=$2`, unlimited, plan); err != nil {
 		t.Fatal("owned unlimited terms unavailable", err)
 	}
+	changedPlan := uuid.New()
+	if _, err := f.env.Pool.Exec(ctx, `INSERT INTO catalogue_plans(id,current_revision,current_devices,current_profile,current_hidden) VALUES($1,1,3,'regular',false)`, changedPlan); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.env.Pool.Exec(ctx, `INSERT INTO catalogue_revisions(plan_id,revision,terms,archived,source,changed_at) SELECT $1::uuid,1,terms || jsonb_build_object('plan_id',$1::text,'devices',3,'traffic_gb',30),false,'legacy_import',now() FROM catalogue_revisions WHERE plan_id=$2`, changedPlan, plan); err != nil {
+		t.Fatal(err)
+	}
 
 	actor, csrf, account := f.signupAccount(t, nativeEmail("panel-access"))
 	if f.svc.Accounts.ChangeOperatorRole(ctx, account, true) != nil {
@@ -68,7 +75,10 @@ func TestNativePanelAccessOperations(t *testing.T) {
 	if read().ExpiryTimeMS != before.ExpiryTimeMS+86400000 {
 		t.Fatal("native renewal did not preserve/add exact period")
 	}
-	execute(map[string]any{"kind": "assign_plan", "plan_id": plan, "revision": 1, "period_days": 30})
+	execute(map[string]any{"kind": "assign_plan", "plan_id": changedPlan, "revision": 1, "period_days": 30})
+	if read().LimitIP != 4 || read().TrafficLimitBytes != 30<<30 {
+		t.Fatal("native plan change did not replace limits")
+	}
 	execute(map[string]any{"kind": "set_vpn_ban", "vpn_banned": true})
 	if read().Enabled {
 		t.Fatal("native VPN ban not applied")

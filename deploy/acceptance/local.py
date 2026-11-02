@@ -637,6 +637,11 @@ def native_paid_restart():
     write('native-operator-account', str(UUID(account)))
     compose('exec', '-T', 'backend', '/server', 'operator', 'grant', '--account-file', '/run/secrets/native_operator_account')
     _, _, login = api(opener, '/api/v1/auth/login', credentials)
+    status,_,decision=api(opener,'/api/v1/operator/trial-requests/'+trial['request_id']+'/decision',
+                         {'decision':'approve','reason':''},login['csrf_token'],str(uuid4()))
+    assert status==200, 'owned trial approval failed'
+    wait_until(lambda:snapshot(decision['operation_id'])['status']=='applied')
+    trial_identity=sql("SELECT vpn_id::text||':'||sub_id||':'||panel_key FROM accounts WHERE id=:'op'::uuid;",operation=account)
     terms = {'devices': 2, 'traffic_gb': 1, 'profile': 'regular', 'hidden': False, 'periods': [30],
              'prices': [{'period_days': 30, 'currency': c, 'amount_minor': '10000' if c == 'RUB' else '0'} for c in ('RUB', 'USD', 'XTR')]}
     status, _, catalogue = api(opener, '/api/v1/catalogue')
@@ -707,6 +712,7 @@ def native_paid_restart():
             assert after[name] == prepared[name] == replay[name], 'restart/replay changed ' + name
         assert replay['payment'] == 'paid' and replay['fulfillment'] == 'applied'
         panel_readback(prepared['target'])
+        assert sql("SELECT vpn_id::text||':'||sub_id||':'||panel_key FROM accounts WHERE id=:'op'::uuid;",operation=account)==trial_identity, 'trial-to-paid changed identity'
         write('paid-recovery-proof.json', json.dumps({'before': before, 'prepared': prepared, 'after': after, 'replay': replay,
               'processes': [original_process, second_process, third_process], 'panel': version, 'telegram': False}))
         vpn(opener)
