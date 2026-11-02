@@ -42,6 +42,7 @@ import (
 )
 
 type panel struct {
+	panelVersion              string
 	mu                        sync.Mutex
 	clients                   map[string]map[string]any
 	adds, forbidden, requests int
@@ -66,6 +67,13 @@ func (p *panel) serve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch {
+	case r.Method == "GET" && r.URL.Path == "/panel/api/server/status":
+		version := p.panelVersion
+		if version == "" {
+			version = "3.11.0"
+		}
+		reply(true, map[string]any{"panelVersion": version, "xray": map[string]string{"version": "26.10.21"}})
+
 	case r.Method == "GET" && r.URL.Path == "/panel/api/clients/list":
 		p.bulkUnavailable++
 		w.WriteHeader(http.StatusMethodNotAllowed)

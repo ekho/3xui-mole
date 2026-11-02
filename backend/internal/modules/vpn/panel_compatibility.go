@@ -119,3 +119,22 @@ func (p *PanelClient) RequireCompatible(ctx context.Context) error {
 	p.panelVersion = c.PanelVersion
 	return nil
 }
+
+// Authenticate once before independent reads; session logins must not race.
+func (p *PanelClient) probe(ctx context.Context) (PanelCompatibility, bool) {
+	if err := p.auth(ctx); err != nil {
+		return PanelCompatibility{Status: "unknown", Reason: "auth_failed"}, false
+	}
+	result := make(chan PanelCompatibility, 1)
+	go func() { c, _ := p.Compatibility(ctx); result <- c }()
+	_, err := p.RegularInboundIDs(ctx)
+	c := <-result
+	if err != nil && c.Status == "supported" {
+		c.Status, c.Reason = "unknown", "unreachable"
+		var callErr *panelCallError
+		if errors.As(err, &callErr) {
+			c.Reason = callErr.reason
+		}
+	}
+	return c, err == nil
+}

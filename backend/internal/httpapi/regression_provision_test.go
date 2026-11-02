@@ -23,6 +23,8 @@ import (
 )
 
 type fakePanel struct {
+	panelVersion                                                                     string
+	statusFailure                                                                    int
 	override                                                                         http.Handler
 	offline                                                                          bool
 	bulkUnavailable                                                                  bool
@@ -88,6 +90,17 @@ func (p *fakePanel) serve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch {
+	case r.Method == "GET" && r.URL.Path == "/panel/api/server/status":
+		if p.statusFailure != 0 {
+			w.WriteHeader(p.statusFailure)
+			return
+		}
+		version := p.panelVersion
+		if version == "" {
+			version = "3.11.0"
+		}
+		reply(map[string]any{"success": true, "obj": map[string]any{"panelVersion": version, "xray": map[string]string{"version": "26.10.21"}}})
+
 	case r.Method == "GET" && r.URL.Path == "/panel/api/clients/list":
 		if p.bulkUnavailable {
 			w.WriteHeader(http.StatusMethodNotAllowed)

@@ -18,6 +18,9 @@ ON CONFLICT DO NOTHING;
 
 -- name: ObservePoolServer :exec
 UPDATE vpn_servers SET online=sqlc.arg(online),observed_at=sqlc.arg(observed_at),
+ panel_version=CASE WHEN sqlc.arg(panel_version)::text='' THEN panel_version ELSE sqlc.arg(panel_version)::text END,
+ xray_version=CASE WHEN sqlc.arg(xray_version)::text='' THEN xray_version ELSE sqlc.arg(xray_version)::text END,
+ panel_compatibility=sqlc.arg(compatibility),panel_compatibility_reason=sqlc.arg(compatibility_reason),
  subscription_base_url=CASE WHEN subscription_base_url='' THEN sqlc.arg(base)::text ELSE subscription_base_url END
 WHERE id=sqlc.arg(id) AND revision=sqlc.arg(revision) AND NOT retired
  AND (observed_at IS NULL OR observed_at<sqlc.arg(observed_at));

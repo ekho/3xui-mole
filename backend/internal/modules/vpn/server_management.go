@@ -27,6 +27,7 @@ type managedAction struct {
 // Only these public server facts are persisted for an exact replay. The panel
 // subscription base and credentials never enter action history.
 type managedStoredServer struct {
+	Compatibility                    PanelCompatibility
 	ID, Name, Host                   string
 	MaxClients                       *int64
 	Online, Retired                  bool
@@ -40,11 +41,11 @@ type managedStoredResult struct {
 }
 
 func managedSnapshot(v Server) managedStoredServer {
-	return managedStoredServer{ID: v.ID, Name: v.Name, Host: v.Host, MaxClients: v.MaxClients, Online: v.Online, Retired: v.Retired,
+	return managedStoredServer{Compatibility: v.Compatibility.normalized(), ID: v.ID, Name: v.Name, Host: v.Host, MaxClients: v.MaxClients, Online: v.Online, Retired: v.Retired,
 		ObservedAt: v.ObservedAt, AssignedClients: v.AssignedClients, ReservedClients: v.ReservedClients, Revision: v.Revision}
 }
 func (v managedStoredServer) server() Server {
-	return Server{ID: v.ID, Name: v.Name, Host: v.Host, MaxClients: v.MaxClients, Online: v.Online, Retired: v.Retired,
+	return Server{Compatibility: v.Compatibility.normalized(), ID: v.ID, Name: v.Name, Host: v.Host, MaxClients: v.MaxClients, Online: v.Online, Retired: v.Retired,
 		ObservedAt: v.ObservedAt, AssignedClients: v.AssignedClients, ReservedClients: v.ReservedClients, Revision: v.Revision}
 }
 func managedSnapshotList(rows []Server) managedStoredResult {
@@ -220,18 +221,18 @@ func (s *Service) CreateManagedServer(ctx context.Context, actor, key uuid.UUID,
 }
 
 type managedProbe struct {
-	server Server
-	at     time.Time
-	online bool
-	base   string
+	compatibility PanelCompatibility
+	server        Server
+	at            time.Time
+	online        bool
+	base          string
 }
 
 func (s *Service) probeManaged(ctx context.Context, server Server) managedProbe {
 	p := managedProbe{server: server, at: time.Now().UTC()}
 	panel := NewPanelClient(Config{PanelURL: server.Host, PanelToken: s.config().Panel.PanelToken, PanelUsername: s.config().Panel.PanelUsername, PanelPassword: s.config().Panel.PanelPassword, PanelRootCAs: s.config().Panel.PanelRootCAs})
 	defer panel.Close()
-	_, err := panel.RegularInboundIDs(ctx)
-	p.online = err == nil
+	p.compatibility, p.online = panel.probe(ctx)
 	if p.online && server.SubscriptionBaseURL == "" {
 		p.base, _ = panel.subscriptionBase(ctx)
 	}
@@ -281,7 +282,7 @@ func (s *Service) PingManagedServer(ctx context.Context, actor uuid.UUID, id str
 		}
 		v.Revision = 1
 	}
-	if err = store.New(tx).ObservePoolServer(ctx, store.ObservePoolServerParams{ID: id, Revision: v.Revision, ObservedAt: pgtype.Timestamptz{Time: probe.at, Valid: true}, Online: probe.online, Base: probe.base}); err != nil {
+	if err = store.New(tx).ObservePoolServer(ctx, store.ObservePoolServerParams{ID: id, Revision: v.Revision, ObservedAt: pgtype.Timestamptz{Time: probe.at, Valid: true}, Online: probe.online, Base: probe.base, PanelVersion: probe.compatibility.PanelVersion, XrayVersion: probe.compatibility.XrayVersion, Compatibility: probe.compatibility.Status, CompatibilityReason: probe.compatibility.Reason}); err != nil {
 		return Server{}, unavailable()
 	}
 	rows, err := s.ServersTx(ctx, tx)
@@ -389,7 +390,7 @@ func (s *Service) SyncManagedServers(ctx context.Context, actor, key uuid.UUID, 
 			if probe.server.Revision == 0 {
 				probe.server.Revision = 1
 			}
-			if err = q.ObservePoolServer(ctx, store.ObservePoolServerParams{ID: probe.server.ID, Revision: probe.server.Revision, ObservedAt: pgtype.Timestamptz{Time: probe.at, Valid: true}, Online: probe.online, Base: probe.base}); err != nil {
+			if err = q.ObservePoolServer(ctx, store.ObservePoolServerParams{ID: probe.server.ID, Revision: probe.server.Revision, ObservedAt: pgtype.Timestamptz{Time: probe.at, Valid: true}, Online: probe.online, Base: probe.base, PanelVersion: probe.compatibility.PanelVersion, XrayVersion: probe.compatibility.XrayVersion, Compatibility: probe.compatibility.Status, CompatibilityReason: probe.compatibility.Reason}); err != nil {
 				return nil, unavailable()
 			}
 		}
