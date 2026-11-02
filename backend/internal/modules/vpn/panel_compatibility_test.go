@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 func compatibilityPanel(t *testing.T, handler http.HandlerFunc) *PanelClient {
@@ -21,6 +23,60 @@ func compatibilityPanel(t *testing.T, handler http.HandlerFunc) *PanelClient {
 	p := NewPanelClient(Config{PanelURL: server.URL + "/fixture", PanelToken: "fixture", PanelRootCAs: roots})
 	t.Cleanup(p.Close)
 	return p
+}
+
+func TestPanelMutationCompatibility(t *testing.T) {
+	id := uuid.MustParse("11111111-1111-4111-8111-111111111111")
+	target := ProvisionTarget{PanelKey: "acct_fixture", VPNID: id, SubID: "fixture", InboundIDs: []int64{1}}
+	access := AccessTarget{PanelKey: target.PanelKey, VPNID: id, SubID: target.SubID}
+	view := &PanelClientView{PanelKey: target.PanelKey, VPNID: id, SubID: target.SubID, Raw: map[string]json.RawMessage{"uuid": json.RawMessage(`"11111111-1111-4111-8111-111111111111"`)}}
+	methods := map[string]func(*PanelClient) error{
+		"add":     func(p *PanelClient) error { return p.AddClient(context.Background(), target) },
+		"attach":  func(p *PanelClient) error { return p.Attach(context.Background(), target.PanelKey, []int64{1}) },
+		"detach":  func(p *PanelClient) error { return p.Detach(context.Background(), target.PanelKey, []int64{1}) },
+		"update":  func(p *PanelClient) error { return p.UpdateAccess(context.Background(), view, access) },
+		"reset":   func(p *PanelClient) error { return p.ResetAccessTraffic(context.Background(), target.PanelKey) },
+		"disable": func(p *PanelClient) error { return p.DisableAccess(context.Background(), target.PanelKey) },
+	}
+	for _, version := range []string{"3.7.0", "3.10.0", "3.11.1", ""} {
+		for name, run := range methods {
+			t.Run(version+"/"+name, func(t *testing.T) {
+				writes := 0
+				p := compatibilityPanel(t, func(w http.ResponseWriter, r *http.Request) {
+					if r.Method == http.MethodPost {
+						writes++
+					}
+					json.NewEncoder(w).Encode(map[string]any{"success": true, "obj": map[string]string{"panelVersion": version}})
+				})
+				err := run(p)
+				if err == nil || !errors.Is(err, ErrPanel) || writes != 0 {
+					t.Fatalf("unsupported mutation err=%v writes=%d", err, writes)
+				}
+			})
+		}
+	}
+	t.Run("version changes within operation", func(t *testing.T) {
+		probes, writes := 0, 0
+		p := compatibilityPanel(t, func(w http.ResponseWriter, r *http.Request) {
+			if r.Method == http.MethodPost {
+				writes++
+			}
+			probes++
+			version := "3.10.2"
+			if probes > 1 {
+				version = "3.11.0"
+			}
+			json.NewEncoder(w).Encode(map[string]any{"success": true, "obj": map[string]string{"panelVersion": version}})
+		})
+		if err := p.RequireCompatible(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+		err := p.ResetAccessTraffic(context.Background(), target.PanelKey)
+		var compatibility *PanelCompatibilityError
+		if !errors.As(err, &compatibility) || compatibility.Compatibility.Reason != "version_changed" || writes != 0 {
+			t.Fatalf("changed version allowed: %v writes=%d", err, writes)
+		}
+	})
 }
 
 func TestPanelCompatibilityRegistry(t *testing.T) {

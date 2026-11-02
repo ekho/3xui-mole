@@ -20,9 +20,11 @@ func TestPanelUpdateNativePayload(t *testing.T) {
 	updates := make(chan map[string]json.RawMessage, 1)
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
+		case "/fixture/panel/api/server/status":
+			json.NewEncoder(w).Encode(map[string]any{"success": true, "obj": map[string]string{"panelVersion": "3.11.0"}})
 		case "/fixture/panel/api/clients/get/acct_fixture":
 			json.NewEncoder(w).Encode(map[string]any{"success": true, "obj": map[string]any{
-				"client":     map[string]any{"id": 7, "uuid": id, "email": "acct_fixture", "subId": "fixture", "expiryTime": 1800000000000, "limitIp": 2, "totalGB": 1024, "enable": true, "allowedIPs": "127.0.0.1, ::1", "customField": "preserved", "resetWeekday": 3, "resetMax": 4, "keepAlive": 25, "password": "fixture-password", "reverse": map[string]any{"tag": "fixture-reverse"}},
+				"client":     map[string]any{"id": 7, "uuid": id, "email": "acct_fixture", "subId": "fixture", "expiryTime": 1800000000000, "limitIp": 2, "totalGB": 1024, "enable": true, "allowedIPs": "127.0.0.1, ::1", "customField": "preserved", "clientHostRuleIds": []int{1, 2}, "resetWeekday": 3, "resetMax": 4, "keepAlive": 25, "password": "fixture-password", "reverse": map[string]any{"tag": "fixture-reverse"}},
 				"inboundIds": []int{1}, "usedTraffic": 0,
 			}})
 		case "/fixture/panel/api/clients/update/acct_fixture":
@@ -51,7 +53,7 @@ func TestPanelUpdateNativePayload(t *testing.T) {
 	}
 	body := <-updates
 	for field, literal := range map[string]string{
-		"id": `"11111111-1111-4111-8111-111111111111"`, "limitIp": "3", "expiryTime": "1800000000000", "totalGB": "2048", "enable": "false", "customField": `"preserved"`,
+		"id": `"11111111-1111-4111-8111-111111111111"`, "limitIp": "3", "expiryTime": "1800000000000", "totalGB": "2048", "enable": "false", "customField": `"preserved"`, "clientHostRuleIds": `[1,2]`,
 		"resetWeekday": "3", "resetMax": "4", "keepAlive": "25", "password": `"fixture-password"`, "reverse": `{"tag":"fixture-reverse"}`,
 	} {
 		if string(body[field]) != literal {
@@ -66,10 +68,14 @@ func TestPanelUpdateNativePayload(t *testing.T) {
 
 func TestPanelUpdateKeepAlivePresence(t *testing.T) {
 	id := uuid.MustParse("11111111-1111-4111-8111-111111111111")
-	for _, raw := range []string{"", "0"} {
+	for _, raw := range []string{"", "0", "25", `"15-25"`} {
 		t.Run("keepAlive="+raw, func(t *testing.T) {
 			var updated map[string]json.RawMessage
 			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method == "GET" && r.URL.Path == "/panel/api/server/status" {
+					json.NewEncoder(w).Encode(map[string]any{"success": true, "obj": map[string]string{"panelVersion": "3.11.0"}})
+					return
+				}
 				if r.Method != "POST" || r.URL.Path != "/panel/api/clients/update/acct_fixture" {
 					t.Error("unexpected native update request")
 				}
@@ -208,6 +214,8 @@ func TestPanelBoundary(t *testing.T) {
 			loginCalls++
 			http.SetCookie(w, &http.Cookie{Name: "session", Value: "fixture", Path: "/fixture", Secure: true})
 			reply(map[string]any{"success": true, "obj": nil})
+		case "/fixture/panel/api/server/status":
+			json.NewEncoder(w).Encode(map[string]any{"success": true, "obj": map[string]string{"panelVersion": "3.11.0"}})
 		case "/fixture/panel/api/inbounds/list":
 			_, err := r.Cookie("session")
 			if err != nil || r.Header.Get("X-CSRF-Token") != "fixture-csrf" {

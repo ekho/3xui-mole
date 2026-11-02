@@ -58,6 +58,21 @@ func (e *PanelCompatibilityError) Error() string {
 }
 func (e *PanelCompatibilityError) Unwrap() error { return ErrPanel }
 
+func compatibilityReviewReason(err error) string {
+	var failure *PanelCompatibilityError
+	if !errors.As(err, &failure) {
+		return ""
+	}
+	switch failure.Compatibility.Reason {
+	case "unsupported_version":
+		return "panel_version_unsupported"
+	case "version_changed":
+		return "panel_version_changed"
+	default:
+		return "panel_version_unconfirmed"
+	}
+}
+
 type panelCallError struct{ reason string }
 
 func (e *panelCallError) Error() string { return "panel request: " + e.reason }
@@ -118,6 +133,13 @@ func (p *PanelClient) RequireCompatible(ctx context.Context) error {
 	}
 	p.panelVersion = c.PanelVersion
 	return nil
+}
+
+func (p *PanelClient) mutate(ctx context.Context, path string, body any) (panelEnvelope, error) {
+	if err := p.RequireCompatible(ctx); err != nil {
+		return panelEnvelope{}, err
+	}
+	return p.call(ctx, "POST", path, body)
 }
 
 // Authenticate once before independent reads; session logins must not race.

@@ -74,6 +74,20 @@ func (s *Service) ApplyAccess(parent context.Context, id uuid.UUID) error {
 	if current.Status == "applied" || current.Status == "needs_review" || current.Status == "skipped" {
 		return nil
 	}
+	var t AccessTarget
+	targetErr := json.Unmarshal(current.Target, &t)
+	p, panelErr := s.panelFor(ctx, t.PanelID, c)
+	if p != nil {
+		defer p.Close()
+	}
+	var compatibilityErr error
+	if targetErr == nil && panelErr == nil {
+		compatibilityErr = p.RequireCompatible(ctx)
+	}
+	var incompatible *PanelCompatibilityError
+	if !current.WriteStarted && !current.ResetStarted && errors.As(compatibilityErr, &incompatible) && incompatible.Compatibility.Status == "unknown" {
+		return river.JobSnooze(time.Minute)
+	}
 	lease := digest(uuid.NewString())
 	op, err := q.LeaseAccessOperation(ctx, store.LeaseAccessOperationParams{ID: id, LeaseHash: lease, UpdatedAt: stamp(s.now())})
 	if err != nil {
@@ -81,14 +95,7 @@ func (s *Service) ApplyAccess(parent context.Context, id uuid.UUID) error {
 	}
 	group := op.Kind == "group_reconcile"
 	bonus := op.Kind == "compensate" && op.OperatorAccountID == nil
-	var t AccessTarget
-	targetErr := json.Unmarshal(op.Target, &t)
 	banOnly := group && t.Banned && len(t.InboundIDs) == 0
-	// Concrete lookup uses this session; finish SQL before its Ping watchdog.
-	p, panelErr := s.panelFor(ctx, t.PanelID, c)
-	if p != nil {
-		defer p.Close()
-	}
 	stop, lost := watchOwner(ctx, c, cancel)
 	defer stop()
 	cleanup := func(code string, ambiguous bool) error {
@@ -191,6 +198,9 @@ func (s *Service) ApplyAccess(parent context.Context, id uuid.UUID) error {
 	if panelErr != nil {
 		return cleanup("panel_unavailable", !bonus)
 	}
+	if reason := compatibilityReviewReason(compatibilityErr); reason != "" {
+		return cleanup(reason, true)
+	}
 	if !banOnly && (t.Profile == "regular" || t.Profile == "euru" || t.Profile == "unlimited") {
 		// Failed provider reads are retryable before a bonus write; profile changes still need review.
 		selected, e := p.ProfileInboundIDs(ctx, t.Profile)
@@ -260,7 +270,9 @@ func (s *Service) ApplyAccess(parent context.Context, id uuid.UUID) error {
 		if !t.Missing || op.WriteStarted || !markWrite() {
 			return cleanup("missing_client", true)
 		}
-		_ = p.AddClient(ctx, ProvisionTarget{OperationID: id, PanelID: t.PanelID, PanelKey: t.PanelKey, VPNID: t.VPNID, SubID: t.SubID, InboundIDs: t.InboundIDs, ExpiryTimeMS: t.ExpiryTimeMS, DeviceCount: t.DeviceCount, TrafficLimitBytes: t.TrafficLimitBytes})
+		if mutationErr := p.AddClient(ctx, ProvisionTarget{OperationID: id, PanelID: t.PanelID, PanelKey: t.PanelKey, VPNID: t.VPNID, SubID: t.SubID, InboundIDs: t.InboundIDs, ExpiryTimeMS: t.ExpiryTimeMS, DeviceCount: t.DeviceCount, TrafficLimitBytes: t.TrafficLimitBytes}); compatibilityReviewReason(mutationErr) != "" {
+			return cleanup(compatibilityReviewReason(mutationErr), true)
+		}
 		view, err = p.GetClient(ctx, t.PanelKey)
 		if err != nil || view == nil {
 			return cleanup("add_unconfirmed", true)
@@ -302,9 +314,13 @@ func (s *Service) ApplyAccess(parent context.Context, id uuid.UUID) error {
 			if view.ExpiryTimeMS != t.ExpiryTimeMS || view.LimitIP != limit || view.TrafficLimitBytes != t.TrafficLimitBytes {
 				return cleanup("baseline_changed", true)
 			}
-			_ = p.DisableAccess(ctx, t.PanelKey)
+			if mutationErr := p.DisableAccess(ctx, t.PanelKey); compatibilityReviewReason(mutationErr) != "" {
+				return cleanup(compatibilityReviewReason(mutationErr), true)
+			}
 		} else {
-			_ = p.UpdateAccess(ctx, view, t)
+			if mutationErr := p.UpdateAccess(ctx, view, t); compatibilityReviewReason(mutationErr) != "" {
+				return cleanup(compatibilityReviewReason(mutationErr), true)
+			}
 		}
 		view, err = p.GetClient(ctx, t.PanelKey)
 		if err != nil || view == nil || view.VPNID != t.VPNID || view.SubID != t.SubID || view.ExpiryTimeMS != t.ExpiryTimeMS || view.LimitIP != limit || view.TrafficLimitBytes != t.TrafficLimitBytes || (t.RestoreEnabled || t.Enable) && !view.Enabled {
@@ -329,10 +345,14 @@ func (s *Service) ApplyAccess(parent context.Context, id uuid.UUID) error {
 			return cleanup("membership_write_unavailable", true)
 		}
 		if len(attach) > 0 {
-			_ = p.Attach(ctx, t.PanelKey, attach)
+			if mutationErr := p.Attach(ctx, t.PanelKey, attach); compatibilityReviewReason(mutationErr) != "" {
+				return cleanup(compatibilityReviewReason(mutationErr), true)
+			}
 		}
 		if len(detach) > 0 {
-			_ = p.Detach(ctx, t.PanelKey, detach)
+			if mutationErr := p.Detach(ctx, t.PanelKey, detach); compatibilityReviewReason(mutationErr) != "" {
+				return cleanup(compatibilityReviewReason(mutationErr), true)
+			}
 		}
 		view, err = p.GetClient(ctx, t.PanelKey)
 		if err != nil || view == nil {

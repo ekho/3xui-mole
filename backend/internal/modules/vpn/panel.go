@@ -305,8 +305,11 @@ func (p *PanelClient) AddClient(ctx context.Context, t ProvisionTarget) error {
 	if limit > 0 {
 		limit++
 	}
-	out, e := p.call(ctx, "POST", "panel/api/clients/add", map[string]any{"client": map[string]any{"email": t.PanelKey, "id": t.VPNID, "subId": t.SubID, "expiryTime": t.ExpiryTimeMS, "limitIp": limit, "totalGB": t.TrafficLimitBytes, "enable": true, "flow": "xtls-rprx-vision"}, "inboundIds": t.InboundIDs})
-	if e != nil || !*out.Success {
+	out, e := p.mutate(ctx, "panel/api/clients/add", map[string]any{"client": map[string]any{"email": t.PanelKey, "id": t.VPNID, "subId": t.SubID, "expiryTime": t.ExpiryTimeMS, "limitIp": limit, "totalGB": t.TrafficLimitBytes, "enable": true, "flow": "xtls-rprx-vision"}, "inboundIds": t.InboundIDs})
+	if e != nil {
+		return e
+	}
+	if !*out.Success {
 		return ErrPanel
 	}
 	return nil
@@ -315,8 +318,11 @@ func (p *PanelClient) Attach(ctx context.Context, key string, ids []int64) error
 	if p.auth(ctx) != nil {
 		return ErrPanel
 	}
-	out, e := p.call(ctx, "POST", "panel/api/clients/"+url.PathEscape(key)+"/attach", map[string]any{"inboundIds": ids})
-	if e != nil || !*out.Success {
+	out, e := p.mutate(ctx, "panel/api/clients/"+url.PathEscape(key)+"/attach", map[string]any{"inboundIds": ids})
+	if e != nil {
+		return e
+	}
+	if !*out.Success {
 		return ErrPanel
 	}
 	return nil
@@ -424,8 +430,11 @@ func (p *PanelClient) Detach(ctx context.Context, key string, ids []int64) error
 	if p.auth(ctx) != nil {
 		return ErrPanel
 	}
-	out, e := p.call(ctx, "POST", "panel/api/clients/"+url.PathEscape(key)+"/detach", map[string]any{"inboundIds": ids})
-	if e != nil || !*out.Success {
+	out, e := p.mutate(ctx, "panel/api/clients/"+url.PathEscape(key)+"/detach", map[string]any{"inboundIds": ids})
+	if e != nil {
+		return e
+	}
+	if !*out.Success {
 		return ErrPanel
 	}
 	return nil
@@ -487,8 +496,11 @@ func (p *PanelClient) UpdateAccess(ctx context.Context, v *PanelClientView, t Ac
 	} else if t.RestoreEnabled || t.Enable {
 		data["enable"] = json.RawMessage("true")
 	}
-	out, e := p.call(ctx, "POST", "panel/api/clients/update/"+url.PathEscape(t.PanelKey), data)
-	if e != nil || !*out.Success {
+	out, e := p.mutate(ctx, "panel/api/clients/update/"+url.PathEscape(t.PanelKey), data)
+	if e != nil {
+		return e
+	}
+	if !*out.Success {
 		return ErrPanel
 	}
 	return nil
@@ -498,8 +510,11 @@ func (p *PanelClient) ResetAccessTraffic(ctx context.Context, key string) error 
 	if p.auth(ctx) != nil {
 		return ErrPanel
 	}
-	out, e := p.call(ctx, "POST", "panel/api/clients/resetTraffic/"+url.PathEscape(key), map[string]any{})
-	if e != nil || !*out.Success {
+	out, e := p.mutate(ctx, "panel/api/clients/resetTraffic/"+url.PathEscape(key), map[string]any{})
+	if e != nil {
+		return e
+	}
+	if !*out.Success {
 		return ErrPanel
 	}
 	return nil
@@ -509,8 +524,11 @@ func (p *PanelClient) DisableAccess(ctx context.Context, key string) error {
 	if p.auth(ctx) != nil {
 		return ErrPanel
 	}
-	out, e := p.call(ctx, "POST", "panel/api/clients/bulkDisable", map[string]any{"emails": []string{key}})
-	if e != nil || !*out.Success {
+	out, e := p.mutate(ctx, "panel/api/clients/bulkDisable", map[string]any{"emails": []string{key}})
+	if e != nil {
+		return e
+	}
+	if !*out.Success {
 		return ErrPanel
 	}
 	return nil

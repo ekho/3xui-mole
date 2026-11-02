@@ -129,16 +129,31 @@ func (s *Service) Provision(parent context.Context, id uuid.UUID) error {
 			return e
 		}
 	}
+	if op.PanelID == "" {
+		op, e = q.OperationByID(ctx, id)
+		if e != nil {
+			return unavailable()
+		}
+	}
+	p, panelErr := s.panelFor(ctx, op.PanelID, c)
+	if p != nil {
+		defer p.Close()
+	}
+	var compatibilityErr error
+	if panelErr == nil {
+		compatibilityErr = p.RequireCompatible(ctx)
+	}
+	var incompatible *PanelCompatibilityError
+	if !op.WriteStarted && errors.As(compatibilityErr, &incompatible) && incompatible.Compatibility.Status == "unknown" {
+		return river.JobSnooze(time.Minute)
+	}
 	lease := digest(uuid.NewString())
 	op, e = q.LeaseOperation(ctx, store.LeaseOperationParams{ID: id, FirstStartedAt: stamp(s.now()), LeaseHash: lease})
 	if e != nil {
 		return unavailable()
 	}
 	// Concrete lookup uses this session; finish SQL before its Ping watchdog.
-	p, panelErr := s.panelFor(ctx, op.PanelID, c)
-	if p != nil {
-		defer p.Close()
-	}
+	// Panel preflight completed before the lease consumed an attempt.
 	stop, lost := watchOwner(ctx, c, cancel)
 	defer stop()
 	fail := func(ambiguous bool) error {
@@ -163,7 +178,7 @@ func (s *Service) Provision(parent context.Context, id uuid.UUID) error {
 	if a.Restricted || !accounts.SourceEligible(a) || !validSnapshot(op) || a.AssignedPanelID != nil && *a.AssignedPanelID != op.PanelID {
 		return fail(true)
 	}
-	if panelErr != nil {
+	if panelErr != nil || compatibilityErr != nil {
 		return fail(true)
 	}
 	var target ProvisionTarget
@@ -227,13 +242,15 @@ func (s *Service) Provision(parent context.Context, id uuid.UUID) error {
 		return true
 	}
 	if v == nil {
-		if s.now().UnixMilli() >= target.ExpiryTimeMS || op.WriteStarted && !s.config().PanelDuplicateGuardVerified {
+		if s.now().UnixMilli() >= target.ExpiryTimeMS || op.WriteStarted {
 			return fail(true)
 		}
 		if !write() {
 			return fail(true)
 		}
-		_ = p.AddClient(ctx, target)
+		if e := p.AddClient(ctx, target); compatibilityReviewReason(e) != "" {
+			return fail(true)
+		}
 		v, e = p.GetClient(ctx, target.PanelKey)
 		if e != nil || v == nil {
 			return fail(true)
@@ -243,7 +260,9 @@ func (s *Service) Provision(parent context.Context, id uuid.UUID) error {
 		if !write() {
 			return fail(true)
 		}
-		_ = p.DisableAccess(ctx, target.PanelKey)
+		if e := p.DisableAccess(ctx, target.PanelKey); compatibilityReviewReason(e) != "" {
+			return fail(true)
+		}
 		v, e = p.GetClient(ctx, target.PanelKey)
 		if e != nil || v == nil || v.Enabled {
 			return fail(true)
@@ -274,7 +293,9 @@ func (s *Service) Provision(parent context.Context, id uuid.UUID) error {
 		if s.now().UnixMilli() >= target.ExpiryTimeMS || !write() {
 			return fail(true)
 		}
-		_ = p.Attach(ctx, target.PanelKey, missing)
+		if e := p.Attach(ctx, target.PanelKey, missing); compatibilityReviewReason(e) != "" {
+			return fail(true)
+		}
 		v, e = p.GetClient(ctx, target.PanelKey)
 		if e != nil || !Matches(v, target, s.now()) || len(MissingInbounds(v, target)) > 0 {
 			return fail(true)
