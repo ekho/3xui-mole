@@ -40,7 +40,7 @@ func (s *Service) accessStep(ctx context.Context, id uuid.UUID, lease []byte, st
 	return nil
 }
 
-func (s *Service) ApplyAccess(parent context.Context, id uuid.UUID) error {
+func (s *Service) ApplyAccess(parent context.Context, id uuid.UUID) (result error) {
 	ctx, cancel := context.WithTimeout(parent, 2*time.Minute)
 	defer cancel()
 	initial, err := store.New(s.pool).AccessOperationByID(ctx, id)
@@ -80,6 +80,13 @@ func (s *Service) ApplyAccess(parent context.Context, id uuid.UUID) error {
 	if p != nil {
 		defer p.Close()
 	}
+	defer func() {
+		cleanup, end := context.WithTimeout(context.Background(), 5*time.Second)
+		defer end()
+		if err := s.recordPanelCompatibility(cleanup, c, p); err != nil {
+			result = unavailable()
+		}
+	}()
 	var compatibilityErr error
 	if targetErr == nil && panelErr == nil {
 		compatibilityErr = p.RequireCompatible(ctx)
@@ -266,8 +273,21 @@ func (s *Service) ApplyAccess(parent context.Context, id uuid.UUID) error {
 		op.WriteStarted = true
 		return true
 	}
+	p.beforeMutation = func(reset bool) bool {
+		if !markWrite() {
+			return false
+		}
+		if reset {
+			n, e := store.New(s.pool).MarkAccessReset(ctx, store.MarkAccessResetParams{ID: id, LeaseHash: lease, UpdatedAt: stamp(s.now())})
+			if e != nil || n != 1 {
+				return false
+			}
+			op.ResetStarted, op.ResetAcknowledged = true, false
+		}
+		return true
+	}
 	if view == nil {
-		if !t.Missing || op.WriteStarted || !markWrite() {
+		if !t.Missing || op.WriteStarted {
 			return cleanup("missing_client", true)
 		}
 		if mutationErr := p.AddClient(ctx, ProvisionTarget{OperationID: id, PanelID: t.PanelID, PanelKey: t.PanelKey, VPNID: t.VPNID, SubID: t.SubID, InboundIDs: t.InboundIDs, ExpiryTimeMS: t.ExpiryTimeMS, DeviceCount: t.DeviceCount, TrafficLimitBytes: t.TrafficLimitBytes}); compatibilityReviewReason(mutationErr) != "" {
@@ -307,9 +327,6 @@ func (s *Service) ApplyAccess(parent context.Context, id uuid.UUID) error {
 		limit = t.PreviousLimitIP
 	}
 	if view.ExpiryTimeMS != t.ExpiryTimeMS || view.LimitIP != limit || view.TrafficLimitBytes != t.TrafficLimitBytes || t.Banned && view.Enabled || (t.RestoreEnabled || t.Enable) && !view.Enabled {
-		if !markWrite() {
-			return cleanup("write_unavailable", true)
-		}
 		if group {
 			if view.ExpiryTimeMS != t.ExpiryTimeMS || view.LimitIP != limit || view.TrafficLimitBytes != t.TrafficLimitBytes {
 				return cleanup("baseline_changed", true)
@@ -340,9 +357,6 @@ func (s *Service) ApplyAccess(parent context.Context, id uuid.UUID) error {
 	if len(attach) > 0 || len(detach) > 0 {
 		if op.WriteStarted && op.Attempts > 1 && !group {
 			return cleanup("membership_partial", true)
-		}
-		if !markWrite() {
-			return cleanup("membership_write_unavailable", true)
 		}
 		if len(attach) > 0 {
 			if mutationErr := p.Attach(ctx, t.PanelKey, attach); compatibilityReviewReason(mutationErr) != "" {
@@ -386,19 +400,13 @@ func (s *Service) ApplyAccess(parent context.Context, id uuid.UUID) error {
 			}
 		}
 		if shouldReset {
-			if !markWrite() {
-				return cleanup("reset_write_unavailable", true)
-			}
-			n, e := store.New(s.pool).MarkAccessReset(ctx, store.MarkAccessResetParams{ID: id, LeaseHash: lease, UpdatedAt: stamp(s.now())})
-			if e != nil || n != 1 {
-				return cleanup("reset_mark_failed", true)
-			}
-			op.ResetStarted = true
-			op.ResetAcknowledged = false
 			resetErr := p.ResetAccessTraffic(ctx, t.PanelKey)
+			if reason := compatibilityReviewReason(resetErr); reason != "" {
+				return cleanup(reason, true)
+			}
 			// Native resetTraffic can re-enable a banned client even when the reply is lost.
 			if t.Banned {
-				if e = p.DisableAccess(ctx, t.PanelKey); e != nil {
+				if e := p.DisableAccess(ctx, t.PanelKey); e != nil {
 					return cleanup("ban_reapply_failed", true)
 				}
 				if s.accessStep(ctx, id, lease, "ban_reapplied") != nil {

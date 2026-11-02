@@ -191,6 +191,17 @@ func serverCard(s vpn.Server, lang string) string {
 	case "unsupported":
 		compatibility = clientText(lang, "не поддерживается", "unsupported")
 	}
+	reasons := map[string][2]string{
+		"not_checked":         {"ещё не проверено", "not checked yet"},
+		"unsupported_version": {"версия не поддерживается", "version is unsupported"},
+		"unreachable":         {"панель недоступна", "panel unreachable"},
+		"auth_failed":         {"ошибка авторизации", "authentication failed"},
+		"invalid_response":    {"неверный ответ панели", "invalid panel response"},
+		"version_changed":     {"версия изменилась во время операции", "version changed during operation"},
+	}
+	if reason, ok := reasons[s.Compatibility.Reason]; ok {
+		compatibility += " (" + clientText(lang, reason[0], reason[1]) + ")"
+	}
 	version := s.Compatibility.PanelVersion
 	if version == "" {
 		version = "—"

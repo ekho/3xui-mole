@@ -137,10 +137,37 @@ func (s *Service) panelFor(ctx context.Context, id string, db serverDB) (*PanelC
 		if v.ID == id && !v.Retired {
 			cfg := s.config().Panel
 			cfg.PanelURL = v.Host
-			return NewPanelClient(cfg), nil
+			panel := NewPanelClient(cfg)
+			panel.serverSnapshot = &v
+			return panel, nil
 		}
 	}
 	return nil, ErrPanel
+}
+
+// Called after the owner's watchdog stops, before its physical connection is released.
+func (s *Service) recordPanelCompatibility(ctx context.Context, c *pgxpool.Conn, p *PanelClient) error {
+	if p == nil || p.serverSnapshot == nil || p.compatibilityCheckedAt.IsZero() {
+		return nil
+	}
+	v := *p.serverSnapshot
+	if v.Revision == 0 {
+		if err := s.seedPrimary(ctx, c); err != nil {
+			return err
+		}
+		rows, err := s.servers(ctx, c)
+		if err != nil {
+			return err
+		}
+		for _, row := range rows {
+			if row.ID == v.ID && row.Host == v.Host && !row.Retired {
+				v = row
+				break
+			}
+		}
+	}
+	observation := p.lastCompatibility
+	return store.New(c).ObservePoolServer(ctx, store.ObservePoolServerParams{ID: v.ID, Revision: v.Revision, ObservedAt: stamp(p.compatibilityCheckedAt), Online: v.Online, Base: v.SubscriptionBaseURL, PanelVersion: observation.PanelVersion, XrayVersion: observation.XrayVersion, Compatibility: observation.Status, CompatibilityReason: observation.Reason})
 }
 
 func (s *Service) SubscriptionBase(ctx context.Context, id string) (string, error) {

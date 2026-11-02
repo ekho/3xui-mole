@@ -20,18 +20,23 @@ import (
 )
 
 type PanelClient struct {
-	cfg          Config
-	http         *http.Client
-	loginMu      sync.Mutex
-	csrf         string
-	compatMu     sync.Mutex
-	panelVersion string
+	cfg                    Config
+	http                   *http.Client
+	loginMu                sync.Mutex
+	csrf                   string
+	compatMu               sync.Mutex
+	panelVersion           string
+	beforeMutation         func(reset bool) bool
+	serverSnapshot         *Server
+	lastCompatibility      PanelCompatibility
+	compatibilityCheckedAt time.Time
 }
 
 var ErrPanel = errors.New("panel unavailable or unconfirmed response")
 var ErrIdentity = errors.New("panel identity mismatch")
 var ErrMembership = errors.New("unknown panel membership")
 var ErrTraffic = errors.New("invalid panel traffic")
+var errPanelWriteGuard = errors.Join(ErrPanel, errors.New("panel write guard failed"))
 
 func NewPanelClient(c Config) *PanelClient {
 	jar, _ := cookiejar.New(nil)

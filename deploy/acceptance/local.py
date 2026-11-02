@@ -707,6 +707,8 @@ def native_paid_restart():
         panel_readback(prepared['target'])
         write('paid-recovery-proof.json', json.dumps({'before': before, 'prepared': prepared, 'after': after, 'replay': replay,
               'processes': [original_process, second_process, third_process], 'panel': version, 'telegram': False}))
+        vpn(opener)
+        print('PASS: paid subscription connected through real VPN to the owned origin',flush=True)
         print('PASS: paid receipt/job and frozen target/job survived two compiled Go process restarts; same funding/access/identity/target, one receipt, real 3X-UI '+version+' readback and duplicate notification; Telegram disabled', flush=True)
     finally:
         sql('DROP TRIGGER IF EXISTS paid_hold_job ON river_job; DROP FUNCTION IF EXISTS paid_hold_job();')

@@ -86,7 +86,7 @@ func (s *Service) reviewOperation(ctx context.Context, op store.TrialOperation, 
 func validSnapshot(op store.TrialOperation) bool {
 	return op.TrialEnabled && op.PeriodDays > 0 && op.PeriodDays <= math.MaxInt64/int64(24*time.Hour) && op.TrafficGb >= 0 && op.TrafficGb <= math.MaxInt64/(1024*1024*1024) && op.Devices >= 0 && op.Devices < math.MaxInt64 && op.PanelID != ""
 }
-func (s *Service) Provision(parent context.Context, id uuid.UUID) error {
+func (s *Service) Provision(parent context.Context, id uuid.UUID) (result error) {
 	ctx, cancel := context.WithTimeout(parent, 2*time.Minute)
 	defer cancel()
 	initial, e := store.New(s.pool).OperationByID(ctx, id)
@@ -139,6 +139,13 @@ func (s *Service) Provision(parent context.Context, id uuid.UUID) error {
 	if p != nil {
 		defer p.Close()
 	}
+	defer func() {
+		cleanup, end := context.WithTimeout(context.Background(), 5*time.Second)
+		defer end()
+		if err := s.recordPanelCompatibility(cleanup, c, p); err != nil {
+			result = unavailable()
+		}
+	}()
 	var compatibilityErr error
 	if panelErr == nil {
 		compatibilityErr = p.RequireCompatible(ctx)
@@ -241,11 +248,9 @@ func (s *Service) Provision(parent context.Context, id uuid.UUID) error {
 		op.WriteStarted = true
 		return true
 	}
+	p.beforeMutation = func(bool) bool { return write() }
 	if v == nil {
 		if s.now().UnixMilli() >= target.ExpiryTimeMS || op.WriteStarted {
-			return fail(true)
-		}
-		if !write() {
 			return fail(true)
 		}
 		if e := p.AddClient(ctx, target); compatibilityReviewReason(e) != "" {
@@ -257,9 +262,6 @@ func (s *Service) Provision(parent context.Context, id uuid.UUID) error {
 		}
 	}
 	if target.Banned && v.Enabled {
-		if !write() {
-			return fail(true)
-		}
 		if e := p.DisableAccess(ctx, target.PanelKey); compatibilityReviewReason(e) != "" {
 			return fail(true)
 		}
@@ -290,7 +292,7 @@ func (s *Service) Provision(parent context.Context, id uuid.UUID) error {
 				return fail(true)
 			}
 		}
-		if s.now().UnixMilli() >= target.ExpiryTimeMS || !write() {
+		if s.now().UnixMilli() >= target.ExpiryTimeMS {
 			return fail(true)
 		}
 		if e := p.Attach(ctx, target.PanelKey, missing); compatibilityReviewReason(e) != "" {

@@ -12,5 +12,11 @@ func TestServerCardCompatibility(t *testing.T) {
 		if !strings.Contains(card, "3.7.0") || !strings.Contains(card, "26.10.21") || !strings.Contains(card, clientText(lang, "не поддерживается", "unsupported")) {
 			t.Fatal("server card hides incompatibility")
 		}
+		for reason, labels := range map[string][2]string{"auth_failed": {"ошибка авторизации", "authentication failed"}, "invalid_response": {"неверный ответ панели", "invalid panel response"}, "not_checked": {"ещё не проверено", "not checked yet"}} {
+			card = serverCard(vpn.Server{ID: "fixture", Compatibility: vpn.PanelCompatibility{Status: "unknown", Reason: reason}}, lang)
+			if !strings.Contains(card, clientText(lang, labels[0], labels[1])) {
+				t.Fatal("server card hides actionable reason", reason, lang)
+			}
+		}
 	}
 }

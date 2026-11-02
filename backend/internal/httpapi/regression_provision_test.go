@@ -23,6 +23,7 @@ import (
 )
 
 type fakePanel struct {
+	statusHook                                                                       func(*fakePanel)
 	panelVersion                                                                     string
 	statusFailure                                                                    int
 	override                                                                         http.Handler
@@ -91,6 +92,9 @@ func (p *fakePanel) serve(w http.ResponseWriter, r *http.Request) {
 	}
 	switch {
 	case r.Method == "GET" && r.URL.Path == "/panel/api/server/status":
+		if p.statusHook != nil {
+			p.statusHook(p)
+		}
 		if p.statusFailure != 0 {
 			w.WriteHeader(p.statusFailure)
 			return

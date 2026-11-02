@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"strings"
+	"time"
 	"unicode"
 )
 
@@ -59,6 +60,9 @@ func (e *PanelCompatibilityError) Error() string {
 func (e *PanelCompatibilityError) Unwrap() error { return ErrPanel }
 
 func compatibilityReviewReason(err error) string {
+	if errors.Is(err, errPanelWriteGuard) {
+		return "write_unavailable"
+	}
 	var failure *PanelCompatibilityError
 	if !errors.As(err, &failure) {
 		return ""
@@ -121,14 +125,17 @@ func (p *PanelClient) Compatibility(ctx context.Context) (PanelCompatibility, er
 }
 
 func (p *PanelClient) RequireCompatible(ctx context.Context) error {
+	checkedAt := time.Now().UTC()
 	c, err := p.Compatibility(ctx)
+	p.compatMu.Lock()
+	defer p.compatMu.Unlock()
+	p.lastCompatibility, p.compatibilityCheckedAt = c, checkedAt
 	if err != nil {
 		return err
 	}
-	p.compatMu.Lock()
-	defer p.compatMu.Unlock()
 	if p.panelVersion != "" && p.panelVersion != c.PanelVersion {
 		c.Status, c.Reason = "unknown", "version_changed"
+		p.lastCompatibility = c
 		return &PanelCompatibilityError{Compatibility: c}
 	}
 	p.panelVersion = c.PanelVersion
@@ -138,6 +145,9 @@ func (p *PanelClient) RequireCompatible(ctx context.Context) error {
 func (p *PanelClient) mutate(ctx context.Context, path string, body any) (panelEnvelope, error) {
 	if err := p.RequireCompatible(ctx); err != nil {
 		return panelEnvelope{}, err
+	}
+	if p.beforeMutation != nil && !p.beforeMutation(strings.HasPrefix(path, "panel/api/clients/resetTraffic/")) {
+		return panelEnvelope{}, errPanelWriteGuard
 	}
 	return p.call(ctx, "POST", path, body)
 }
