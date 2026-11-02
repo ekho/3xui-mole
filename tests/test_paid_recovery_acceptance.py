@@ -12,10 +12,7 @@ from deploy.acceptance import local
 
 class PaidRecoveryAcceptanceTests(unittest.TestCase):
     def test_provider_override_reaches_panels_client_and_version_guard(self):
-        images = {
-            '3.7.0': 'ghcr.io/mhsanaei/3x-ui:3.7.0@sha256:3b3131f1876e6bf35063a9ec4dd1c594e4525180bfc2e1c477dcc8a3c9550ca1',
-            '3.10.0': 'ghcr.io/mhsanaei/3x-ui:3.10.0@sha256:ef90d07ea00cf3b76bcd37e7c5025d73788dc188894c6a741c22776a83c2c556',
-        }
+        images = {r['version']: r['image'] for r in local.REGISTRY['supported']}
         with tempfile.TemporaryDirectory() as directory:
             state = Path(directory)
             with patch.multiple(local, STATE=state, ENV=state / 'public.env'):
@@ -27,7 +24,7 @@ class PaidRecoveryAcceptanceTests(unittest.TestCase):
                 for version, image in images.items():
                     with self.subTest(version=version):
                         result = subprocess.run(args, cwd=local.ROOT,
-                            env={**os.environ, 'LOCAL_PANEL_IMAGE': image},
+                            env={**os.environ, 'LOCAL_PANEL_IMAGE': image, 'LOCAL_SECOND_PANEL_IMAGE': image},
                             capture_output=True, text=True, timeout=30)
                         self.assertEqual(result.returncode, 0, 'owned Compose config must resolve')
                         config = json.loads(result.stdout)

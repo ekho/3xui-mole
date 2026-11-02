@@ -5,6 +5,7 @@ services:
     volumes: ['${LOCAL_STATE_DIR:?required}/panel-db:/etc/x-ui']
   panel-second:
     extends: {file: ../acceptance/compose.local.yml, service: panel}
+    image: '${LOCAL_SECOND_PANEL_IMAGE:?select the second panel through the acceptance helper}'
     volumes: ['${LOCAL_STATE_DIR:?required}/panel-second-db:/etc/x-ui']
   gateway:
     image: cabinet-server-management-gateway:local
@@ -21,6 +22,7 @@ services:
     ports: ['127.0.0.1:61444:9444', '127.0.0.1:61449:9449']
     depends_on: [panel, panel-second]
 secrets:
+  panel_password: {file: '${PANEL_PASSWORD_FILE:?required}'}
   public_cert: {file: '${LOCAL_STATE_DIR:?required}/cert.pem'}
   public_key: {file: '${LOCAL_STATE_DIR:?required}/key.pem'}
 networks:

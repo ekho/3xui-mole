@@ -28,7 +28,7 @@ services:
       - '127.0.0.1:59446:9446'
     depends_on: [panel, mailpit]
   panel:
-    image: &panel-image '${LOCAL_PANEL_IMAGE:-ghcr.io/mhsanaei/3x-ui:3.10.0@sha256:ef90d07ea00cf3b76bcd37e7c5025d73788dc188894c6a741c22776a83c2c556}'
+    image: &panel-image '${LOCAL_PANEL_IMAGE:?select a pinned panel through the acceptance helper}'
     user: '${APP_RUNTIME_UID:-10001}:${APP_RUNTIME_GID:-10001}'
     entrypoint: [/bin/sh, -c]
     command: ['cp -R /app/bin /tmp/bin && exec /app/x-ui']
@@ -39,7 +39,7 @@ services:
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     volumes: ['${LOCAL_STATE_DIR:?required}/panel-db:/etc/x-ui']
-    secrets: [public_cert, public_key]
+    secrets: [public_cert, public_key, panel_password]
   mailpit:
     image: axllent/mailpit@sha256:98b916bd3c8d61f7633a52d3ea2f58d00620cb01ca57ab59edde68c347a95365
     user: '${APP_RUNTIME_UID:-10001}:${APP_RUNTIME_GID:-10001}'

@@ -42,9 +42,13 @@ def prepare():
                        str(STATE / 'key.pem'), '-out', str(STATE / 'cert.pem')])
         (STATE / 'key.pem').chmod(0o600)
     # Compose also interpolates unused secrets in the extended source file.
+    envfile=STATE/'public.env'
+    saved=dict(line.split('=',1) for line in envfile.read_text().splitlines() if line and not line.startswith('#')) if envfile.exists() else {}
+    images=local.state_images(STATE,saved)
     local.write('public.env', '\n'.join((f'LOCAL_STATE_DIR={STATE}',
                 f'APP_RUNTIME_UID={os.getuid()}', f'APP_RUNTIME_GID={os.getgid()}',
-                f'PANEL_PASSWORD_FILE={STATE / "panel-password"}', 'SMTP_AUTH_FILE=/dev/null')) + '\n')
+                f'PANEL_PASSWORD_FILE={STATE / "panel-password"}', 'SMTP_AUTH_FILE=/dev/null',
+                *(k+'='+v for k,v in images.items()))) + '\n')
 
 
 def panel(port, initialize=False):
@@ -62,12 +66,17 @@ def panel(port, initialize=False):
     csrf = call('csrf-token')
     marker = STATE / f'initialized-{port}'
     password = (STATE / 'panel-password').read_text().strip()
-    if initialize and not marker.exists():
-        call('login', {'username': 'admin', 'password': 'admin'}, csrf)
-        call('panel/api/setting/updateUser', {'oldUsername': 'admin', 'oldPassword': 'admin',
-             'newUsername': 'local-operator', 'newPassword': password}, csrf)
-        local.write(marker.name, 'yes')
     call('login', {'username': 'local-operator', 'password': password}, csrf)
+    if initialize and not marker.exists():local.write(marker.name, 'yes')
+    status=call('panel/api/server/status')
+    config=json.loads(compose('config','--format','json'))
+    service='panel' if port==61444 else 'panel-second'
+    image=config['services'][service]['image']
+    assert any(r['image']==image and r['version']==status['panelVersion'] for r in local.REGISTRY['supported']), 'running panel differs from selected release'
+    path=STATE/'panel-runtime.json'
+    runtime=json.loads(path.read_text()) if path.exists() else {}
+    runtime[service]={'panel_version':status['panelVersion'],'xray_version':status['xray']['version'],'panel_image':image}
+    local.write('panel-runtime.json',json.dumps(runtime))
     if initialize:
         if not any(row.get('tag') == 'local-regular-vless' for row in call('panel/api/inbounds/list')):
             call('panel/api/inbounds/add', {'enable': True, 'remark': 'Server management fixture',
@@ -86,6 +95,8 @@ def panel(port, initialize=False):
 def up():
     prepare()
     compose('config', '--quiet')
+    local.initialize_panel(compose, STATE, 'panel', 'panel-db')
+    local.initialize_panel(compose, STATE, 'panel-second', 'panel-second-db')
     compose('build', 'gateway')
     compose('up', '--pull', 'missing', '-d')
     for port in (61444, 61449):

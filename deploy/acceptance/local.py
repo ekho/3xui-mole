@@ -21,6 +21,8 @@ from urllib.parse import urlsplit, parse_qs, urlencode, quote
 from uuid import UUID, uuid4
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+from deploy.acceptance.panel_versions import REGISTRY, panel_release, selected_images, state_images, initialize_panel
 PROFILE = os.environ.get('LOCAL_PROFILE', 'native')
 assert PROFILE == 'native', 'only the native Go profile is supported'
 STATE = Path(os.environ.get('LOCAL_STATE_DIR', ROOT / '.superpowers/acceptance/native-docker'))
@@ -75,9 +77,9 @@ def compose(*args, stdin=None):
 
 def panel_version(config=None):
     image = (config or json.loads(compose('config', '--format', 'json')))['services']['panel']['image']
-    match = re.fullmatch(r'ghcr.io/mhsanaei/3x-ui:(3\.7\.0|3\.10\.0)@sha256:[a-f0-9]{64}', image)
+    match = next((r for r in REGISTRY['supported'] if r['image'] == image), None)
     assert match, 'acceptance requires an owned, pinned supported panel image'
-    return match.group(1)
+    return match['version']
 
 def prepare():
     STATE.mkdir(parents=True, exist_ok=True)
@@ -93,6 +95,9 @@ def prepare():
     if PROFILE == 'native' and not (STATE/'yoomoney-notification-secret').exists():
         write('yoomoney-notification-secret', secrets.token_urlsafe(32))
     if ENV.exists():
+        saved = dict(line.split('=', 1) for line in ENV.read_text().splitlines() if line and not line.startswith('#'))
+        saved.update(state_images(STATE,saved))
+        write('public.env', '\n'.join(k+'='+v for k,v in saved.items())+'\n')
         return
     (STATE / 'panel-db').mkdir(mode=0o700)
     values = {name:secrets.token_urlsafe(32) for name in ('pg-password','smtp-password','panel-password','unused-panel-token')}
@@ -120,6 +125,7 @@ def prepare():
                   APP_GATEWAY_IP='172.31.96.14',
                   SUBSCRIPTION_BASE_URL='https://localhost:59445/sub/',LOCAL_STATE_DIR=str(STATE),
                   PANEL_PASSWORD_FILE=str(STATE/'panel-password'),SMTP_AUTH_FILE=str(STATE/'smtp-auth'))
+    config.update(selected_images({}))
     mapping={'PG_PASSWORD_FILE':'pg-password','DATABASE_URL_FILE':'database-url','REDIS_URL_FILE':'redis-url',
              'MAIL_KEY_FILE':'mail-key','CODE_KEY_FILE':'code-key',
              'SMTP_PASSWORD_FILE':'smtp-password','PANEL_TOKEN_FILE':'unused-panel-token','BOT_TOKEN_FILE':'unused-bot-token'}
@@ -156,12 +162,8 @@ def login_panel(port=59444):
     password=(STATE/'panel-password').read_text().strip()
     marker='panel-initialized' if port == 59444 else 'panel-second-initialized'
     initialized=STATE/marker
-    if not initialized.exists():
-        # Only the newly created, isolated panel DB uses upstream's initial credentials.
-        panel_call(opener,'login',{'username':'admin','password':'admin'},csrf,port=port)
-        panel_call(opener,'panel/api/setting/updateUser',{'oldUsername':'admin','oldPassword':'admin','newUsername':'local-operator','newPassword':password},csrf,port=port)
-        write(marker,'yes')
     panel_call(opener,'login',{'username':'local-operator','password':password},csrf,port=port)
+    if not initialized.exists():write(marker,'yes')
     return opener, csrf
 
 def allow_test_origin(opener, csrf):
@@ -186,6 +188,8 @@ def up(reuse_images=False):
     prepare()
     write('public.env',ENV.read_text().replace('TRIAL_ENABLED=true','TRIAL_ENABLED=false'))
     compose('config','--quiet')
+    initialize_panel(compose, STATE, 'panel', 'panel-db')
+    initialize_panel(compose, STATE, 'panel-second', 'panel-second-db')
     # Public legal/support values are runtime configuration; secrets remain files.
     if not reuse_images:compose('build','backend','gateway')
     compose('up','--pull','missing','--no-build','-d','backend','gateway','origin')
@@ -225,6 +229,11 @@ def up(reuse_images=False):
     preflight()
     if PROFILE == 'native':
         second, second_csrf=login_panel(59449)
+        second_status=panel_call(second, 'panel/api/server/status', port=59449)
+        metadata=json.loads((STATE/'panel-runtime.json').read_text())
+        metadata['second']={'panel_version':second_status['panelVersion'], 'xray_version':second_status['xray']['version'], 'panel_image':configured['services']['panel-second']['image']}
+        assert second_status['panelVersion'] == next(r['version'] for r in REGISTRY['supported'] if r['image'] == metadata['second']['panel_image'])
+        write('panel-runtime.json',json.dumps(metadata))
         if not any(row.get('tag')=='local-regular-vless' for row in panel_call(second,'panel/api/inbounds/list',port=59449)):
             panel_call(second,'panel/api/inbounds/add',{
                 'enable':True,'remark':'Local second panel','listen':'0.0.0.0','port':24443,'protocol':'vless','tag':'local-regular-vless',
