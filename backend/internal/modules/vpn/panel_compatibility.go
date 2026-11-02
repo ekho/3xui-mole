@@ -112,7 +112,7 @@ func (p *PanelClient) Compatibility(ctx context.Context) (PanelCompatibility, er
 	if safePanelVersion(status.Xray.Version) {
 		c.XrayVersion = status.Xray.Version
 	}
-	if _, ok := LookupPanelRelease(c.PanelVersion); !ok {
+	if _, ok := LookupPanelRelease(status.PanelVersion); !ok {
 		c.Status = "unsupported"
 		return fail("unsupported_version")
 	}

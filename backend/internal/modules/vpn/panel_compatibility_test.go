@@ -102,6 +102,7 @@ func TestPanelCompatibilityStatus(t *testing.T) {
 		{"old-supported", `{"success":true,"obj":{"panelVersion":"v3.10.2","xray":{"version":"26.10.10"}}}`, "supported", "", 200},
 		{"core-is-not-panel", `{"success":true,"obj":{"panelVersion":"3.7.0","xray":{"version":"3.11.0"}}}`, "unsupported", "unsupported_version", 200},
 		{"missing-core", `{"success":true,"obj":{"panelVersion":"3.11.0"}}`, "supported", "", 200},
+		{"double-prefix", `{"success":true,"obj":{"panelVersion":"vv3.11.0"}}`, "unsupported", "unsupported_version", 200},
 		{"missing-panel", `{"success":true,"obj":{"xray":{"version":"3.11.0"}}}`, "unknown", "invalid_response", 200},
 		{"null-panel", `{"success":true,"obj":{"panelVersion":null}}`, "unknown", "invalid_response", 200},
 		{"numeric-panel", `{"success":true,"obj":{"panelVersion":311}}`, "unknown", "invalid_response", 200},
