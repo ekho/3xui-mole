@@ -139,6 +139,46 @@ func TestNativeTrialServerPool(t *testing.T) {
 	if f.svc.Accounts.ChangeOperatorRole(ctx, actor, true) != nil {
 		t.Fatal("owned operator role unavailable")
 	}
+
+	if state := os.Getenv("NATIVE_DOCKER_STATE"); state != "" {
+		data, e := os.ReadFile(filepath.Join(state, "panel-runtime.json"))
+		var observed struct {
+			PanelVersion string `json:"panel_version"`
+			Second       struct {
+				PanelVersion string `json:"panel_version"`
+			}
+		}
+		if e != nil || json.Unmarshal(data, &observed) != nil {
+			t.Fatal("owned pool runtime metadata missing")
+		}
+		for id, version := range map[string]string{f.cfg.Subscriptions.PanelID: observed.PanelVersion, "second": observed.Second.PanelVersion} {
+			var actual, admission string
+			if f.env.Pool.QueryRow(ctx, "SELECT panel_version,panel_compatibility FROM vpn_servers WHERE id=$1", id).Scan(&actual, &admission) != nil || actual != version || admission != "supported" {
+				t.Fatal("independent panel compatibility observation lost")
+			}
+		}
+	}
+	for _, account := range []uuid.UUID{first, second} {
+		status, raw, _ := f.send(t, actorClient, "POST", "/api/v1/operator/clients/"+account.String()+"/access-operations", map[string]any{"kind": "compensate", "days": 1, "reason": "Owned mixed-pool renewal"}, csrf, uuid.NewString(), false)
+		var op struct {
+			ID uuid.UUID `json:"operation_id"`
+		}
+		if status != 202 || json.Unmarshal(raw, &op) != nil {
+			t.Fatal("assigned pool renewal rejected", status)
+		}
+		wait(t, func() bool {
+			var status string
+			return f.env.Pool.QueryRow(ctx, "SELECT status FROM access_operations WHERE id=$1", op.ID).Scan(&status) == nil && status == "applied"
+		})
+		current, e := f.svc.Accounts.Lookup(ctx, account)
+		original := identity
+		if account == second {
+			original = other
+		}
+		if e != nil || current.AssignedPanelID == nil || *current.AssignedPanelID != *original.AssignedPanelID || current.VpnID != original.VpnID || current.SubID != original.SubID {
+			t.Fatal("renewal remapped mixed-pool identity")
+		}
+	}
 	status, raw, _ := f.send(t, actorClient, "POST", "/api/v1/operator/reports/statistics", wire.StatisticsInput{}, csrf, "", false)
 	var report auditreports.StatisticsReport
 	if status != 200 || json.Unmarshal(raw, &report) != nil || len(report.Servers) != 2 {
@@ -159,12 +199,9 @@ func TestNativeTrialServerPool(t *testing.T) {
 	beforeOutage := snapshot()
 	if os.Getenv("NATIVE_DOCKER_STATE") != "" {
 		state := filepath.Clean(os.Getenv("NATIVE_DOCKER_STATE"))
-		if state != filepath.Join(f.root, ".superpowers", "acceptance", "native-docker") {
-			t.Fatal("unexpected Docker fixture owner")
-		}
 		data, err := os.ReadFile(filepath.Join(state, "runtime.json"))
-		var metadata struct{ Project string }
-		if err != nil || json.Unmarshal(data, &metadata) != nil || !regexp.MustCompile(`^cabinet-native(?:-[a-z0-9-]+)?$`).MatchString(metadata.Project) {
+		var metadata struct{ Project, Purpose string }
+		if err != nil || json.Unmarshal(data, &metadata) != nil || metadata.Purpose != "native-acceptance" || !regexp.MustCompile(`^cabinet-[a-z0-9-]+$`).MatchString(metadata.Project) {
 			t.Fatal("owned native Docker project unavailable")
 		}
 		compose := func(action string) {

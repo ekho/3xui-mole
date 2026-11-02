@@ -14,7 +14,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// A lost UUID/CA or rebuilt payload would change a real 3.7.0 update.
+// A lost UUID/CA or rebuilt payload would change a native update.
 func TestPanelUpdateNativePayload(t *testing.T) {
 	id := uuid.MustParse("11111111-1111-4111-8111-111111111111")
 	updates := make(chan map[string]json.RawMessage, 1)

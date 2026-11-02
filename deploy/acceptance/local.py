@@ -89,6 +89,10 @@ def prepare():
     if not (STATE / 'runtime.json').exists():
         write('runtime.json', json.dumps({'project': PROJECT, 'postgres_user': PG_USER,
               'base_database': BASE_DATABASE, 'fixture_prefixes': {}}))
+    metadata=json.loads((STATE/'runtime.json').read_text())
+    assert metadata.get('purpose', 'native-acceptance') == 'native-acceptance', 'unowned native fixture'
+    metadata['purpose']='native-acceptance'
+    write('runtime.json',json.dumps(metadata))
     (STATE / 'origin').mkdir(exist_ok=True)
     (STATE / 'origin/index.html').write_bytes(VPN_ORIGIN_MARKER)
     if not (STATE/'native-operator-account').exists():write('native-operator-account','')
@@ -208,7 +212,7 @@ def up(reuse_images=False):
     version = panel_version(configured)
     assert compose('exec', '-T', 'panel', '/app/x-ui', '-v').decode().strip() == version, 'running panel version differs from the pinned image'
     status = panel_call(opener, 'panel/api/server/status')
-    write('panel-runtime.json', json.dumps({'panel_version': version,
+    write('panel-runtime.json', json.dumps({'sha':command(['git','rev-parse','HEAD']).decode().strip(), 'architecture':command(['docker','info','--format','{{.Architecture}}']).decode().strip(), 'panel_version': version,
         'panel_image': configured['services']['panel']['image'], 'xray_version': status['xray']['version']}))
     inbounds=panel_call(opener,'panel/api/inbounds/list')
     if not any(row.get('tag')=='local-regular-vless' for row in inbounds):
@@ -218,8 +222,9 @@ def up(reuse_images=False):
             'streamSettings':{'network':'tcp','security':'tls','tlsSettings':{'serverName':'panel','certificates':[{'certificateFile':'/run/secrets/public_cert','keyFile':'/run/secrets/public_key'}]}},
             'sniffing':{'enabled':False},'allocate':{'strategy':'always','refresh':5,'concurrency':3}} ,csrf)
     settings = panel_call(opener, 'panel/api/setting/all', {}, csrf)
-    if not settings.get('subEnable') or settings.get('subPath') != '/sub/' or settings.get('subURI') != 'https://localhost:59445/sub/':
-        settings.update(subEnable=True, subPath='/sub/', subURI='https://localhost:59445/sub/')
+    restart_primary=not settings.get('subEnable') or not settings.get('subJsonEnable') or not settings.get('subClashEnable') or settings.get('subPath') != '/sub/' or settings.get('subURI') != 'https://localhost:59445/sub/'
+    if restart_primary:
+        settings.update(subEnable=True, subJsonEnable=True, subClashEnable=True, subPath='/sub/', subURI='https://localhost:59445/sub/')
         panel_call(opener, 'panel/api/setting/update', settings, csrf)
     # Preserve absence as a version-specific observation before enabling trial.
     _,_,raw=request(opener,'https://localhost:59444/panel/api/clients/get/acct_'+secrets.token_hex(16))
@@ -240,9 +245,18 @@ def up(reuse_images=False):
                 'settings':{'clients':[],'decryption':'none','fallbacks':[]},
                 'streamSettings':{'network':'tcp','security':'none'},'sniffing':{'enabled':False}},second_csrf,port=59449)
         settings=panel_call(second,'panel/api/setting/all',{},second_csrf,port=59449)
-        if not settings.get('subEnable') or settings.get('subPath') != '/sub/' or settings.get('subURI') != 'https://localhost:59449/sub/':
+        restart_second=not settings.get('subEnable') or settings.get('subPath') != '/sub/' or settings.get('subURI') != 'https://localhost:59449/sub/'
+        if restart_second:
             settings.update(subEnable=True,subPath='/sub/',subURI='https://localhost:59449/sub/')
             panel_call(second,'panel/api/setting/update',settings,second_csrf,port=59449)
+    if restart_second:
+        compose('restart','panel-second')
+    if restart_primary:
+        compose('restart','panel')
+        def subscription_ready():
+            try:return bool(panel_call(session(),'csrf-token'))
+            except (OSError,ValueError):return False
+        wait_until(subscription_ready)
     data=ENV.read_text().replace('TRIAL_ENABLED=false','TRIAL_ENABLED=true')
     write('public.env',data)
     compose('up','--no-build','-d','backend')
@@ -593,7 +607,7 @@ def native_check():
     log=STATE/'native-go.log'
     with log.open('w') as output:
         log.chmod(0o600)
-        result=subprocess.run(['go','test','-json','-race','./tests','-run','TestNativeTrial|TestNativeNotices','-count=1','-timeout=15m'],
+        result=subprocess.run(['go','test','-json','-race','./tests','-run','TestNativePanelCompatibility|TestNativePanelAccessOperations|TestNativeStarsRecurring$|TestNativeTrial|TestNativeNotices','-count=1','-timeout=15m'],
                               cwd=ROOT/'backend',env=environment,stdout=output,stderr=subprocess.STDOUT,timeout=930)
     assert result.returncode==0, 'native Go integration failed; see private native-go.log'
     events=[json.loads(line) for line in log.read_text().splitlines() if line.startswith('{')]

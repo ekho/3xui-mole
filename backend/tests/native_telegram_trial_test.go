@@ -26,7 +26,7 @@ import (
 
 // Catches losing a queued automatic grant on a whole-graph restart, depending
 // on a running bot, or issuing another identity after an external write/local
-// commit failure. With NATIVE_DOCKER_STATE this uses actual TLS 3X-UI 3.7.0.
+// commit failure. With NATIVE_DOCKER_STATE this uses actual TLS supported 3X-UI.
 func TestNativeTrialTelegramActivation(t *testing.T) {
 	pub, key, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {

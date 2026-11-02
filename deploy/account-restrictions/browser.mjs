@@ -8,19 +8,22 @@ import https from 'node:https';
 import {fileURLToPath} from 'node:url';
 
 const root=fileURLToPath(new URL('../../',import.meta.url));
-const ownedProject=JSON.parse(readFileSync(root+'.superpowers/acceptance/local-docker/runtime.json')).project;
+const nativeState=process.env.LOCAL_STATE_DIR||root+'.superpowers/acceptance/native-docker';
+const panelVersion=JSON.parse(readFileSync(nativeState+'/panel-runtime.json')).panel_version;
+if(!panelVersion)throw Error('actual panel version missing');
+const ownedProject=JSON.parse(readFileSync(nativeState+'/runtime.json')).project;
 if(typeof ownedProject!=='string'||!ownedProject)throw Error('owned project metadata missing');
 const require=createRequire(root+'web/package.json');
 const {chromium,expect}=require('@playwright/test');
 const origin='https://localhost:58443';
-const certPem=readFileSync(root+'.superpowers/acceptance/local-docker/cert.pem');
+const certPem=readFileSync(nativeState+'/cert.pem');
 const pin=createHash('sha256').update(new X509Certificate(certPem).publicKey.export({type:'spki',format:'der'})).digest('base64');
 const evidence=root+'.superpowers/acceptance/account-restrictions';
 mkdirSync(evidence,{recursive:true,mode:0o700});chmodSync(evidence,0o700);
 const evidencePath=evidence+'/browser.jsonl',fd=openSync(evidencePath,'wx',0o600);
 chmodSync(evidencePath,0o600);
 const command='node deploy/account-restrictions/browser.mjs';
-const target=`${ownedProject} HTTPS localhost:58443, Mailpit localhost:59446, own PostgreSQL and 3X-UI 3.7.0`;
+const target=`${ownedProject} HTTPS localhost:58443, Mailpit localhost:59446, own PostgreSQL and 3X-UI ${panelVersion}`;
 function check(criterion,expected,actual,pass){
  writeSync(fd,JSON.stringify({criterion,target,command,expected,actual,verdict:pass?'PASS':'FAIL',artifacts:[evidencePath]})+'\n');
  if(!pass)throw Error(criterion);

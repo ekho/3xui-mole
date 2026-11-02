@@ -57,7 +57,7 @@ func TestCutoverCheckReadOnlyAndRevision(t *testing.T) {
 		t.Fatal("compatible read-only preflight failed", err)
 	}
 	var artifact cutoverArtifact
-	if json.Unmarshal(out.Bytes(), &artifact) != nil || artifact.SourceRevision != sourceRevision || artifact.LegacyReceiptsVersion != 1 || artifact.Schema.Version != 44 || len(artifact.Schema.Migrations) != 64 || len(artifact.Schema.Structure) != 64 {
+	if json.Unmarshal(out.Bytes(), &artifact) != nil || artifact.SourceRevision != sourceRevision || artifact.LegacyReceiptsVersion != 1 || artifact.Schema.Version != 45 || len(artifact.Schema.Migrations) != 64 || len(artifact.Schema.Structure) != 64 {
 		t.Fatal("incomplete artifact identity")
 	}
 	var jobs int
@@ -72,7 +72,7 @@ func TestCutoverCheckReadOnlyAndRevision(t *testing.T) {
 		}
 	}
 	sourceRevision = original
-	if _, err := e.Pool.Exec(context.Background(), `UPDATE goose_db_version SET is_applied=false WHERE version_id=44`); err != nil {
+	if _, err := e.Pool.Exec(context.Background(), `UPDATE goose_db_version SET is_applied=false WHERE version_id=45`); err != nil {
 		t.Fatal(err)
 	}
 	sourceRevision = strings.Repeat("a", 40)
@@ -161,7 +161,7 @@ func TestCutoverArtifactRollback(t *testing.T) {
 		command.Env = environment
 		out, err := command.Output()
 		var artifact cutoverArtifact
-		ok := err == nil && json.Unmarshal(out, &artifact) == nil && artifact.SourceRevision == revision && artifact.LegacyReceiptsVersion == 1 && artifact.Schema.Version == 44
+		ok := err == nil && json.Unmarshal(out, &artifact) == nil && artifact.SourceRevision == revision && artifact.LegacyReceiptsVersion == 1 && artifact.Schema.Version == 45
 		return artifact, ok
 	}
 	newManifest, newOK := preflight(newBinary, current)

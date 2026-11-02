@@ -1,0 +1,25 @@
+services:
+  panel:
+    extends: {file: compose.local.yml, service: panel}
+  gateway:
+    image: cabinet-web:local
+    build: {context: ../../web}
+    entrypoint: [/usr/bin/caddy]
+    command: [run, --config, /etc/caddy/Caddyfile, --adapter, caddyfile]
+    volumes: ['./Caddyfile.panel-upgrade:/etc/caddy/Caddyfile:ro']
+    secrets: [public_cert, public_key]
+    ports: ['127.0.0.1:62444:9444', '127.0.0.1:62445:9445']
+    depends_on: [panel]
+    read_only: true
+    tmpfs: ['/tmp:mode=1777']
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+  origin:
+    extends: {file: compose.local.yml, service: origin}
+  vpn-client:
+    extends: {file: compose.local.yml, service: vpn-client}
+    ports: !override ['127.0.0.1:62448:1080']
+secrets:
+  panel_password: {file: '${PANEL_PASSWORD_FILE:?required}'}
+  public_cert: {file: '${LOCAL_STATE_DIR:?required}/cert.pem'}
+  public_key: {file: '${LOCAL_STATE_DIR:?required}/key.pem'}

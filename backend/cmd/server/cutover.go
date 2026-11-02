@@ -71,7 +71,7 @@ func runCutoverCheck(output io.Writer) error {
 	}
 	defer tx.Rollback(ctx)
 	schema, err := db.BackupSchemaState(ctx, tx)
-	if err != nil || schema.Version != 44 {
+	if err != nil || schema.Version != 45 {
 		return bad
 	}
 	if err = tx.Commit(ctx); err != nil {
