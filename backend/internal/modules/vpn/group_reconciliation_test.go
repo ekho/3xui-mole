@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -247,6 +248,7 @@ func TestGroupReconciliationBanOnlyAndUnresolvedOwner(t *testing.T) {
 }
 
 type groupPanel struct {
+	version             string
 	mu                  sync.Mutex
 	client              map[string]any
 	ids                 []int64
@@ -265,6 +267,12 @@ func (g *groupPanel) serve(w http.ResponseWriter, r *http.Request) {
 	var obj any
 	success := true
 	switch {
+	case r.Method == "GET" && strings.HasSuffix(r.URL.Path, "/server/status"):
+		version := g.version
+		if version == "" {
+			version = "3.11.0"
+		}
+		obj = map[string]string{"panelVersion": version}
 	case strings.HasSuffix(r.URL.Path, "/inbounds/list"):
 		obj = g.inbounds
 	case r.Method == "GET" && strings.Contains(r.URL.Path, "/clients/"):
@@ -410,5 +418,40 @@ func TestGroupReconciliationOwnedNoDuplicateAndBan(t *testing.T) {
 		if strings.Contains(path, "reset") || strings.HasSuffix(path, "/add") || strings.Contains(path, "delete") || strings.HasSuffix(path, "/update") {
 			t.Fatal("group operation crossed write boundary")
 		}
+	}
+}
+
+func TestGroupReconciliationCompatibilityAlertContract(t *testing.T) {
+	for _, unsupported := range []bool{false, true} {
+		t.Run(map[bool]string{false: "unknown", true: "unsupported"}[unsupported], func(t *testing.T) {
+			s, account, g := groupFixture(t)
+			if err := s.SyncServers(context.Background()); err != nil {
+				t.Fatal(err)
+			}
+			if unsupported {
+				g.version = "3.7.0"
+			} else {
+				g.offline = true
+			}
+			notified := false
+			s.WithGroupFailureNotifier(func(_ context.Context, _ pgx.Tx, _ uuid.UUID, code string) error {
+				if code != "panel_unavailable" {
+					t.Fatal("group compatibility escaped the persisted alert vocabulary", code)
+				}
+				notified = true
+				return nil
+			})
+			id, err := s.PrepareGroupReconciliation(context.Background(), account)
+			if !errors.Is(err, ErrPanel) || id != uuid.Nil || !notified || len(g.writes) != 0 {
+				t.Fatal("compatibility refusal lost infrastructure alert or wrote panel", err)
+			}
+			var state, reason string
+			if err := s.pool.QueryRow(context.Background(), "SELECT panel_compatibility,panel_compatibility_reason FROM vpn_servers WHERE id=(SELECT assigned_panel_id FROM accounts WHERE id=$1)", account).Scan(&state, &reason); err != nil {
+				t.Fatal(err)
+			}
+			if unsupported && (state != "unsupported" || reason != "unsupported_version") || !unsupported && (state != "unknown" || reason != "unreachable") {
+				t.Fatal("group refusal lost server diagnostic", state, reason)
+			}
+		})
 	}
 }

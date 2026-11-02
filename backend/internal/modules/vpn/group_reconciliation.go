@@ -30,7 +30,7 @@ func (s *Service) groupFailureTx(ctx context.Context, tx pgx.Tx, account uuid.UU
 }
 
 // Preparation never writes the panel; AccessWorker remains its sole executor.
-func (s *Service) PrepareGroupReconciliation(ctx context.Context, account uuid.UUID) (uuid.UUID, error) {
+func (s *Service) PrepareGroupReconciliation(ctx context.Context, account uuid.UUID) (operation uuid.UUID, result error) {
 	owner, err := s.OpenAccessOwner(ctx, account)
 	if err != nil {
 		return uuid.Nil, unavailable()
@@ -96,8 +96,16 @@ func (s *Service) PrepareGroupReconciliation(ctx context.Context, account uuid.U
 		return fail("panel_unavailable", ErrPanel)
 	}
 	defer p.Close()
+	defer func() {
+		cleanup, end := context.WithTimeout(context.Background(), 5*time.Second)
+		defer end()
+		if err := s.recordPanelCompatibility(cleanup, owner.conn, p); err != nil {
+			result = unavailable()
+		}
+	}()
 	if err := p.RequireCompatible(ctx); err != nil {
-		return fail(compatibilityReviewReason(err), ErrPanel)
+		// Group alerts retain their persisted categories; the server stores the exact admission reason.
+		return fail("panel_unavailable", ErrPanel)
 	}
 	v, err := p.GetClient(ctx, a.PanelKey)
 	if err != nil {
