@@ -115,6 +115,13 @@ func (s *Service) FulfillPurchase(parent context.Context, id uuid.UUID) error {
 		return unavailable()
 	}
 	defer panel.Close()
+	if err = panel.RequireCompatible(ctx); err != nil {
+		var incompatible *vpn.PanelCompatibilityError
+		if errors.As(err, &incompatible) && incompatible.Compatibility.Status == "unsupported" {
+			return s.purchaseReview(ctx, id, "panel_version_unsupported")
+		}
+		return river.JobSnooze(time.Minute)
+	}
 	view, err := panel.GetClient(ctx, a.PanelKey)
 	if err != nil {
 		return unavailable()

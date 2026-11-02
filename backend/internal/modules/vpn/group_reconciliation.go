@@ -96,6 +96,9 @@ func (s *Service) PrepareGroupReconciliation(ctx context.Context, account uuid.U
 		return fail("panel_unavailable", ErrPanel)
 	}
 	defer p.Close()
+	if err := p.RequireCompatible(ctx); err != nil {
+		return fail(compatibilityReviewReason(err), ErrPanel)
+	}
 	v, err := p.GetClient(ctx, a.PanelKey)
 	if err != nil {
 		return fail("panel_unavailable", ErrPanel)

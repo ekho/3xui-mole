@@ -215,9 +215,14 @@ func (s *Service) createAccessOperation(ctx context.Context, actor, target, key 
 	if panelID == "" {
 		server, err := owner.AvailableServer(ctx)
 		if err != nil {
-			return out, failure(409, "ACCESS_NOT_ELIGIBLE")
+			if errors.Is(err, vpn.ErrPanel) && (in.Kind == "set_profile" || in.Kind == "set_vpn_ban") {
+				panelID = s.config().PanelID
+			} else {
+				return out, failure(409, "ACCESS_NOT_ELIGIBLE")
+			}
+		} else {
+			panelID = server.ID
 		}
-		panelID = server.ID
 	}
 	panel, err := owner.PanelFor(ctx, panelID)
 	if err != nil {
@@ -447,6 +452,11 @@ func (s *Service) createAccessOperation(ctx context.Context, actor, target, key 
 		}
 	} else if v != nil && sameNativeTarget && (in.Kind == "set_profile" && profile == t.Profile || in.Kind == "set_vpn_ban" && a.VpnBanned == t.Banned) && !t.Reset && !t.Enable && (t.Banned && !v.Enabled || !t.Banned && (v.Enabled || in.Kind == "set_profile" && (v.ExpiryTimeMS > 0 && v.ExpiryTimeMS <= now.UnixMilli() || v.TrafficLimitBytes > 0 && v.UsedTraffic != nil && *v.UsedTraffic >= v.TrafficLimitBytes))) {
 		immediate, step = true, "state_unchanged"
+	}
+	if !immediate {
+		if err := panel.RequireCompatible(ctx); err != nil {
+			return out, failure(409, "ACCESS_NOT_ELIGIBLE")
+		}
 	}
 	tx, err = owner.Begin(ctx)
 	if err != nil {
