@@ -2,12 +2,28 @@ from pathlib import Path
 import json
 import tempfile
 import unittest
+from unittest.mock import patch
+import os
 
-from deploy.acceptance.panel_upgrade import create_state, snapshot_panel, restore_panel, owned
+from deploy.acceptance.panel_upgrade import create_state, snapshot_panel, restore_panel, owned, compose_environment
 from deploy.acceptance.panel_versions import panel_release
 
 
 class PanelUpgradeTests(unittest.TestCase):
+    def test_parent_environment_cannot_select_an_existing_panel_or_credentials(self):
+        with tempfile.TemporaryDirectory() as temp:
+            state=Path(temp)/'owned';create_state(state,'3.11.0')
+            source=panel_release('3.10.0',upgrade_source=True)['image']
+            (state/'public.env').write_text('LOCAL_PANEL_IMAGE='+source+'\n')
+            with patch.dict(os.environ,{'LOCAL_STATE_DIR':'/foreign/panel','PANEL_PASSWORD_FILE':'/foreign/password','APP_RUNTIME_UID':'0','APP_RUNTIME_GID':'0','LOCAL_PANEL_IMAGE':'foreign:latest'}):
+                env=compose_environment(state)
+                self.assertEqual(env['LOCAL_STATE_DIR'],str(state.resolve()))
+                self.assertEqual(env['PANEL_PASSWORD_FILE'],str(state.resolve()/'panel-password'))
+                self.assertEqual(env['LOCAL_PANEL_IMAGE'],source)
+                self.assertEqual(env['APP_RUNTIME_UID'],str(os.getuid()))
+                self.assertEqual(os.environ['LOCAL_PANEL_IMAGE'],'foreign:latest')
+            (state/'public.env').write_text('LOCAL_PANEL_IMAGE=foreign:latest\n')
+            with self.assertRaises(ValueError):compose_environment(state)
     def test_rehearsal_rejects_unowned_state_and_unsupported_target(self):
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp)

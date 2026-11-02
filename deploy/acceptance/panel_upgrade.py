@@ -76,18 +76,28 @@ def restore_panel(compose, state):
     write(state, 'public.env', ''.join(k + '=' + v + '\n' for k, v in env.items()))
 
 
+def compose_environment(state):
+    metadata = owned(state)
+    values = dict(line.split('=', 1) for line in (state / 'public.env').read_text().splitlines() if line and not line.startswith('#'))
+    image = values.get('LOCAL_PANEL_IMAGE')
+    if image not in (metadata['source_image'], metadata['target_image']):
+        raise ValueError('upgrade image must be its pinned source or target')
+    return {**os.environ, 'LOCAL_STATE_DIR': str(state.resolve()), 'LOCAL_PANEL_IMAGE': image,
+            'PANEL_PASSWORD_FILE': str(state.resolve() / 'panel-password'), 'SMTP_AUTH_FILE': '/dev/null',
+            'APP_RUNTIME_UID': str(os.getuid()), 'APP_RUNTIME_GID': str(os.getgid())}
+
+
 def check(state, target):
+    endpoint = local.command(['docker', 'context', 'inspect', '--format', '{{.Endpoints.docker.Host}}']).decode().strip()
+    assert endpoint.startswith('unix://') and os.environ.get('DOCKER_HOST', endpoint).startswith('unix://'), 'upgrade rehearsal requires local Docker'
     create_state(state, target)
     state = state.resolve()
     metadata = owned(state)
-    # CLI environment must not override the explicitly selected source/target image.
-    os.environ.pop("LOCAL_PANEL_IMAGE", None)
-    os.environ.pop("LOCAL_SECOND_PANEL_IMAGE", None)
     local.STATE = state
     def compose(*args):
         return local.command(['docker', 'compose', '--project-name', metadata['project'],
                  '--env-file', str(state / 'public.env'), '-f',
-                 'deploy/acceptance/compose.panel-upgrade.yml', *args])
+                 'deploy/acceptance/compose.panel-upgrade.yml', *args], env=compose_environment(state))
     (state / 'panel-db').mkdir(mode=0o700)
     (state / 'origin').mkdir()
     (state / 'origin/index.html').write_bytes(local.VPN_ORIGIN_MARKER)
@@ -106,6 +116,8 @@ def check(state, target):
                 'command': 'python deploy/acceptance/panel_upgrade.py check --target ' + target,
                 'verdict': 'FAIL', 'stages': []}
     try:
+        config=json.loads(compose('config','--format','json'))
+        assert config['services']['gateway']['user']==f'{os.getuid()}:{os.getgid()}', 'gateway must read only its owner-private fixture secrets'
         initialize_panel(compose, state, 'panel', 'panel-db')
         compose('build', 'gateway')
         compose('up', '-d', 'panel', 'gateway', 'origin')

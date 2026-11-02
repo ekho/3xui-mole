@@ -62,8 +62,8 @@ def write(name, value):
     path.chmod(0o600)
     return str(path)
 
-def command(args, *, stdin=None):
-    result = subprocess.run(args, cwd=ROOT, input=stdin, capture_output=True, timeout=180)
+def command(args, *, stdin=None, env=None):
+    result = subprocess.run(args, cwd=ROOT, input=stdin, env=env, capture_output=True, timeout=180)
     if result.returncode:
         # Provider output may contain credentials, subscription links or test identity.
         raise RuntimeError('local command failed: ' + args[0])

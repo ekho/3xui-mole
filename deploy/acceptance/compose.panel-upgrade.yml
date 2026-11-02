@@ -3,6 +3,7 @@ services:
     extends: {file: compose.local.yml, service: panel}
   gateway:
     image: cabinet-web:local
+    user: '${APP_RUNTIME_UID:-10001}:${APP_RUNTIME_GID:-10001}'
     build: {context: ../../web}
     entrypoint: [/usr/bin/caddy]
     command: [run, --config, /etc/caddy/Caddyfile, --adapter, caddyfile]
