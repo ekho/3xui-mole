@@ -614,6 +614,8 @@ def native_check():
     assert not any(e.get('Action')=='fail' or e.get('Action')=='skip' and e.get('Test') for e in events), 'native Go test failed or skipped; see private native-go.log'
     passed=sum(e.get('Action')=='pass' and bool(e.get('Test')) for e in events)
     assert passed>0, 'native Go selection ran no tests'
+    required={'TestNativePanelCompatibility','TestNativePanelAccessOperations','TestNativeTrialServerPool','TestNativeStarsRecurring'}
+    assert required <= {e.get('Test') for e in events if e.get('Action')=='pass'}, 'mandatory native contracts did not run'
     print(f'PASS: native Go HTTP/jobs/Telegram integration ({passed} tests/subtests,0 failures/skips) with real TLS SMTP and 3X-UI {panel_version(config)}; Bot API simulated',flush=True)
     native_restart()
 
