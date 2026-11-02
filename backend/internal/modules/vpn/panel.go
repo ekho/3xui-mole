@@ -20,10 +20,12 @@ import (
 )
 
 type PanelClient struct {
-	cfg     Config
-	http    *http.Client
-	loginMu sync.Mutex
-	csrf    string
+	cfg          Config
+	http         *http.Client
+	loginMu      sync.Mutex
+	csrf         string
+	compatMu     sync.Mutex
+	panelVersion string
 }
 
 var ErrPanel = errors.New("panel unavailable or unconfirmed response")
@@ -83,11 +85,18 @@ func (p *PanelClient) call(ctx context.Context, method, path string, body any) (
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return out, ErrPanel
+		reason := "unreachable"
+		if resp.StatusCode == 401 || resp.StatusCode == 403 {
+			reason = "auth_failed"
+		}
+		if resp.StatusCode == 404 {
+			reason = "invalid_response"
+		}
+		return out, &panelCallError{reason: reason}
 	}
 	raw, e := io.ReadAll(io.LimitReader(resp.Body, 1024*1024+1))
 	if e != nil || len(raw) > 1024*1024 || json.Unmarshal(raw, &out) != nil || out.Success == nil {
-		return out, ErrPanel
+		return out, &panelCallError{reason: "invalid_response"}
 	}
 	return out, nil
 }
