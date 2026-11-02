@@ -16,12 +16,29 @@ func managedServerID(c *echo.Context) (string, error) {
 }
 
 func serverSummary(v vpn.Server) wire.OperatorServerSummary {
-	return wire.OperatorServerSummary{Id: v.ID, Name: v.Name, Host: v.Host, MaxClients: v.MaxClients,
+	out := wire.OperatorServerSummary{Id: v.ID, Name: v.Name, Host: v.Host, MaxClients: v.MaxClients,
 		Online: v.Online, ObservedAt: v.ObservedAt, AssignedClients: v.AssignedClients,
 		ReservedClients: v.ReservedClients, Retired: v.Retired}
+	c := v.Compatibility
+	if c.Status == "" {
+		c.Status, c.Reason = "unknown", "not_checked"
+	}
+	out.Compatibility = wire.PanelCompatibility(c.Status)
+	if c.PanelVersion != "" {
+		out.PanelVersion = &c.PanelVersion
+	}
+	if c.XrayVersion != "" {
+		out.XrayVersion = &c.XrayVersion
+	}
+	if c.Reason != "" {
+		reason := wire.PanelCompatibilityReason(c.Reason)
+		out.CompatibilityReason = &reason
+	}
+	return out
 }
 func serverDetail(v vpn.Server) wire.OperatorServerDetail {
-	return wire.OperatorServerDetail{Id: v.ID, Name: v.Name, Host: v.Host, MaxClients: v.MaxClients,
+	summary := serverSummary(v)
+	return wire.OperatorServerDetail{PanelVersion: summary.PanelVersion, XrayVersion: summary.XrayVersion, Compatibility: summary.Compatibility, CompatibilityReason: summary.CompatibilityReason, Id: v.ID, Name: v.Name, Host: v.Host, MaxClients: v.MaxClients,
 		Online: v.Online, ObservedAt: v.ObservedAt, AssignedClients: v.AssignedClients,
 		ReservedClients: v.ReservedClients, Retired: v.Retired, CanPing: !v.Retired,
 		CanDelete: !v.Retired && v.Online && v.AssignedClients == 0 && v.ReservedClients == 0}

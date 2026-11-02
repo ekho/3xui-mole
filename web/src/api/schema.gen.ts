@@ -3568,6 +3568,10 @@ export interface components {
             /** Format: int64 */
             reserved_clients: number;
             retired: boolean;
+            panel_version: string | null;
+            xray_version: string | null;
+            compatibility: components["schemas"]["PanelCompatibility"];
+            compatibility_reason: components["schemas"]["PanelCompatibilityReason"];
         };
         OperatorServerDetail: {
             id: string;
@@ -3586,6 +3590,10 @@ export interface components {
             retired: boolean;
             can_ping: boolean;
             can_delete: boolean;
+            panel_version: string | null;
+            xray_version: string | null;
+            compatibility: components["schemas"]["PanelCompatibility"];
+            compatibility_reason: components["schemas"]["PanelCompatibilityReason"];
         };
         OperatorServers: {
             servers: components["schemas"]["OperatorServerSummary"][];
@@ -3712,6 +3720,10 @@ export interface components {
             /** Format: int64 */
             pending_money_records: number;
         };
+        /** @enum {string} */
+        PanelCompatibility: "supported" | "unsupported" | "unknown";
+        /** @enum {string|null} */
+        PanelCompatibilityReason: "not_checked" | "unsupported_version" | "unreachable" | "auth_failed" | "invalid_response" | "version_changed" | null;
     };
     responses: never;
     parameters: never;

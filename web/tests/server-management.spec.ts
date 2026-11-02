@@ -3,7 +3,7 @@ import {test,expect,type Page,type Route} from '@playwright/test';
 const csrf='s'.repeat(43);
 const legacyId='legacy/edge id?x#1';
 const session=(canManage:boolean)=>({account:{account_id:'10000000-0000-4000-8000-000000000001',email:'operator@example.test',email_verified:true,locale:'en',telegram_linked:false},csrf_token:csrf,can_manage_servers:canManage});
-const offline={id:legacyId,name:'Edge North',host:'https://edge.example.test',max_clients:null,online:false,observed_at:null,assigned_clients:3,reserved_clients:1,retired:false};
+const offline={panel_version:null,xray_version:null,compatibility:'unknown',compatibility_reason:'not_checked',id:legacyId,name:'Edge North',host:'https://edge.example.test',max_clients:null,online:false,observed_at:null,assigned_clients:3,reserved_clients:1,retired:false};
 const detail={...offline,assigned_clients:0,reserved_clients:0,can_ping:true,can_delete:false};
 const deletable={...detail,online:true,observed_at:'2026-10-09T10:00:00Z',can_delete:true};
 
@@ -96,4 +96,23 @@ test('list failure retries to a Russian empty state and offline refusal has acce
  let reads=0;await routes(page,true,async(route,path)=>{if(path==='/api/v1/operator/servers'&&route.request().method()==='GET'){reads++;if(reads===1)await route.fulfill({status:503,json:{error:{code:'SERVICE_UNAVAILABLE'}}});else await route.fulfill({json:{servers:[]}});return true;}return false;});
  await page.goto('/admin/servers?lang=ru');await expect(page.getByRole('alert')).toBeFocused();await page.getByRole('button',{name:'Повторить',exact:true}).click();await expect(page.getByText('Серверов пока нет.',{exact:true})).toBeVisible();
  await page.getByRole('button',{name:'Добавить сервер',exact:true}).click();const error=page.getByRole('alert');await expect(error).toBeFocused();expect(await page.getByLabel('Название сервера').getAttribute('aria-describedby')).toContain('server-form-error');expect(await page.getByLabel('HTTPS-адрес').getAttribute('aria-describedby')).toContain('server-form-error');
+});
+
+for(const lang of ['en','ru'])test(`online incompatible panel is visible and ping refreshes its version (${lang})`,async({page})=>{
+ let refreshed=false;
+ const current=()=>({...deletable,panel_version:refreshed?'3.11.0':'3.7.0',xray_version:'26.10.21',compatibility:refreshed?'supported':'unsupported',compatibility_reason:refreshed?null:'unsupported_version'});
+ await routes(page,true,async(route,path)=>{
+  if(path==='/api/v1/operator/servers'){await route.fulfill({json:{servers:[current()]}});return true;}
+  if(path==='/api/v1/operator/servers/'+encodeURIComponent(legacyId)){await route.fulfill({json:current()});return true;}
+  if(path.endsWith('/ping')){refreshed=true;await route.fulfill({json:current()});return true;}
+  return false;
+ });
+ await page.goto('/admin/servers?lang='+lang);
+ const reason=lang==='en'?'Unsupported panel version':'Версия панели не поддерживается';
+ await expect(page.getByText(reason,{exact:true}).first()).toBeVisible();
+ await page.getByRole('button',{name:lang==='en'?'Open server Edge North':'Открыть сервер Edge North'}).click();
+ await expect(page.getByText('3.7.0',{exact:true}).first()).toBeVisible();
+ await page.getByRole('button',{name:lang==='en'?'Ping server':'Проверить сервер',exact:true}).click();
+ await expect(page.getByText('3.11.0',{exact:true}).first()).toBeVisible();
+ await expect(page.getByText(reason,{exact:true})).toHaveCount(0);
 });
