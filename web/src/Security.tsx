@@ -30,7 +30,7 @@ export function Security({lang}:{lang:Lang}){
  }
  function submit(e:FormEvent){e.preventDefault();void mutate(true);}
  const disabled=!info||busy||uncertain||cooldown>0;
- return <section className="card auth"><p className="eyebrow">{t.cabinet}</p><h1>{t.security}</h1>{info?<p>{info.email}</p>:null}
+ return <section className="card auth"><h1>{t.security}</h1>{info?<p>{info.email}</p>:null}
   {error?<p role="alert" className="error">{error}{uncertain?<><br/><a href={link('/login',lang)}>{t.login}</a></>:null}</p>:null}
   {!info&&!uncertain&&error?<button type="button" onClick={()=>location.reload()}>{t.retry}</button>:null}
   {saved?<p role="status" className="notice">{t.saved}</p>:null}

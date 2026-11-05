@@ -57,7 +57,7 @@ for(const currency of ['XTR','USD'])test('browser restores the saved period acro
 });
 
 for(const mode of ['light','dark'] as const)test('admin custom cards retain readable text in '+mode+' theme',async({page})=>{
-  await page.emulateMedia({colorScheme:mode});
+  await page.emulateMedia({colorScheme:mode,reducedMotion:'reduce'});
   await page.route('**/api/v1/**',route=>{
     const path=new URL(route.request().url()).pathname;
     if(path.endsWith('/operator/session'))return route.fulfill({json:{account:{account_id:'10000000-0000-4000-8000-000000000001',email:'operator@example.test',email_verified:true,locale:'en',telegram_linked:false},csrf_token:'s'.repeat(43)}});
@@ -65,11 +65,19 @@ for(const mode of ['light','dark'] as const)test('admin custom cards retain read
     return route.fulfill({json:{}});
   });
   await page.goto('/admin/clients?lang=en');await expect(page.getByRole('heading',{name:'customer@example.test',exact:true})).toBeVisible();
-  const ratios=await page.locator('.admin-client dl div').evaluateAll(tiles=>{
+  await expect(page.getByRole('table',{name:'Clients'})).toBeVisible();
+  await expect(page.getByRole('columnheader',{name:'Email',exact:true})).toBeVisible();
+  const ratios=await page.locator('.client-table td').evaluateAll(tiles=>{
     const luminance=(value:string)=>{const channels=value.match(/\d+(?:\.\d+)?/g)!.slice(0,3).map(Number).map(channel=>{const s=channel/255;return s<=.04045?s/12.92:((s+.055)/1.055)**2.4;});return channels[0]*.2126+channels[1]*.7152+channels[2]*.0722;};
-    return tiles.map(tile=>{const a=luminance(getComputedStyle(tile.querySelector('dd')!).color),b=luminance(getComputedStyle(tile).backgroundColor);return(Math.max(a,b)+.05)/(Math.min(a,b)+.05);});
+    return tiles.map(tile=>{const a=luminance(getComputedStyle(tile).color),b=luminance(getComputedStyle(tile).backgroundColor);return(Math.max(a,b)+.05)/(Math.min(a,b)+.05);});
   });
   expect(ratios.length).toBeGreaterThan(0);expect(ratios.every(ratio=>ratio>=4.5)).toBe(true);
+  const selectedLanguage=page.getByRole('button',{name:'EN',exact:true});await selectedLanguage.hover();
+  const hoveredContrast=await selectedLanguage.evaluate(element=>{
+    const luminance=(value:string)=>{const c=value.match(/\d+(?:\.\d+)?/g)!.slice(0,3).map(Number).map(v=>{const s=v/255;return s<=.04045?s/12.92:((s+.055)/1.055)**2.4;});return c[0]*.2126+c[1]*.7152+c[2]*.0722;};
+    const style=getComputedStyle(element),a=luminance(style.color),b=luminance(style.backgroundColor);return(Math.max(a,b)+.05)/(Math.min(a,b)+.05);
+  });
+  expect(hoveredContrast).toBeGreaterThanOrEqual(4.5);
 });
 
 for(const destination of ['/catalogue?plan=50000000-0000-4000-8000-000000000001&period=30&currency=XTR&token=private-query','//attacker.example.test/pay','/admin/clients','https://attacker.example.test/pay','/Catalogue','/\\[invalid'])test('browser sign-in returns only to an allowed public payment context '+destination,async({page})=>{

@@ -1,0 +1,576 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-05T11:10:57.871252Z",
+  "title": "Design System: 3xui-mole — Маршрут",
+  "extensions": {
+    "colorMeta": {
+      "accent": {
+        "role": "primary",
+        "displayName": "Ржавый акцент",
+        "tonalRamp": [
+          "oklch(15% 0.0572 38.0)",
+          "oklch(26% 0.0980 38.0)",
+          "oklch(38% 0.1389 38.0)",
+          "oklch(49% 0.1634 38.0)",
+          "oklch(61% 0.1634 38.0)",
+          "oklch(72% 0.1389 38.0)",
+          "oklch(84% 0.0980 38.0)",
+          "oklch(95% 0.0409 38.0)"
+        ]
+      },
+      "accent-hover": {
+        "role": "primary",
+        "displayName": "Ржавый акцент при наведении",
+        "tonalRamp": [
+          "oklch(15% 0.0483 38.5)",
+          "oklch(26% 0.0828 38.5)",
+          "oklch(38% 0.1173 38.5)",
+          "oklch(49% 0.1380 38.5)",
+          "oklch(61% 0.1380 38.5)",
+          "oklch(72% 0.1173 38.5)",
+          "oklch(84% 0.0828 38.5)",
+          "oklch(95% 0.0345 38.5)"
+        ]
+      },
+      "accent-light": {
+        "role": "primary",
+        "displayName": "Светлая медь",
+        "tonalRamp": [
+          "oklch(15% 0.0358 45.5)",
+          "oklch(26% 0.0614 45.5)",
+          "oklch(38% 0.0870 45.5)",
+          "oklch(49% 0.1024 45.5)",
+          "oklch(61% 0.1024 45.5)",
+          "oklch(72% 0.0870 45.5)",
+          "oklch(84% 0.0614 45.5)",
+          "oklch(95% 0.0256 45.5)"
+        ]
+      },
+      "nav-indicator": {
+        "role": "primary",
+        "displayName": "Медная линия",
+        "tonalRamp": [
+          "oklch(15% 0.0430 44.9)",
+          "oklch(26% 0.0738 44.9)",
+          "oklch(38% 0.1045 44.9)",
+          "oklch(49% 0.1229 44.9)",
+          "oklch(61% 0.1229 44.9)",
+          "oklch(72% 0.1045 44.9)",
+          "oklch(84% 0.0738 44.9)",
+          "oklch(95% 0.0307 44.9)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Графит",
+        "tonalRamp": [
+          "oklch(15% 0.0044 243.3)",
+          "oklch(26% 0.0075 243.3)",
+          "oklch(38% 0.0106 243.3)",
+          "oklch(49% 0.0125 243.3)",
+          "oklch(61% 0.0125 243.3)",
+          "oklch(72% 0.0106 243.3)",
+          "oklch(84% 0.0075 243.3)",
+          "oklch(95% 0.0031 243.3)"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Бумага",
+        "tonalRamp": [
+          "oklch(15% 0.0019 117.9)",
+          "oklch(26% 0.0032 117.9)",
+          "oklch(38% 0.0046 117.9)",
+          "oklch(49% 0.0054 117.9)",
+          "oklch(61% 0.0054 117.9)",
+          "oklch(72% 0.0046 117.9)",
+          "oklch(84% 0.0032 117.9)",
+          "oklch(95% 0.0013 117.9)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Белая поверхность",
+        "tonalRamp": [
+          "oklch(15% 0.0000 0.0)",
+          "oklch(26% 0.0000 0.0)",
+          "oklch(38% 0.0000 0.0)",
+          "oklch(49% 0.0000 0.0)",
+          "oklch(61% 0.0000 0.0)",
+          "oklch(72% 0.0000 0.0)",
+          "oklch(84% 0.0000 0.0)",
+          "oklch(95% 0.0000 0.0)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Тихая линия",
+        "tonalRamp": [
+          "oklch(15% 0.0028 139.4)",
+          "oklch(26% 0.0048 139.4)",
+          "oklch(38% 0.0068 139.4)",
+          "oklch(49% 0.0080 139.4)",
+          "oklch(61% 0.0080 139.4)",
+          "oklch(72% 0.0068 139.4)",
+          "oklch(84% 0.0048 139.4)",
+          "oklch(95% 0.0020 139.4)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Вторичный текст",
+        "tonalRamp": [
+          "oklch(15% 0.0044 136.6)",
+          "oklch(26% 0.0075 136.6)",
+          "oklch(38% 0.0106 136.6)",
+          "oklch(49% 0.0125 136.6)",
+          "oklch(61% 0.0125 136.6)",
+          "oklch(72% 0.0106 136.6)",
+          "oklch(84% 0.0075 136.6)",
+          "oklch(95% 0.0031 136.6)"
+        ]
+      },
+      "input-line": {
+        "role": "neutral",
+        "displayName": "Граница поля",
+        "tonalRamp": [
+          "oklch(15% 0.0050 141.8)",
+          "oklch(26% 0.0086 141.8)",
+          "oklch(38% 0.0122 141.8)",
+          "oklch(49% 0.0143 141.8)",
+          "oklch(61% 0.0143 141.8)",
+          "oklch(72% 0.0122 141.8)",
+          "oklch(84% 0.0086 141.8)",
+          "oklch(95% 0.0036 141.8)"
+        ]
+      },
+      "nav-text": {
+        "role": "neutral",
+        "displayName": "Текст на графите",
+        "tonalRamp": [
+          "oklch(15% 0.0030 145.5)",
+          "oklch(26% 0.0052 145.5)",
+          "oklch(38% 0.0073 145.5)",
+          "oklch(49% 0.0086 145.5)",
+          "oklch(61% 0.0086 145.5)",
+          "oklch(72% 0.0073 145.5)",
+          "oklch(84% 0.0052 145.5)",
+          "oklch(95% 0.0022 145.5)"
+        ]
+      },
+      "nav-hover": {
+        "role": "neutral",
+        "displayName": "Выделение на графите",
+        "tonalRamp": [
+          "oklch(15% 0.0040 232.7)",
+          "oklch(26% 0.0068 232.7)",
+          "oklch(38% 0.0097 232.7)",
+          "oklch(49% 0.0114 232.7)",
+          "oklch(61% 0.0114 232.7)",
+          "oklch(72% 0.0097 232.7)",
+          "oklch(84% 0.0068 232.7)",
+          "oklch(95% 0.0028 232.7)"
+        ]
+      },
+      "dark-bg": {
+        "role": "neutral",
+        "displayName": "Тёмная рабочая область",
+        "tonalRamp": [
+          "oklch(15% 0.0045 243.4)",
+          "oklch(26% 0.0077 243.4)",
+          "oklch(38% 0.0109 243.4)",
+          "oklch(49% 0.0129 243.4)",
+          "oklch(61% 0.0129 243.4)",
+          "oklch(72% 0.0109 243.4)",
+          "oklch(84% 0.0077 243.4)",
+          "oklch(95% 0.0032 243.4)"
+        ]
+      },
+      "dark-input": {
+        "role": "neutral",
+        "displayName": "Тёмное поле",
+        "tonalRamp": [
+          "oklch(15% 0.0050 244.1)",
+          "oklch(26% 0.0086 244.1)",
+          "oklch(38% 0.0121 244.1)",
+          "oklch(49% 0.0143 244.1)",
+          "oklch(61% 0.0143 244.1)",
+          "oklch(72% 0.0121 244.1)",
+          "oklch(84% 0.0086 244.1)",
+          "oklch(95% 0.0036 244.1)"
+        ]
+      },
+      "dark-muted": {
+        "role": "neutral",
+        "displayName": "Вторичный текст тёмной темы",
+        "tonalRamp": [
+          "oklch(15% 0.0040 149.8)",
+          "oklch(26% 0.0068 149.8)",
+          "oklch(38% 0.0097 149.8)",
+          "oklch(49% 0.0114 149.8)",
+          "oklch(61% 0.0114 149.8)",
+          "oklch(72% 0.0097 149.8)",
+          "oklch(84% 0.0068 149.8)",
+          "oklch(95% 0.0028 149.8)"
+        ]
+      },
+      "dark-line": {
+        "role": "neutral",
+        "displayName": "Разделитель тёмной темы",
+        "tonalRamp": [
+          "oklch(15% 0.0049 232.0)",
+          "oklch(26% 0.0085 232.0)",
+          "oklch(38% 0.0120 232.0)",
+          "oklch(49% 0.0141 232.0)",
+          "oklch(61% 0.0141 232.0)",
+          "oklch(72% 0.0120 232.0)",
+          "oklch(84% 0.0085 232.0)",
+          "oklch(95% 0.0035 232.0)"
+        ]
+      },
+      "dark-input-line": {
+        "role": "neutral",
+        "displayName": "Граница тёмного поля",
+        "tonalRamp": [
+          "oklch(15% 0.0055 162.2)",
+          "oklch(26% 0.0095 162.2)",
+          "oklch(38% 0.0134 162.2)",
+          "oklch(49% 0.0158 162.2)",
+          "oklch(61% 0.0158 162.2)",
+          "oklch(72% 0.0134 162.2)",
+          "oklch(84% 0.0095 162.2)",
+          "oklch(95% 0.0039 162.2)"
+        ]
+      },
+      "active": {
+        "role": "semantic",
+        "displayName": "Активный доступ",
+        "tonalRamp": [
+          "oklch(15% 0.0240 155.1)",
+          "oklch(26% 0.0411 155.1)",
+          "oklch(38% 0.0582 155.1)",
+          "oklch(49% 0.0684 155.1)",
+          "oklch(61% 0.0684 155.1)",
+          "oklch(72% 0.0582 155.1)",
+          "oklch(84% 0.0411 155.1)",
+          "oklch(95% 0.0171 155.1)"
+        ]
+      },
+      "negative-status": {
+        "role": "semantic",
+        "displayName": "Отрицательный статус",
+        "tonalRamp": [
+          "oklch(15% 0.0511 28.2)",
+          "oklch(26% 0.0875 28.2)",
+          "oklch(38% 0.1240 28.2)",
+          "oklch(49% 0.1459 28.2)",
+          "oklch(61% 0.1459 28.2)",
+          "oklch(72% 0.1240 28.2)",
+          "oklch(84% 0.0875 28.2)",
+          "oklch(95% 0.0365 28.2)"
+        ]
+      },
+      "danger": {
+        "role": "semantic",
+        "displayName": "Опасное действие",
+        "tonalRamp": [
+          "oklch(15% 0.0545 26.3)",
+          "oklch(26% 0.0935 26.3)",
+          "oklch(38% 0.1324 26.3)",
+          "oklch(49% 0.1558 26.3)",
+          "oklch(61% 0.1558 26.3)",
+          "oklch(72% 0.1324 26.3)",
+          "oklch(84% 0.0935 26.3)",
+          "oklch(95% 0.0389 26.3)"
+        ]
+      },
+      "danger-deep": {
+        "role": "semantic",
+        "displayName": "Ошибка и опасное наведение",
+        "tonalRamp": [
+          "oklch(15% 0.0464 26.7)",
+          "oklch(26% 0.0795 26.7)",
+          "oklch(38% 0.1126 26.7)",
+          "oklch(49% 0.1325 26.7)",
+          "oklch(61% 0.1325 26.7)",
+          "oklch(72% 0.1126 26.7)",
+          "oklch(84% 0.0795 26.7)",
+          "oklch(95% 0.0331 26.7)"
+        ]
+      },
+      "notice-bg": {
+        "role": "semantic",
+        "displayName": "Фон уведомления",
+        "tonalRamp": [
+          "oklch(15% 0.0050 148.8)",
+          "oklch(26% 0.0085 148.8)",
+          "oklch(38% 0.0121 148.8)",
+          "oklch(49% 0.0142 148.8)",
+          "oklch(61% 0.0142 148.8)",
+          "oklch(72% 0.0121 148.8)",
+          "oklch(84% 0.0085 148.8)",
+          "oklch(95% 0.0036 148.8)"
+        ]
+      },
+      "notice-line": {
+        "role": "semantic",
+        "displayName": "Граница уведомления",
+        "tonalRamp": [
+          "oklch(15% 0.0159 154.4)",
+          "oklch(26% 0.0272 154.4)",
+          "oklch(38% 0.0385 154.4)",
+          "oklch(49% 0.0453 154.4)",
+          "oklch(61% 0.0453 154.4)",
+          "oklch(72% 0.0385 154.4)",
+          "oklch(84% 0.0272 154.4)",
+          "oklch(95% 0.0113 154.4)"
+        ]
+      },
+      "warning-bg": {
+        "role": "semantic",
+        "displayName": "Фон предупреждения",
+        "tonalRamp": [
+          "oklch(15% 0.0087 89.2)",
+          "oklch(26% 0.0149 89.2)",
+          "oklch(38% 0.0211 89.2)",
+          "oklch(49% 0.0248 89.2)",
+          "oklch(61% 0.0248 89.2)",
+          "oklch(72% 0.0211 89.2)",
+          "oklch(84% 0.0149 89.2)",
+          "oklch(95% 0.0062 89.2)"
+        ]
+      },
+      "warning-text": {
+        "role": "semantic",
+        "displayName": "Текст предупреждения",
+        "tonalRamp": [
+          "oklch(15% 0.0293 83.2)",
+          "oklch(26% 0.0502 83.2)",
+          "oklch(38% 0.0711 83.2)",
+          "oklch(49% 0.0837 83.2)",
+          "oklch(61% 0.0837 83.2)",
+          "oklch(72% 0.0711 83.2)",
+          "oklch(84% 0.0502 83.2)",
+          "oklch(95% 0.0209 83.2)"
+        ]
+      },
+      "warning-line": {
+        "role": "semantic",
+        "displayName": "Граница предупреждения",
+        "tonalRamp": [
+          "oklch(15% 0.0247 89.1)",
+          "oklch(26% 0.0424 89.1)",
+          "oklch(38% 0.0600 89.1)",
+          "oklch(49% 0.0706 89.1)",
+          "oklch(61% 0.0706 89.1)",
+          "oklch(72% 0.0600 89.1)",
+          "oklch(84% 0.0424 89.1)",
+          "oklch(95% 0.0177 89.1)"
+        ]
+      },
+      "error-bg": {
+        "role": "semantic",
+        "displayName": "Фон ошибки",
+        "tonalRamp": [
+          "oklch(15% 0.0057 22.1)",
+          "oklch(26% 0.0098 22.1)",
+          "oklch(38% 0.0139 22.1)",
+          "oklch(49% 0.0163 22.1)",
+          "oklch(61% 0.0163 22.1)",
+          "oklch(72% 0.0139 22.1)",
+          "oklch(84% 0.0098 22.1)",
+          "oklch(95% 0.0041 22.1)"
+        ]
+      },
+      "error-line": {
+        "role": "semantic",
+        "displayName": "Граница ошибки",
+        "tonalRamp": [
+          "oklch(15% 0.0214 24.8)",
+          "oklch(26% 0.0367 24.8)",
+          "oklch(38% 0.0520 24.8)",
+          "oklch(49% 0.0612 24.8)",
+          "oklch(61% 0.0612 24.8)",
+          "oklch(72% 0.0520 24.8)",
+          "oklch(84% 0.0367 24.8)",
+          "oklch(95% 0.0153 24.8)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Заголовок страницы",
+        "purpose": "Общий h1; до 540px — 1.5rem."
+      },
+      "cabinet-title": {
+        "displayName": "Заголовок кабинета",
+        "purpose": "Имя или заголовок кабинета; до 540px — 1.25rem."
+      },
+      "section-title": {
+        "displayName": "Заголовок секции",
+        "purpose": "Подключение, аккаунт и группы действий."
+      },
+      "body": {
+        "displayName": "Основной текст",
+        "purpose": "Абзацы и поля; 16px в корне HTML."
+      },
+      "label": {
+        "displayName": "Подпись и кнопка",
+        "purpose": "Видимые подписи полей и компактные действия."
+      },
+      "caption": {
+        "displayName": "Пояснение",
+        "purpose": "Подписи значений и вспомогательный текст."
+      },
+      "summary-value": {
+        "displayName": "Значение сводки",
+        "purpose": "Табличные цифры; до 540px — 1rem."
+      },
+      "web-nav": {
+        "displayName": "Вебнавигация",
+        "purpose": "Горизонтальное меню; до 540px — .82rem."
+      },
+      "mini-nav": {
+        "displayName": "Навигация Mini App",
+        "purpose": "Подпись под SVG; активный пункт — 700."
+      }
+    },
+    "shadows": [
+      {
+        "name": "flat-controls",
+        "value": "none",
+        "purpose": "Явно задано для MUI кнопок, AppBar, содержимого списка и финального hover primary в Mini App; не отменяет унаследованную глубину других MUI-компонентов."
+      }
+    ],
+    "motion": [
+      {
+        "name": "control-state",
+        "value": "background-color 160ms ease-out, border-color 160ms ease-out",
+        "purpose": "Переходы обычных HTML-кнопок и ссылок-кнопок."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "none",
+        "purpose": "Отключает эти переходы при prefers-reduced-motion: reduce."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "compact-desktop",
+        "value": "1100px"
+      },
+      {
+        "name": "stacked",
+        "value": "900px"
+      },
+      {
+        "name": "mobile",
+        "value": "540px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Основное действие",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Браузерный вариант; минимальная высота 44px, видимый фокус, reduced motion и disabled.",
+      "html": "<button class=\"ds-button-primary\" type=\"button\">Показать ссылку</button>",
+      "css": ".ds-button-primary{font-family:system-ui,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;font-size:1rem;line-height:1.5;font-weight:600;border:1px solid;border-radius:6px;padding:10px 16px;min-height:44px;cursor:pointer;transition:background-color 160ms ease-out,border-color 160ms ease-out;background:var(--accent,#b94116);color:#fff;border-color:var(--accent,#b94116)}.ds-button-primary:hover:enabled{background:var(--accent-hover,#953410);border-color:var(--accent-hover,#953410)}.ds-button-primary:focus-visible{outline:3px solid var(--accent,#b94116);outline-offset:3px}.ds-button-primary:disabled{cursor:not-allowed;opacity:.6}@media(prefers-reduced-motion:reduce){.ds-button-primary{transition:none}}"
+    },
+    {
+      "name": "Обычная кнопка",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Браузерный вариант; минимальная высота 44px, видимый фокус, reduced motion и disabled.",
+      "html": "<button class=\"ds-button-secondary\" type=\"button\">Скрыть</button>",
+      "css": ".ds-button-secondary{font-family:system-ui,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;font-size:1rem;line-height:1.5;font-weight:600;border:1px solid;border-radius:6px;padding:10px 16px;min-height:44px;cursor:pointer;transition:background-color 160ms ease-out,border-color 160ms ease-out;background:var(--surface,#fff);color:var(--ink,#252b30);border-color:var(--input-line,#858c84)}.ds-button-secondary:hover:enabled{background:var(--paper,#f3f4f0);border-color:var(--ink,#252b30)}.ds-button-secondary:focus-visible{outline:3px solid var(--accent,#b94116);outline-offset:3px}.ds-button-secondary:disabled{cursor:not-allowed;opacity:.6}@media(prefers-reduced-motion:reduce){.ds-button-secondary{transition:none}}"
+    },
+    {
+      "name": "Опасное действие",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Браузерный вариант; минимальная высота 44px, видимый фокус, reduced motion и disabled.",
+      "html": "<button class=\"ds-button-danger\" type=\"button\">Заблокировать</button>",
+      "css": ".ds-button-danger{font-family:system-ui,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;font-size:1rem;line-height:1.5;font-weight:600;border:1px solid;border-radius:6px;padding:10px 16px;min-height:44px;cursor:pointer;transition:background-color 160ms ease-out,border-color 160ms ease-out;background:#a02927;color:#fff;border-color:#a02927}.ds-button-danger:hover:enabled{background:#83221f;border-color:#83221f}.ds-button-danger:focus-visible{outline:3px solid var(--accent,#b94116);outline-offset:3px}.ds-button-danger:disabled{cursor:not-allowed;opacity:.6}@media(prefers-reduced-motion:reduce){.ds-button-danger{transition:none}}"
+    },
+    {
+      "name": "Поле с подписью",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Подпись над полем; браузерные цвета, фокус, placeholder и состояние aria-invalid.",
+      "html": "<label class=\"ds-field\" for=\"ds-customer-email\">Email<input class=\"ds-input\" id=\"ds-customer-email\" type=\"email\" placeholder=\"name@example.test\" /></label>",
+      "css": ".ds-field{display:grid;gap:6px;font-family:system-ui,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;font-size:1rem;line-height:1.5;font-weight:600;color:var(--ink,#252b30)}.ds-input{font-family:system-ui,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;font-size:1rem;line-height:1.5;font-weight:600;color:var(--ink,#252b30);background:var(--surface,#fff);border:1px solid var(--input-line,#858c84);border-radius:8px;padding:11px 12px;width:100%;min-width:0;caret-color:var(--accent,#b94116)}.ds-input::placeholder{color:var(--muted,#61665f);opacity:1}.ds-input:focus-visible{outline:3px solid var(--accent,#b94116);outline-offset:3px}.ds-input[aria-invalid=true]{border-color:#a02927}"
+    },
+    {
+      "name": "Навигация вебкабинета",
+      "kind": "nav",
+      "refersTo": "web-navigation",
+      "description": "Четыре существующих назначения в графитовой оболочке, текущий раздел с медной линией и светлым фокусом.",
+      "html": "<div class=\"ds-nav-shell\"><nav class=\"ds-web-nav\" aria-label=\"Основная навигация\"><a class=\"ds-web-link\" href=\"/cabinet\" aria-current=\"page\">Мой доступ</a><a class=\"ds-web-link\" href=\"/catalogue\">Каталог</a><a class=\"ds-web-link\" href=\"/cabinet/history\">Платежи</a><a class=\"ds-web-link\" href=\"/cabinet/support\">Помощь</a></nav></div>",
+      "css": ".ds-nav-shell{background:var(--ink,#252b30);padding:16px 32px;font-family:system-ui,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif}.ds-web-nav{display:flex;gap:24px;min-width:0}.ds-web-link{display:flex;align-items:center;justify-content:center;position:relative;min-height:44px;color:#d8ddd8;text-decoration:none;font-size:.9rem;line-height:1.5;font-weight:550;white-space:nowrap;padding:8px 0}.ds-web-link[aria-current=page]{color:#fff}.ds-web-link[aria-current=page]::after{content:\"\";position:absolute;bottom:-16px;left:0;right:0;height:3px;background:#e98f66}.ds-web-link:hover{color:#fff}.ds-web-link:focus-visible{outline:3px solid #f1a582;outline-offset:3px}@media(max-width:1100px){.ds-web-nav{gap:16px}}@media(max-width:900px){.ds-web-nav{justify-content:space-between}}@media(max-width:540px){.ds-nav-shell{padding:12px 16px}.ds-web-nav{gap:12px}.ds-web-link{font-size:.82rem}.ds-web-link[aria-current=page]::after{bottom:-12px}}"
+    },
+    {
+      "name": "Панель с раскрытием",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "Панель аккаунта: тонкая граница и нативное details. Цвета поверхности следуют унаследованным переменным.",
+      "html": "<aside class=\"ds-panel\"><h2 class=\"ds-panel-title\">Ваш аккаунт</h2><details class=\"ds-details\"><summary>Аккаунт и настройки</summary><p>Язык: русский</p></details></aside>",
+      "css": ".ds-panel{min-width:0;padding:28px;background:var(--surface,#fff);color:var(--ink,#252b30);border:1px solid var(--line,#d9ddd8);border-radius:14px;font-family:system-ui,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;font-size:1rem;line-height:1.5}.ds-panel-title{font-size:1.25rem;font-weight:650;letter-spacing:-.015em;margin:0 0 16px;line-height:1.35}.ds-details summary{min-height:44px;padding:10px 0;cursor:pointer;font-weight:650}.ds-details summary:hover{color:var(--accent,#b94116)}.ds-details summary:focus-visible{outline:3px solid var(--accent,#b94116);outline-offset:3px}.ds-details p{margin:16px 0;overflow-wrap:anywhere}@media(max-width:540px){.ds-panel{padding:20px}.ds-panel-title{margin-bottom:8px}}"
+    },
+    {
+      "name": "Сегментированная сводка",
+      "kind": "custom",
+      "refersTo": "summary-segment",
+      "description": "Четыре связанных факта, полная дата со временем и табличные цифры. На телефоне — сетка 2×2. Значения демонстрационные.",
+      "html": "<dl class=\"ds-summary\"><div><dt>Действует до</dt><dd><time datetime=\"2026-12-05T13:00:00+03:00\">05.12.2026, 13:00:00</time></dd></div><div><dt>Устройства</dt><dd>3</dd></div><div><dt>Использовано</dt><dd>28 GiB</dd></div><div><dt>Осталось</dt><dd>72 GiB</dd></div></dl>",
+      "css": ".ds-summary{display:grid;grid-template-columns:1.3fr .8fr 1fr 1fr;border:1px solid var(--line,#d9ddd8);background:var(--surface,#fff);color:var(--ink,#252b30);border-radius:14px;gap:0;margin:8px 0 20px;font-family:system-ui,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;line-height:1.5}.ds-summary>div{min-width:0;padding:20px 28px;background:transparent}.ds-summary>div+div{border-left:1px solid var(--line,#d9ddd8)}.ds-summary dt{font-size:.88rem;color:var(--muted,#61665f)}.ds-summary dd{margin:4px 0 0;font-size:1.25rem;font-weight:650;line-height:1.45;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}@media(max-width:540px){.ds-summary{margin:4px 0 16px;grid-template-columns:repeat(2,minmax(0,1fr));border-radius:12px}.ds-summary>div{padding:12px 16px}.ds-summary>div:nth-child(3){border-left:0}.ds-summary>div:nth-child(n+3){border-top:1px solid var(--line,#d9ddd8)}.ds-summary dd{font-size:1rem}}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Маршрут",
+    "overview": "«Маршрут» делает данные о доступе и работу оператора читаемыми через сегменты, ровные строки и тонкие разделители. Графитовая оболочка отделяет навигацию от спокойной рабочей области; ржаво-оранжевый акцент отмечает действия. Плотность зависит от задачи: клиентские блоки оставляют место для объяснений, операторские таблицы используют доступную ширину.\n\nЭто интерфейс существующего 3xui-mole, с его именем и логотипом. Единый характер держится на типографике, размерах контролов и ритме данных, а не на буквальном повторении палитры во всех окружениях: Mini App принимает тему Telegram, админка имеет светлый и тёмный варианты. Русские и английские подписи и длинные значения должны помещаться без потери смысла.",
+    "keyCharacteristics": [
+      "Графитовая навигация и светлая рабочая поверхность в браузерной теме.",
+      "Сегменты данных, табличные цифры и тонкие разделители.",
+      "Компактные прямоугольные контролы с видимым фокусом.",
+      "Цвета Telegram и отдельная тёмная тема оператора сохраняют общий ритм."
+    ],
+    "rules": [
+      {
+        "name": "The Host Palette Rule",
+        "body": "В Mini App фон, текст, поверхность, кнопка и ссылка берутся из проверенных цветов Telegram; геометрия и типографика остаются общими. Литеральные начальные значения соответствуют светлой теме, без циклических ссылок CSS-переменных.",
+        "section": "colors"
+      },
+      {
+        "name": "The Paired State Rule",
+        "body": "Меняя фон состояния, сохраняйте совместимый цвет текста и рамки; статус должен оставаться понятным по подписи, а не только по цвету.",
+        "section": "colors"
+      },
+      {
+        "name": "The Complete Value Rule",
+        "body": "Дата окончания остаётся полной датой со временем; длинное значение переносится внутри сегмента. Табличный ритм не оправдывает усечение данных или скрытие их в tooltip.",
+        "section": "typography"
+      },
+      {
+        "name": "The Divider First Rule",
+        "body": "Разделяйте строки и связанные области тонкой границей или сменой поверхности. Не добавляйте тень ради самого выделения блока.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** сохраняйте имя 3xui-mole и существующий логотип в согласованной оболочке.",
+      "**Do** используйте сегменты, тонкие линии и полные значения для связанных данных.",
+      "**Do** проверяйте пару фона и текста во всех состояниях, включая hover, выбранный пункт и семантическое сообщение в тёмной теме.",
+      "**Do** сохраняйте видимый фокус, подписи, сенсорные действия от 44px и переносы русских и английских строк.",
+      "**Do** учитывайте тему, стабильную высоту и безопасные отступы Telegram; сохраняйте локальную прокрутку широких операторских таблиц."
+    ],
+    "donts": [
+      "**Don't** переносите синтетические поля, метрики, фиксированный холст или демонстрационный переключатель из эскиза в продукт.",
+      "**Don't** заменяйте данные или тексты состояний одним цветом, иконкой или обрезанным значением.",
+      "**Don't** раскрывайте ссылку подключения или QR в обычной сводке без действия пользователя.",
+      "**Don't** распространяйте жёсткую браузерную палитру на Mini App или смешивайте светлый текст тёмной оболочки со светлым фоном сообщения.",
+      "**Don't** добавляйте декоративное появление страниц или превращайте невалидную старую тень в правило системы."
+    ]
+  }
+}

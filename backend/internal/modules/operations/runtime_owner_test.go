@@ -108,8 +108,19 @@ func TestRuntimeOwnerWarmupLossAndCancel(t *testing.T) {
 	case <-time.After(3 * time.Second):
 		t.Fatal("canceled warm-up did not close")
 	}
-	var pidAfter int32
-	if err := env.Pool.QueryRow(ctx, ownerPIDQuery).Scan(&pidAfter); err != nil || pidAfter != 0 {
-		t.Fatalf("warm-up lock survived cancellation: pid=%d err=%v", pidAfter, err)
+	// Closing the client socket does not wait for PostgreSQL to release its session locks.
+	deadline := time.Now().Add(3 * time.Second)
+	for {
+		var pidAfter int32
+		if err := env.Pool.QueryRow(ctx, ownerPIDQuery).Scan(&pidAfter); err != nil {
+			t.Fatal(err)
+		}
+		if pidAfter == 0 {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("warm-up lock survived cancellation: pid=%d", pidAfter)
+		}
+		time.Sleep(10 * time.Millisecond)
 	}
 }

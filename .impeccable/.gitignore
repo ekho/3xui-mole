@@ -1,0 +1,6 @@
+# Local detector state and unselected comparison sketches.
+hook.cache.json
+mocks/decision/*.html
+!mocks/decision/boarding.html
+review/baseline/
+review/admin-card-mobile-bottom.jpg

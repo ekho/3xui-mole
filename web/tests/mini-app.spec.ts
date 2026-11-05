@@ -8,7 +8,7 @@ const none:Model<'Subscription'>={status:'none',devices:0,traffic_limit_bytes:0,
 const emptySupport:Model<'SupportResult'>={conversation:null,messages:[],has_more:false,oldest_sequence:null};
 const emptyHistory:Model<'PaymentHistoryPage'>={kind:'orders',orders:[],receipts:[],legacy_transactions:[],refunds:[],has_more:false};
 
-type Options={sdk?:'ready'|'empty'|'fail'|'timeout'|'broken-methods';readLaunch?:boolean;consent?:boolean;sub?:Model<'Subscription'>;extra?:(r:Route,path:string)=>Promise<boolean>};
+type Options={theme?:Record<string,string>;sdk?:'ready'|'empty'|'fail'|'timeout'|'broken-methods';readLaunch?:boolean;consent?:boolean;sub?:Model<'Subscription'>;extra?:(r:Route,path:string)=>Promise<boolean>};
 async function fixture(page:Page,options:Options={}){
  const calls:{path:string;method:string;authorization:boolean;cookie:boolean;body:any}[]=[];let sessions=0;let sdkMode=options.sdk;
  let pendingSDK:Route|undefined;
@@ -17,7 +17,7 @@ async function fixture(page:Page,options:Options={}){
   const raw=sdkMode==='empty'?"''":options.readLaunch?"new URLSearchParams(location.hash.slice(1)).get('tgWebAppData')??''":JSON.stringify(launch);
   await r.fulfill({contentType:'application/javascript',body:`
   window.__sdk={opened:[],handlers:{},back:null,stale:sessionStorage.getItem('__telegram__initParams')};
-  window.Telegram={WebApp:{initData:${raw},initDataUnsafe:{user:{id:999999}},version:'9.6',platform:'web',themeParams:{bg_color:'#17212b',text_color:'#ffffff',secondary_bg_color:'#242f3d',button_color:'#2481cc',button_text_color:'#ffffff',link_color:'#6ab3f3'},viewportStableHeight:640,safeAreaInset:{top:12,bottom:10,left:0,right:0},contentSafeAreaInset:{top:8,bottom:6,left:0,right:0},ready(){${sdkMode==='broken-methods'?'throw new Error("owned SDK method failure")':''}},expand(){},onEvent(n,f){window.__sdk.handlers[n]=f},offEvent(n){delete window.__sdk.handlers[n]},BackButton:{show(){},hide(){},onClick(f){window.__sdk.back=f},offClick(){window.__sdk.back=null}},openLink(url){window.__sdk.opened.push(url)}}};
+  window.Telegram={WebApp:{initData:${raw},initDataUnsafe:{user:{id:999999}},version:'9.6',platform:'web',themeParams:${JSON.stringify(options.theme??{bg_color:'#17212b',text_color:'#ffffff',secondary_bg_color:'#242f3d',button_color:'#2481cc',button_text_color:'#ffffff',link_color:'#6ab3f3'})},viewportStableHeight:640,safeAreaInset:{top:12,bottom:10,left:0,right:0},contentSafeAreaInset:{top:8,bottom:6,left:0,right:0},ready(){${sdkMode==='broken-methods'?'throw new Error("owned SDK method failure")':''}},expand(){},onEvent(n,f){window.__sdk.handlers[n]=f},offEvent(n){delete window.__sdk.handlers[n]},BackButton:{show(){},hide(){},onClick(f){window.__sdk.back=f},offClick(){window.__sdk.back=null}},openLink(url){window.__sdk.opened.push(url)}}};
   sessionStorage.setItem('__telegram__initParams',JSON.stringify({tgWebAppData:window.Telegram.WebApp.initData}));`});
  });
  await page.route('**/api/v1/**',async r=>{
@@ -318,4 +318,38 @@ test('Mini App language selection preserves signed launch data while SDK loads',
   await expect(page.getByRole('heading',{name:'Mini client'})).toBeVisible();expect(f.sessions()).toBe(1);
   expect(await storage(page)).not.toMatch(/owned-signed|mini_|csrf_token|__telegram__initParams/);
  }finally{release();}
+});
+
+for(const lang of ['ru','en'] as const)test('primary navigation retains Mini App session and route prefix '+lang,async({page})=>{
+ const observed=await fixture(page,{sub:{...none,status:'active',devices:3,access_profile:'regular',connection_available:true,data_stale:false,expires_at:'2030-01-01T00:00:00Z'}});
+ await page.setViewportSize({width:390,height:844});await page.goto('/mini-app/cabinet?lang='+lang);
+ const nav=page.getByRole('navigation',{name:lang==='ru'?'Основная навигация':'Primary navigation'});
+ await nav.getByRole('link',{name:lang==='ru'?'Каталог':'Catalogue',exact:true}).click();
+ await expect(page).toHaveURL('/mini-app/catalogue'+(lang==='en'?'?lang=en':''));
+ await expect(nav.getByRole('link',{name:lang==='ru'?'Каталог':'Catalogue',exact:true})).toHaveAttribute('aria-current','page');
+ await nav.getByRole('link',{name:lang==='ru'?'Мой доступ':'My access',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Mini client',exact:true})).toBeVisible();
+ expect(observed.sessions()).toBe(1);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});
+
+
+test('Mini App notice body and date remain readable in the dark host theme',async({page})=>{
+ await fixture(page,{extra:async(route,path)=>{
+  if(path!=='/api/v1/notices')return false;
+  await route.fulfill({json:{version:'operator-notices-v1',email_enabled:false,email_available:true,page:1,per_page:20,total:1,notices:[{id:'22222222-2222-4222-8222-222222222222',revision:1,text:'Readable notice',html:'<b>Readable notice</b>',created_at:'2030-01-01T10:00:00Z'}]}});return true;
+ }});
+ await page.goto('/mini-app?lang=en');await expect(page.getByText('Readable notice',{exact:true})).toBeVisible();
+ const ratios=await page.locator('.support-list .notice').evaluateAll(notices=>{
+  const luminance=(value:string)=>{const c=value.match(/\d+(?:\.\d+)?/g)!.slice(0,3).map(Number).map(v=>{const s=v/255;return s<=.04045?s/12.92:((s+.055)/1.055)**2.4;});return c[0]*.2126+c[1]*.7152+c[2]*.0722;};
+  return notices.flatMap(notice=>[notice.querySelector('.notice-body')!,notice.querySelector('.help')!].map(element=>{const a=luminance(getComputedStyle(element).color),b=luminance(getComputedStyle(notice).backgroundColor);return(Math.max(a,b)+.05)/(Math.min(a,b)+.05);}));
+ });
+ expect(ratios).toHaveLength(2);expect(ratios.every(ratio=>ratio>=4.5)).toBe(true);
+});
+
+
+test('Mini App selected language remains distinct when host theme parameters are empty',async({page})=>{
+ await fixture(page,{theme:{}});await page.goto('/mini-app?lang=en');await expect(page.getByRole('heading',{name:'Mini client',exact:true})).toBeVisible();
+ const background=await page.getByRole('button',{name:'EN',exact:true}).evaluate(element=>getComputedStyle(element).backgroundColor);
+ expect(background).not.toBe('rgba(0, 0, 0, 0)');
+ await expect(page.getByRole('button',{name:'EN',exact:true})).toHaveAttribute('aria-pressed','true');
 });
