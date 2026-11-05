@@ -94,10 +94,11 @@ PANEL_URL=https://panel.example.com
 SUBSCRIPTION_BASE_URL=https://subscriptions.example.com/sub/
 ```
 
-`PANEL_DUPLICATE_GUARD_VERIFIED` stays false until you verify duplicate/repeated
-client operations against your actual panel in a controlled test. Only then
-set it to true for access provisioning. Keep panel and server identities stable
-when updating an existing installation.
+`PANEL_DUPLICATE_GUARD_VERIFIED` no longer permits uncertain-create retries.
+Remove it: absent/false remain accepted, while true or malformed values reject
+startup. After a possible write, an operator must compare the original frozen
+target with the panel; absence alone does not authorize another Add. Preserve
+panel and server identities.
 
 Create an image override outside Git. `migrate`, `backend` and `reconcile` use
 the same backend image; `gateway` uses the web image:
@@ -188,7 +189,7 @@ matching DNS/TLS and policy URLs; cookies from the previous origin do not move.
 | `PANEL_URL`, `SUBSCRIPTION_BASE_URL` | HTTPS panel and subscription URLs without credentials/query/fragment. The latter includes the subscription path, such as `/sub/`. |
 | `PANEL_TOKEN_FILE` **or** `PANEL_USERNAME` + `PANEL_PASSWORD_FILE` | Choose one authentication method. Leave the unused method empty. |
 | `PANEL_CA_FILE` | Optional private panel trust root; TLS verification remains enabled. |
-| `PANEL_DUPLICATE_GUARD_VERIFIED` | `false`; requires the panel verification described above. |
+| `PANEL_DUPLICATE_GUARD_VERIFIED` | Removed bypass: absent/false accepted; true/malformed rejected. |
 | `TRIAL_ENABLED` | `false`; enables starter trial admission, subject to approval and one-trial checks. |
 | `TRIAL_PERIOD`, `TRIAL_TRAFFIC_GB`, `BONUS_DEVICES_COUNT` | 3 days, 15 GiB, 1 device. Traffic `0` means unlimited. |
 | `ACCESS_RESET_TIMEZONE` | `UTC`; timezone for monthly unlimited traffic resets. |
@@ -208,33 +209,74 @@ verify the panel integration before offering that profile in the catalogue.
 
 ### 3X-UI compatibility
 
-The native fixture uses **3X-UI 3.10.0 / Xray 26.10.10**, pinned by digest.
-CI also checks the 3.7.0 API with the same integration code. For a local
-control run, set `LOCAL_PANEL_IMAGE` to the pinned 3.7.0 reference in CI.
-The fixture's private `panel-runtime.json` records the observed panel and
-Xray versions and the selected pinned image.
+The exact supported releases are **3.10.2 / bundled Xray 26.10.10** and
+**3.11.0 / bundled Xray 26.10.21**. The local default is 3.11.0.
+[`panel_versions.json`](../../backend/internal/modules/vpn/panel_versions.json)
+is the single source for versions, OCI digests and the CI matrix. 3.7.0 is
+unsupported; 3.10.0 is an upgrade-rehearsal source only. Other patches, custom
+cores and master/node topologies do not enter the verified matrix implicitly.
+Native tests use two independent panels, including mixed versions; this is
+not master/node evidence.
+
+The backend reads `panelVersion` and `xray.version` from `server/status`.
+`online` describes reachability; `supported`, `unsupported` and `unknown`
+describe admission for operations. Unknown/unsupported servers receive no
+new clients. Every mutation rechecks the release; a version change within
+an operation requires review. Existing clients never move panels implicitly.
+Before any possible write, unknown defers workers without false write/reset
+markers; unsupported sends assigned work to review. After a possible write,
+existing recovery restrictions still apply. Accepted payments and frozen
+targets survive; webhooks retain the financial fact independently of panel
+availability. Metadata-only/no-op actions need not mutate the panel.
+
+Bearer authentication requires a valid **admin** token. Monitor cannot mutate
+clients (403); invalid tokens return 401. Username/password uses cookies and
+CSRF. HTTPS certificate verification remains enabled. Read→update retains
+unknown fields, `clientHostRuleIds` and keepAlive, preserving absent, explicit
+zero, scalar and range values. The 3.11.0 native contract checks host bindings
+in raw/JSON/Clash subscriptions and a shared AmneziaWG/VLESS client's range;
+it does not qualify an AmneziaWG data plane managed by mole.
 
 Fresh panels use random subscription paths. Match `SUBSCRIPTION_BASE_URL`
-to the actual `subPath` or published `subURI`; settings discovery uses the
-panel's URL. Upgrades retain existing URLs. Synthetic fixtures explicitly
-set `/sub/` for their gateways. Keep inbounds intended for client
-subscriptions visible: `excludeFromSub=true` keeps an inbound serving but
-removes its links from subscriptions.
+to the assigned panel's `subPath` or published `subURI`; discovery uses that
+panel's URL. Upgrades retain existing URLs. `excludeFromSub=true` removes
+links to an otherwise serving inbound. Restart the panel and verify the
+published URL after changing subscription paths or enabled formats.
 
-Back up the panel database and keep the old image digest before upgrading.
-Wait for migrations, then verify identities, limits, traffic and a real
-connection. SQLite directories require `0700`, DB/WAL/SHM files `0600`, and
-the correct owner. Roll back with the old database and image together;
-do not run an old panel against an upgraded database. In master/node
-deployments upgrade the nodes too: some 3.10.0 fixes run on the node.
+Before rollout, record actual panel versions and pending operations. Pause
+new provisioning and finish or review in-flight writes. Upgrade older panels
+separately before enabling the new executable. Stop the SQLite writer before
+copying the entire directory, including WAL/SHM; use 0700 directories, 0600
+files and the correct owner. Retain the previous image digest. After migrations,
+compare UUID/subId/URL, memberships, limits, enable/ban and traffic, then
+verify a real VPN connection.
 
-The Bearer token needs permission for the client endpoints and settings;
-check its scope and expiry. Invalid tokens return 401; a wrong base path
-may return 404. Username/password authentication uses cookies and CSRF.
-HTTPS certificate verification remains enabled. Xray 26.10.10 outbounds
-using a private CA require **Use system CA** or explicit trust. Client
-apps using xdns/udphop need a compatible core; the 3.10.0 xdns shape needs
-Xray 26.10.10+. [Upstream requirements](https://github.com/MHSanaei/3x-ui/releases/tag/v3.10.0).
+To roll back, stop the writer, set aside the migrated database and restore
+**the original database and original image together**. Never open a migrated
+database with an old image. A mole PostgreSQL backup is not a panel backup.
+The new mole rejects mutations after restoring 3.10.0; a full service rollback
+also needs the previous compatible mole release. Mole now uses schema 45:
+a schema-44-only executable also requires its matching PostgreSQL snapshot.
+Cutover-check rejects a mismatched schema; the repository checkpoint names a
+schema-45 build and does not promise rollback to an earlier release without
+restoring its database.
+
+The rehearsal creates a new owned fixture and retains both database copies
+in private state:
+
+```sh
+python deploy/acceptance/panel_upgrade.py check --target 3.11.0 --state /secure/new-owned-rehearsal
+```
+
+Repeat with 3.10.2 and another empty state. `panel-runtime.json` and
+`evidence.json` record SHA, architecture, observed panel/core versions, image
+refs and results. Do not publish the remaining state files containing secrets.
+Local runtime checks use arm64; amd64 native CI jobs must pass before release.
+A manifest or synthetic PASS is not runtime acceptance.
+
+To add a release: exact registry/digest PR → upstream API/model comparison →
+identical native core tests, mixed pool and upgrade/rollback → green required
+jobs and release notes. Do not replace the exact registry with a version range.
 
 ### Telegram and audit
 

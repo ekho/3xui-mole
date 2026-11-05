@@ -232,6 +232,9 @@ func (s *Service) ApplyMonthlyReset(ctx context.Context, account uuid.UUID, peri
 		return river.JobSnooze(30 * time.Second)
 	}
 	defer p.Close()
+	if err := p.RequireCompatible(ctx); err != nil {
+		return river.JobSnooze(time.Minute)
+	}
 	v, readErr := p.GetClient(ctx, a.PanelKey)
 	valid := readErr == nil && v != nil && v.VPNID == a.VpnID && v.SubID == a.SubID
 	var ids []int64

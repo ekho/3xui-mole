@@ -322,6 +322,9 @@ func (s *Service) CreatePurchaseOrder(ctx context.Context, account, key uuid.UUI
 		return empty, unavailable()
 	}
 	defer panel.Close()
+	if err = panel.RequireCompatible(ctx); err != nil {
+		return empty, unavailable()
+	}
 	v, err := panel.GetClient(ctx, pre.PanelKey)
 	if err != nil {
 		return empty, unavailable()

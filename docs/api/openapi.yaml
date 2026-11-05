@@ -21040,6 +21040,22 @@
           },
           "retired": {
             "type": "boolean"
+          },
+          "panel_version": {
+            "type": "string",
+            "maxLength": 64,
+            "nullable": true
+          },
+          "xray_version": {
+            "type": "string",
+            "maxLength": 64,
+            "nullable": true
+          },
+          "compatibility": {
+            "$ref": "#/components/schemas/PanelCompatibility"
+          },
+          "compatibility_reason": {
+            "$ref": "#/components/schemas/PanelCompatibilityReason"
           }
         },
         "required": [
@@ -21051,7 +21067,11 @@
           "observed_at",
           "assigned_clients",
           "reserved_clients",
-          "retired"
+          "retired",
+          "panel_version",
+          "xray_version",
+          "compatibility",
+          "compatibility_reason"
         ]
       },
       "OperatorServerDetail": {
@@ -21103,6 +21123,22 @@
           },
           "can_delete": {
             "type": "boolean"
+          },
+          "panel_version": {
+            "type": "string",
+            "maxLength": 64,
+            "nullable": true
+          },
+          "xray_version": {
+            "type": "string",
+            "maxLength": 64,
+            "nullable": true
+          },
+          "compatibility": {
+            "$ref": "#/components/schemas/PanelCompatibility"
+          },
+          "compatibility_reason": {
+            "$ref": "#/components/schemas/PanelCompatibilityReason"
           }
         },
         "required": [
@@ -21116,7 +21152,11 @@
           "reserved_clients",
           "retired",
           "can_ping",
-          "can_delete"
+          "can_delete",
+          "panel_version",
+          "xray_version",
+          "compatibility",
+          "compatibility_reason"
         ]
       },
       "OperatorServers": {
@@ -21620,6 +21660,26 @@
           "pending_rewards",
           "money_records",
           "pending_money_records"
+        ]
+      },
+      "PanelCompatibility": {
+        "type": "string",
+        "enum": [
+          "supported",
+          "unsupported",
+          "unknown"
+        ]
+      },
+      "PanelCompatibilityReason": {
+        "type": "string",
+        "nullable": true,
+        "enum": [
+          "not_checked",
+          "unsupported_version",
+          "unreachable",
+          "auth_failed",
+          "invalid_response",
+          "version_changed"
         ]
       }
     }

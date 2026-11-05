@@ -63,15 +63,19 @@ type TrialOperation struct {
 }
 
 type VpnServer struct {
-	ID                  string
-	Name                string
-	Host                string
-	MaxClients          pgtype.Int8
-	SubscriptionBaseUrl string
-	Online              bool
-	ObservedAt          pgtype.Timestamptz
-	Revision            int64
-	Retired             bool
+	ID                       string
+	Name                     string
+	Host                     string
+	MaxClients               pgtype.Int8
+	SubscriptionBaseUrl      string
+	Online                   bool
+	ObservedAt               pgtype.Timestamptz
+	Revision                 int64
+	Retired                  bool
+	PanelVersion             string
+	XrayVersion              string
+	PanelCompatibility       string
+	PanelCompatibilityReason string
 }
 
 type VpnServerReservation struct {

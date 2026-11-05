@@ -157,11 +157,8 @@ func LoadConfig() (Config, error) {
 			return c, errors.New("invalid TRIAL_ENABLED")
 		}
 	}
-	if value := os.Getenv("PANEL_DUPLICATE_GUARD_VERIFIED"); value != "" {
-		c.VPN.PanelDuplicateGuardVerified, err = strconv.ParseBool(value)
-		if err != nil {
-			return c, errors.New("invalid PANEL_DUPLICATE_GUARD_VERIFIED")
-		}
+	if err = validatePanelRetryConfig(); err != nil {
+		return c, err
 	}
 	if os.Getenv("PANEL_TOKEN_FILE") != "" {
 		c.VPN.Panel.PanelToken, err = SecretFile("PANEL_TOKEN")

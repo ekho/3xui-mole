@@ -36,23 +36,34 @@ func (q *Queries) ManagedServerBusy(ctx context.Context, serverID string) (pgtyp
 
 const observePoolServer = `-- name: ObservePoolServer :exec
 UPDATE vpn_servers SET online=$1,observed_at=$2,
- subscription_base_url=CASE WHEN subscription_base_url='' THEN $3::text ELSE subscription_base_url END
-WHERE id=$4 AND revision=$5 AND NOT retired
+ panel_version=CASE WHEN $3::text='' THEN panel_version ELSE $3::text END,
+ xray_version=CASE WHEN $4::text='' THEN xray_version ELSE $4::text END,
+ panel_compatibility=$5,panel_compatibility_reason=$6,
+ subscription_base_url=CASE WHEN subscription_base_url='' THEN $7::text ELSE subscription_base_url END
+WHERE id=$8 AND revision=$9 AND NOT retired
  AND (observed_at IS NULL OR observed_at<$2)
 `
 
 type ObservePoolServerParams struct {
-	Online     bool
-	ObservedAt pgtype.Timestamptz
-	Base       string
-	ID         string
-	Revision   int64
+	Online              bool
+	ObservedAt          pgtype.Timestamptz
+	PanelVersion        string
+	XrayVersion         string
+	Compatibility       string
+	CompatibilityReason string
+	Base                string
+	ID                  string
+	Revision            int64
 }
 
 func (q *Queries) ObservePoolServer(ctx context.Context, arg ObservePoolServerParams) error {
 	_, err := q.db.Exec(ctx, observePoolServer,
 		arg.Online,
 		arg.ObservedAt,
+		arg.PanelVersion,
+		arg.XrayVersion,
+		arg.Compatibility,
+		arg.CompatibilityReason,
 		arg.Base,
 		arg.ID,
 		arg.Revision,
@@ -61,21 +72,25 @@ func (q *Queries) ObservePoolServer(ctx context.Context, arg ObservePoolServerPa
 }
 
 const poolServers = `-- name: PoolServers :many
-SELECT s.id, s.name, s.host, s.max_clients, s.subscription_base_url, s.online, s.observed_at, s.revision, s.retired, (SELECT count(*) FROM vpn_server_reservations r WHERE r.server_id=s.id) AS reserved_clients
+SELECT s.id, s.name, s.host, s.max_clients, s.subscription_base_url, s.online, s.observed_at, s.revision, s.retired, s.panel_version, s.xray_version, s.panel_compatibility, s.panel_compatibility_reason, (SELECT count(*) FROM vpn_server_reservations r WHERE r.server_id=s.id) AS reserved_clients
 FROM vpn_servers s ORDER BY s.id
 `
 
 type PoolServersRow struct {
-	ID                  string
-	Name                string
-	Host                string
-	MaxClients          pgtype.Int8
-	SubscriptionBaseUrl string
-	Online              bool
-	ObservedAt          pgtype.Timestamptz
-	Revision            int64
-	Retired             bool
-	ReservedClients     int64
+	ID                       string
+	Name                     string
+	Host                     string
+	MaxClients               pgtype.Int8
+	SubscriptionBaseUrl      string
+	Online                   bool
+	ObservedAt               pgtype.Timestamptz
+	Revision                 int64
+	Retired                  bool
+	PanelVersion             string
+	XrayVersion              string
+	PanelCompatibility       string
+	PanelCompatibilityReason string
+	ReservedClients          int64
 }
 
 func (q *Queries) PoolServers(ctx context.Context) ([]PoolServersRow, error) {
@@ -97,6 +112,10 @@ func (q *Queries) PoolServers(ctx context.Context) ([]PoolServersRow, error) {
 			&i.ObservedAt,
 			&i.Revision,
 			&i.Retired,
+			&i.PanelVersion,
+			&i.XrayVersion,
+			&i.PanelCompatibility,
+			&i.PanelCompatibilityReason,
 			&i.ReservedClients,
 		); err != nil {
 			return nil, err
@@ -114,7 +133,7 @@ INSERT INTO vpn_servers(id,name,host,max_clients) VALUES($1,$2,$3,$4)
 ON CONFLICT(id) DO UPDATE SET name=EXCLUDED.name,max_clients=EXCLUDED.max_clients,
  revision=vpn_servers.revision+1
 WHERE vpn_servers.host=EXCLUDED.host AND NOT vpn_servers.retired
-RETURNING id, name, host, max_clients, subscription_base_url, online, observed_at, revision, retired
+RETURNING id, name, host, max_clients, subscription_base_url, online, observed_at, revision, retired, panel_version, xray_version, panel_compatibility, panel_compatibility_reason
 `
 
 type RegisterPoolServerParams struct {
@@ -142,6 +161,10 @@ func (q *Queries) RegisterPoolServer(ctx context.Context, arg RegisterPoolServer
 		&i.ObservedAt,
 		&i.Revision,
 		&i.Retired,
+		&i.PanelVersion,
+		&i.XrayVersion,
+		&i.PanelCompatibility,
+		&i.PanelCompatibilityReason,
 	)
 	return i, err
 }

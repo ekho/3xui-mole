@@ -19,6 +19,7 @@ services:
     ports: ['127.0.0.1:59447:1025']
   panel-second:
     extends: {file: compose.local.yml, service: panel}
+    image: '${LOCAL_SECOND_PANEL_IMAGE:?select the second panel through the acceptance helper}'
     volumes: ['${LOCAL_STATE_DIR:?required}/panel-second-db:/etc/x-ui']
   gateway:
     ports: ['127.0.0.1:59449:9449']

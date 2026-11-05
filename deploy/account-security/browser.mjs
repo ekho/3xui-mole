@@ -5,11 +5,14 @@ import {createHash,randomUUID,X509Certificate} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 const root=fileURLToPath(new URL('../../',import.meta.url));
-const ownedProject=JSON.parse(readFileSync(root+'.superpowers/acceptance/local-docker/runtime.json')).project;
+const nativeState=process.env.LOCAL_STATE_DIR||root+'.superpowers/acceptance/native-docker';
+const panelVersion=JSON.parse(readFileSync(nativeState+'/panel-runtime.json')).panel_version;
+if(!panelVersion)throw Error('actual panel version missing');
+const ownedProject=JSON.parse(readFileSync(nativeState+'/runtime.json')).project;
 if(typeof ownedProject!=='string'||!ownedProject)throw Error('owned project metadata missing');
 const require=createRequire(root+'web/package.json');
 const {chromium,expect}=require('@playwright/test');
-const cert=new X509Certificate(readFileSync(root+'.superpowers/acceptance/local-docker/cert.pem'));
+const cert=new X509Certificate(readFileSync(nativeState+'/cert.pem'));
 const pin=createHash('sha256').update(cert.publicKey.export({type:'spki',format:'der'})).digest('base64');
 function mail(email,purpose){
  const code=`import importlib.util,json,re,sys
@@ -77,7 +80,7 @@ try{
   step='second mailbox, separate context';await other.goto('https://localhost:58443/confirm-email-change?lang=en#token='+newProof);expect(new URL(other.url()).hash).toBe('');response=other.waitForResponse(r=>r.url().endsWith('/email-change/confirm'));await other.getByRole('button',{name:'Confirm mailbox',exact:true}).click();expect((await response).status()).toBe(200);await expect(other.getByText('Email changed. Sign in with the new address.')).toBeVisible();expect(await page.evaluate(async()=>(await fetch('/api/v1/me')).status)).toBe(401);
   step='new email login and ownership';await login(page,finalPassword,target);expect(await page.evaluate(async()=>(await(await fetch('/api/v1/me')).json()).account.account_id)).toBe(owner);await page.getByRole('button',{name:'Show subscription link'}).click();expect(await page.getByLabel('Subscription link',{exact:true}).inputValue()).toBe(keyBefore);expect(local('native',{operation})).toEqual(nativeBefore);
   step='final logout';await page.getByRole('button',{name:'Sign out'}).click();await expect(page).toHaveURL(/login/);expect(await page.evaluate(async()=>(await fetch('/api/v1/me')).status)).toBe(401);
-  console.log('PASS: real Docker reset/password/session/email/logout UI, both TLS Mailpit mailboxes, separate contexts, same owner/subscription/native 3X-UI3.7.0 target and limits');
+  console.log(`PASS: real Docker reset/password/session/email/logout UI, both TLS Mailpit mailboxes, separate contexts, same owner/subscription/native 3X-UI ${panelVersion} target and limits`);
  }else console.log('PASS: real Docker HTTPS reset link via TLS Mailpit/River, two sessions revoked, old password rejected, new login and mobile form');
 }catch{
  console.error('FAIL: Account security Docker browser step '+step);process.exitCode=1;

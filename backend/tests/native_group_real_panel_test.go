@@ -141,7 +141,8 @@ func TestNativeGroupReconciliationRealPanel(t *testing.T) {
 	unknown := addInbound("local-group-foreign-"+uuid.NewString(), 24445)
 	p := vpn.NewPanelClient(f.cfg.VPN.Panel)
 	t.Cleanup(p.Close)
-	expiry := f.env.Clock().Add(30 * 24 * time.Hour).UnixMilli()
+	// The real panel and compiled process use wall time, not testkit's frozen clock.
+	expiry := time.Now().Add(30 * 24 * time.Hour).UnixMilli()
 	owned := vpn.ProvisionTarget{OperationID: uuid.New(), PanelID: f.cfg.Subscriptions.PanelID, PanelKey: identity.PanelKey, VPNID: identity.VpnID, SubID: identity.SubID, InboundIDs: []int64{originalID, unknown}, Profile: "regular", DeviceCount: 2, TrafficLimitBytes: 1234567, ExpiryTimeMS: expiry}
 	foreign := vpn.ProvisionTarget{OperationID: uuid.New(), PanelKey: "acct_group_foreign_" + uuid.NewString(), VPNID: uuid.New(), SubID: uuid.NewString(), InboundIDs: []int64{originalID, unknown}, Profile: "regular", DeviceCount: 3, TrafficLimitBytes: 7654321, ExpiryTimeMS: expiry}
 	createdClients = append(createdClients, owned.PanelKey)
@@ -197,6 +198,9 @@ func TestNativeGroupReconciliationRealPanel(t *testing.T) {
 		other, otherErr := p.GetClient(ctx, foreign.PanelKey)
 		u, d, trafficErr := p.Traffic(ctx, owned.PanelKey, owned.VPNID, owned.SubID)
 		if err != nil || otherErr != nil || after == nil || after.VPNID != before.VPNID || after.SubID != before.SubID || after.PanelKey != before.PanelKey || after.ExpiryTimeMS != before.ExpiryTimeMS || after.TrafficLimitBytes != before.TrafficLimitBytes || after.LimitIP != before.LimitIP || after.Enabled != before.Enabled || trafficErr != nil || u != up || d != down {
+			if after != nil {
+				t.Logf("group diff identity=%v expiry=%v quota=%v limit=%d/%d enabled=%v/%v traffic=%d/%d -> %d/%d errors=%v/%v/%v", after.VPNID == before.VPNID && after.SubID == before.SubID && after.PanelKey == before.PanelKey, after.ExpiryTimeMS == before.ExpiryTimeMS, after.TrafficLimitBytes == before.TrafficLimitBytes, before.LimitIP, after.LimitIP, before.Enabled, after.Enabled, up, down, u, d, err != nil, otherErr != nil, trafficErr != nil)
+			}
 			t.Fatal("real group executor changed identity, access, disable or traffic")
 		}
 		got, want := slices.Clone(after.InboundIDs), []int64{unknown, newID}

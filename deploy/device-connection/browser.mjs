@@ -46,7 +46,7 @@ else:
   try:return bool(m.panel_call(m.session(),'csrf-token'))
   except (OSError,ValueError):return False
  def payload(client,changes):
-  # Native3.7.0 binds model.Client; its id is UUID, while readback id is the DB integer.
+  # The native panel binds model.Client; its id is UUID, while readback id is the DB integer.
   result={**client,'id':client['uuid'],'created_at':client['createdAt'],**changes}
   result['allowedIPs']=[ip.strip() for ip in client['allowedIPs'].split(',') if ip.strip()]
   if isinstance(result.get('reverse'),str):result['reverse']=json.loads(result['reverse']) if result['reverse'].strip() else None

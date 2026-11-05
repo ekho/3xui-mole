@@ -21,6 +21,8 @@ from urllib.parse import urlsplit, parse_qs, urlencode, quote
 from uuid import UUID, uuid4
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+from deploy.acceptance.panel_versions import REGISTRY, panel_release, selected_images, state_images, initialize_panel
 PROFILE = os.environ.get('LOCAL_PROFILE', 'native')
 assert PROFILE == 'native', 'only the native Go profile is supported'
 STATE = Path(os.environ.get('LOCAL_STATE_DIR', ROOT / '.superpowers/acceptance/native-docker'))
@@ -60,8 +62,8 @@ def write(name, value):
     path.chmod(0o600)
     return str(path)
 
-def command(args, *, stdin=None):
-    result = subprocess.run(args, cwd=ROOT, input=stdin, capture_output=True, timeout=180)
+def command(args, *, stdin=None, env=None):
+    result = subprocess.run(args, cwd=ROOT, input=stdin, env=env, capture_output=True, timeout=180)
     if result.returncode:
         # Provider output may contain credentials, subscription links or test identity.
         raise RuntimeError('local command failed: ' + args[0])
@@ -75,9 +77,9 @@ def compose(*args, stdin=None):
 
 def panel_version(config=None):
     image = (config or json.loads(compose('config', '--format', 'json')))['services']['panel']['image']
-    match = re.fullmatch(r'ghcr.io/mhsanaei/3x-ui:(3\.7\.0|3\.10\.0)@sha256:[a-f0-9]{64}', image)
+    match = next((r for r in REGISTRY['supported'] if r['image'] == image), None)
     assert match, 'acceptance requires an owned, pinned supported panel image'
-    return match.group(1)
+    return match['version']
 
 def prepare():
     STATE.mkdir(parents=True, exist_ok=True)
@@ -87,12 +89,19 @@ def prepare():
     if not (STATE / 'runtime.json').exists():
         write('runtime.json', json.dumps({'project': PROJECT, 'postgres_user': PG_USER,
               'base_database': BASE_DATABASE, 'fixture_prefixes': {}}))
+    metadata=json.loads((STATE/'runtime.json').read_text())
+    assert metadata.get('purpose', 'native-acceptance') == 'native-acceptance', 'unowned native fixture'
+    metadata['purpose']='native-acceptance'
+    write('runtime.json',json.dumps(metadata))
     (STATE / 'origin').mkdir(exist_ok=True)
     (STATE / 'origin/index.html').write_bytes(VPN_ORIGIN_MARKER)
     if not (STATE/'native-operator-account').exists():write('native-operator-account','')
     if PROFILE == 'native' and not (STATE/'yoomoney-notification-secret').exists():
         write('yoomoney-notification-secret', secrets.token_urlsafe(32))
     if ENV.exists():
+        saved = dict(line.split('=', 1) for line in ENV.read_text().splitlines() if line and not line.startswith('#'))
+        saved.update(state_images(STATE,saved))
+        write('public.env', '\n'.join(k+'='+v for k,v in saved.items())+'\n')
         return
     (STATE / 'panel-db').mkdir(mode=0o700)
     values = {name:secrets.token_urlsafe(32) for name in ('pg-password','smtp-password','panel-password','unused-panel-token')}
@@ -120,6 +129,7 @@ def prepare():
                   APP_GATEWAY_IP='172.31.96.14',
                   SUBSCRIPTION_BASE_URL='https://localhost:59445/sub/',LOCAL_STATE_DIR=str(STATE),
                   PANEL_PASSWORD_FILE=str(STATE/'panel-password'),SMTP_AUTH_FILE=str(STATE/'smtp-auth'))
+    config.update(selected_images({}))
     mapping={'PG_PASSWORD_FILE':'pg-password','DATABASE_URL_FILE':'database-url','REDIS_URL_FILE':'redis-url',
              'MAIL_KEY_FILE':'mail-key','CODE_KEY_FILE':'code-key',
              'SMTP_PASSWORD_FILE':'smtp-password','PANEL_TOKEN_FILE':'unused-panel-token','BOT_TOKEN_FILE':'unused-bot-token'}
@@ -156,12 +166,8 @@ def login_panel(port=59444):
     password=(STATE/'panel-password').read_text().strip()
     marker='panel-initialized' if port == 59444 else 'panel-second-initialized'
     initialized=STATE/marker
-    if not initialized.exists():
-        # Only the newly created, isolated panel DB uses upstream's initial credentials.
-        panel_call(opener,'login',{'username':'admin','password':'admin'},csrf,port=port)
-        panel_call(opener,'panel/api/setting/updateUser',{'oldUsername':'admin','oldPassword':'admin','newUsername':'local-operator','newPassword':password},csrf,port=port)
-        write(marker,'yes')
     panel_call(opener,'login',{'username':'local-operator','password':password},csrf,port=port)
+    if not initialized.exists():write(marker,'yes')
     return opener, csrf
 
 def allow_test_origin(opener, csrf):
@@ -186,6 +192,8 @@ def up(reuse_images=False):
     prepare()
     write('public.env',ENV.read_text().replace('TRIAL_ENABLED=true','TRIAL_ENABLED=false'))
     compose('config','--quiet')
+    initialize_panel(compose, STATE, 'panel', 'panel-db')
+    initialize_panel(compose, STATE, 'panel-second', 'panel-second-db')
     # Public legal/support values are runtime configuration; secrets remain files.
     if not reuse_images:compose('build','backend','gateway')
     compose('up','--pull','missing','--no-build','-d','backend','gateway','origin')
@@ -204,7 +212,7 @@ def up(reuse_images=False):
     version = panel_version(configured)
     assert compose('exec', '-T', 'panel', '/app/x-ui', '-v').decode().strip() == version, 'running panel version differs from the pinned image'
     status = panel_call(opener, 'panel/api/server/status')
-    write('panel-runtime.json', json.dumps({'panel_version': version,
+    write('panel-runtime.json', json.dumps({'sha':command(['git','rev-parse','HEAD']).decode().strip(), 'architecture':command(['docker','info','--format','{{.Architecture}}']).decode().strip(), 'panel_version': version,
         'panel_image': configured['services']['panel']['image'], 'xray_version': status['xray']['version']}))
     inbounds=panel_call(opener,'panel/api/inbounds/list')
     if not any(row.get('tag')=='local-regular-vless' for row in inbounds):
@@ -214,8 +222,9 @@ def up(reuse_images=False):
             'streamSettings':{'network':'tcp','security':'tls','tlsSettings':{'serverName':'panel','certificates':[{'certificateFile':'/run/secrets/public_cert','keyFile':'/run/secrets/public_key'}]}},
             'sniffing':{'enabled':False},'allocate':{'strategy':'always','refresh':5,'concurrency':3}} ,csrf)
     settings = panel_call(opener, 'panel/api/setting/all', {}, csrf)
-    if not settings.get('subEnable') or settings.get('subPath') != '/sub/' or settings.get('subURI') != 'https://localhost:59445/sub/':
-        settings.update(subEnable=True, subPath='/sub/', subURI='https://localhost:59445/sub/')
+    restart_primary=not settings.get('subEnable') or not settings.get('subJsonEnable') or not settings.get('subClashEnable') or settings.get('subPath') != '/sub/' or settings.get('subURI') != 'https://localhost:59445/sub/'
+    if restart_primary:
+        settings.update(subEnable=True, subJsonEnable=True, subClashEnable=True, subPath='/sub/', subURI='https://localhost:59445/sub/')
         panel_call(opener, 'panel/api/setting/update', settings, csrf)
     # Preserve absence as a version-specific observation before enabling trial.
     _,_,raw=request(opener,'https://localhost:59444/panel/api/clients/get/acct_'+secrets.token_hex(16))
@@ -225,15 +234,29 @@ def up(reuse_images=False):
     preflight()
     if PROFILE == 'native':
         second, second_csrf=login_panel(59449)
+        second_status=panel_call(second, 'panel/api/server/status', port=59449)
+        metadata=json.loads((STATE/'panel-runtime.json').read_text())
+        metadata['second']={'panel_version':second_status['panelVersion'], 'xray_version':second_status['xray']['version'], 'panel_image':configured['services']['panel-second']['image']}
+        assert second_status['panelVersion'] == next(r['version'] for r in REGISTRY['supported'] if r['image'] == metadata['second']['panel_image'])
+        write('panel-runtime.json',json.dumps(metadata))
         if not any(row.get('tag')=='local-regular-vless' for row in panel_call(second,'panel/api/inbounds/list',port=59449)):
             panel_call(second,'panel/api/inbounds/add',{
                 'enable':True,'remark':'Local second panel','listen':'0.0.0.0','port':24443,'protocol':'vless','tag':'local-regular-vless',
                 'settings':{'clients':[],'decryption':'none','fallbacks':[]},
                 'streamSettings':{'network':'tcp','security':'none'},'sniffing':{'enabled':False}},second_csrf,port=59449)
         settings=panel_call(second,'panel/api/setting/all',{},second_csrf,port=59449)
-        if not settings.get('subEnable') or settings.get('subPath') != '/sub/' or settings.get('subURI') != 'https://localhost:59449/sub/':
+        restart_second=not settings.get('subEnable') or settings.get('subPath') != '/sub/' or settings.get('subURI') != 'https://localhost:59449/sub/'
+        if restart_second:
             settings.update(subEnable=True,subPath='/sub/',subURI='https://localhost:59449/sub/')
             panel_call(second,'panel/api/setting/update',settings,second_csrf,port=59449)
+    if restart_second:
+        compose('restart','panel-second')
+    if restart_primary:
+        compose('restart','panel')
+        def subscription_ready():
+            try:return bool(panel_call(session(),'csrf-token'))
+            except (OSError,ValueError):return False
+        wait_until(subscription_ready)
     data=ENV.read_text().replace('TRIAL_ENABLED=false','TRIAL_ENABLED=true')
     write('public.env',data)
     compose('up','--no-build','-d','backend')
@@ -584,13 +607,15 @@ def native_check():
     log=STATE/'native-go.log'
     with log.open('w') as output:
         log.chmod(0o600)
-        result=subprocess.run(['go','test','-json','-race','./tests','-run','TestNativeTrial|TestNativeNotices','-count=1','-timeout=15m'],
+        result=subprocess.run(['go','test','-json','-race','./tests','-run','TestNativePanelCompatibility|TestNativePanelAccessOperations|TestNativeStarsRecurring$|TestNativeTrial|TestNativeNotices','-count=1','-timeout=15m'],
                               cwd=ROOT/'backend',env=environment,stdout=output,stderr=subprocess.STDOUT,timeout=930)
     assert result.returncode==0, 'native Go integration failed; see private native-go.log'
     events=[json.loads(line) for line in log.read_text().splitlines() if line.startswith('{')]
     assert not any(e.get('Action')=='fail' or e.get('Action')=='skip' and e.get('Test') for e in events), 'native Go test failed or skipped; see private native-go.log'
     passed=sum(e.get('Action')=='pass' and bool(e.get('Test')) for e in events)
     assert passed>0, 'native Go selection ran no tests'
+    required={'TestNativePanelCompatibility','TestNativePanelAccessOperations','TestNativeTrialServerPool','TestNativeStarsRecurring'}
+    assert required <= {e.get('Test') for e in events if e.get('Action')=='pass'}, 'mandatory native contracts did not run'
     print(f'PASS: native Go HTTP/jobs/Telegram integration ({passed} tests/subtests,0 failures/skips) with real TLS SMTP and 3X-UI {panel_version(config)}; Bot API simulated',flush=True)
     native_restart()
 
@@ -612,6 +637,11 @@ def native_paid_restart():
     write('native-operator-account', str(UUID(account)))
     compose('exec', '-T', 'backend', '/server', 'operator', 'grant', '--account-file', '/run/secrets/native_operator_account')
     _, _, login = api(opener, '/api/v1/auth/login', credentials)
+    status,_,decision=api(opener,'/api/v1/operator/trial-requests/'+trial['request_id']+'/decision',
+                         {'decision':'approve','reason':''},login['csrf_token'],str(uuid4()))
+    assert status==200, 'owned trial approval failed'
+    wait_until(lambda:snapshot(decision['operation_id'])['status']=='applied')
+    trial_identity=sql("SELECT vpn_id::text||':'||sub_id||':'||panel_key FROM accounts WHERE id=:'op'::uuid;",operation=account)
     terms = {'devices': 2, 'traffic_gb': 1, 'profile': 'regular', 'hidden': False, 'periods': [30],
              'prices': [{'period_days': 30, 'currency': c, 'amount_minor': '10000' if c == 'RUB' else '0'} for c in ('RUB', 'USD', 'XTR')]}
     status, _, catalogue = api(opener, '/api/v1/catalogue')
@@ -682,8 +712,11 @@ def native_paid_restart():
             assert after[name] == prepared[name] == replay[name], 'restart/replay changed ' + name
         assert replay['payment'] == 'paid' and replay['fulfillment'] == 'applied'
         panel_readback(prepared['target'])
+        assert sql("SELECT vpn_id::text||':'||sub_id||':'||panel_key FROM accounts WHERE id=:'op'::uuid;",operation=account)==trial_identity, 'trial-to-paid changed identity'
         write('paid-recovery-proof.json', json.dumps({'before': before, 'prepared': prepared, 'after': after, 'replay': replay,
               'processes': [original_process, second_process, third_process], 'panel': version, 'telegram': False}))
+        vpn(opener)
+        print('PASS: paid subscription connected through real VPN to the owned origin',flush=True)
         print('PASS: paid receipt/job and frozen target/job survived two compiled Go process restarts; same funding/access/identity/target, one receipt, real 3X-UI '+version+' readback and duplicate notification; Telegram disabled', flush=True)
     finally:
         sql('DROP TRIGGER IF EXISTS paid_hold_job ON river_job; DROP FUNCTION IF EXISTS paid_hold_job();')

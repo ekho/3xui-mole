@@ -8,12 +8,15 @@ import https from 'node:https';
 import {fileURLToPath} from 'node:url';
 
 const root=fileURLToPath(new URL('../../',import.meta.url));
-const ownedProject=JSON.parse(readFileSync(root+'.superpowers/acceptance/local-docker/runtime.json')).project;
+const nativeState=process.env.LOCAL_STATE_DIR||root+'.superpowers/acceptance/native-docker';
+const panelVersion=JSON.parse(readFileSync(nativeState+'/panel-runtime.json')).panel_version;
+if(!panelVersion)throw Error('actual panel version missing');
+const ownedProject=JSON.parse(readFileSync(nativeState+'/runtime.json')).project;
 if(typeof ownedProject!=='string'||!ownedProject)throw Error('owned project metadata missing');
 const require=createRequire(root+'web/package.json');
 const {chromium,expect}=require('@playwright/test');
 const origin='https://localhost:58443';
-const certPem=readFileSync(root+'.superpowers/acceptance/local-docker/cert.pem');
+const certPem=readFileSync(nativeState+'/cert.pem');
 const cert=new X509Certificate(certPem);
 const pin=createHash('sha256').update(cert.publicKey.export({type:'spki',format:'der'})).digest('base64');
 const evidence=root+'.superpowers/acceptance/operator-cabinet';
@@ -54,7 +57,7 @@ function genuineTelegramId(){
  return values[0];
 }
 function check(criterion,expected,actual,pass){
- const row={criterion,target:`${ownedProject} HTTPS/PG/Redis/Mailpit/native 3X-UI 3.7.0; browser customer and operator sessions`,command,expected,actual,verdict:pass?'PASS':'FAIL',artifacts:[evidencePath]};
+ const row={criterion,target:`${ownedProject} HTTPS/PG/Redis/Mailpit/native 3X-UI ${panelVersion}; browser customer and operator sessions`,command,expected,actual,verdict:pass?'PASS':'FAIL',artifacts:[evidencePath]};
  writeSync(evidenceFd,JSON.stringify(row)+'\n');
  if(!pass)throw new Error(criterion);
 }

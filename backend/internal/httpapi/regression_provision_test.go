@@ -23,6 +23,9 @@ import (
 )
 
 type fakePanel struct {
+	statusHook                                                                       func(*fakePanel)
+	panelVersion                                                                     string
+	statusFailure                                                                    int
 	override                                                                         http.Handler
 	offline                                                                          bool
 	bulkUnavailable                                                                  bool
@@ -88,6 +91,20 @@ func (p *fakePanel) serve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch {
+	case r.Method == "GET" && r.URL.Path == "/panel/api/server/status":
+		if p.statusHook != nil {
+			p.statusHook(p)
+		}
+		if p.statusFailure != 0 {
+			w.WriteHeader(p.statusFailure)
+			return
+		}
+		version := p.panelVersion
+		if version == "" {
+			version = "3.11.0"
+		}
+		reply(map[string]any{"success": true, "obj": map[string]any{"panelVersion": version, "xray": map[string]string{"version": "26.10.21"}}})
+
 	case r.Method == "GET" && r.URL.Path == "/panel/api/clients/list":
 		if p.bulkUnavailable {
 			w.WriteHeader(http.StatusMethodNotAllowed)
@@ -571,7 +588,13 @@ func TestRegressionProvisionReconciliationAbsentAfterAmbiguity(t *testing.T) {
 	if err != nil || p.adds != 1 || op.Status != "needs_review" {
 		t.Fatal("ambiguous absence bypassed uniqueness guarantee", err)
 	}
-	s.cfg.VPN.PanelDuplicateGuardVerified = true
+	var restored vpn.ProvisionTarget
+	if err := json.Unmarshal(op.Target, &restored); err != nil {
+		t.Fatal(err)
+	}
+	// The operator restored the exact frozen target outside the worker.
+	p.client = map[string]any{"id": restored.VPNID.String(), "uuid": restored.VPNID.String(), "email": restored.PanelKey, "subId": restored.SubID, "expiryTime": restored.ExpiryTimeMS, "totalGB": restored.TrafficLimitBytes, "limitIp": restored.DeviceCount + 1, "enable": true}
+	p.ids = append([]int64{}, restored.InboundIDs...)
 	_, err = s.reconcileTrialOperation(ctx, id, uuid.New(), subscriptions.ReconcileInput{OperatorTgId: 101, Reason: "Fixture uniqueness was verified"})
 	if err != nil {
 		t.Fatal(err)
@@ -580,7 +603,7 @@ func TestRegressionProvisionReconciliationAbsentAfterAmbiguity(t *testing.T) {
 		t.Fatal(err)
 	}
 	op, err = testProvisionRow(ctx, e.Pool, id)
-	if err != nil || op.Status != "applied" || p.adds != 2 {
+	if err != nil || op.Status != "applied" || p.adds != 1 {
 		t.Fatal("attested fixture recovery failed", err)
 	}
 }

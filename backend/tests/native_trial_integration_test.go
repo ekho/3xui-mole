@@ -835,7 +835,7 @@ func TestNativeTrialReports(t *testing.T) {
 	if os.Getenv("NATIVE_DOCKER_STATE") != "" {
 		for _, report := range []auditreports.StatisticsReport{global, cohort} {
 			if report.Activity.ActiveUsers == nil || *report.Activity.ActiveUsers != 1 || report.Activity.UnknownUsers != 0 || len(report.Servers) != 1 || report.Servers[0].Availability != "available" || report.Servers[0].Clients == nil || *report.Servers[0].Clients < 1 || report.Servers[0].ErrorCode != nil {
-				t.Fatal("actual 3X-UI3.7.0 bulk report did not confirm native access")
+				t.Fatal("actual native 3X-UI bulk report did not confirm native access")
 			}
 		}
 		if global.Activity.KnownInactiveUsers != 1 || cohort.Activity.KnownInactiveUsers != 0 || zero.Servers[0].Clients == nil || *zero.Servers[0].Clients < 1 {

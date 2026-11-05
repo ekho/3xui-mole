@@ -30,6 +30,8 @@ func poolFixture(t *testing.T) (*testkit.Env, *Service, *Settings, *httptest.Ser
 		}
 		w.Header().Set("Content-Type", "application/json")
 		switch r.Method + " " + r.URL.Path {
+		case "GET /panel/api/server/status":
+			w.Write([]byte(`{"success":true,"obj":{"panelVersion":"3.11.0","xray":{"version":"26.10.21"}}}`))
 		case "GET /panel/api/inbounds/list":
 			w.Write([]byte(`{"success":true,"obj":[{"id":1,"tag":"regular","enable":true}]}`))
 		case "POST /panel/api/setting/all":

@@ -23,7 +23,7 @@ func (s *Service) EnqueueGroupAlertTx(ctx context.Context, tx pgx.Tx, recipient 
 
 func groupAlertText(code, locale string, account uuid.UUID) string {
 	copy := map[string][2]string{
-		"panel_unavailable":      {"Не удалось прочитать состояние панели.", "The panel state could not be read."},
+		"panel_unavailable":      {"Не удалось подтвердить состояние или совместимость панели.", "The panel state or API compatibility could not be confirmed."},
 		"identity_mismatch":      {"Идентификаторы клиента панели не совпадают. Клиент не изменён.", "The panel client identity does not match. The client was left unchanged."},
 		"missing_client":         {"Клиент не найден в назначенной панели. Новый клиент не создан.", "The client is missing from its assigned panel. No client was created."},
 		"unknown_profile":        {"Профиль доступа неизвестен. Членство клиента не изменено.", "The access profile is unknown. Client memberships were left unchanged."},

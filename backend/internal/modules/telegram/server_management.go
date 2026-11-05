@@ -184,6 +184,33 @@ func serverCard(s vpn.Server, lang string) string {
 		}
 		state += " (" + s.ObservedAt.UTC().Format("2006-01-02 15:04 UTC") + ")"
 	}
+	compatibility := clientText(lang, "неизвестно", "unknown")
+	switch s.Compatibility.Status {
+	case "supported":
+		compatibility = clientText(lang, "поддерживается", "supported")
+	case "unsupported":
+		compatibility = clientText(lang, "не поддерживается", "unsupported")
+	}
+	reasons := map[string][2]string{
+		"not_checked":         {"ещё не проверено", "not checked yet"},
+		"unsupported_version": {"версия не поддерживается", "version is unsupported"},
+		"unreachable":         {"панель недоступна", "panel unreachable"},
+		"auth_failed":         {"ошибка авторизации", "authentication failed"},
+		"invalid_response":    {"неверный ответ панели", "invalid panel response"},
+		"version_changed":     {"версия изменилась во время операции", "version changed during operation"},
+	}
+	if reason, ok := reasons[s.Compatibility.Reason]; ok {
+		compatibility += " (" + clientText(lang, reason[0], reason[1]) + ")"
+	}
+	version := s.Compatibility.PanelVersion
+	if version == "" {
+		version = "—"
+	}
+	core := s.Compatibility.XrayVersion
+	if core == "" {
+		core = "—"
+	}
+	state += "; " + compatibility + "; 3X-UI " + html.EscapeString(shortServerText(version, 64)) + " / Xray " + html.EscapeString(shortServerText(core, 64))
 	id := html.EscapeString(shortServerText(s.ID, 128))
 	return fmt.Sprintf("<b>%s</b>\nID: <code>%s</code>\n%s: <code>%s</code>\n%s: %s\n%s: %s\n%s: %d / %d\n/server_ping %s\n/server_delete %s confirm\n/servers_sync",
 		html.EscapeString(shortServerText(s.Name, 100)), id, clientText(lang, "Хост", "Host"), html.EscapeString(shortServerText(s.Host, 200)), clientText(lang, "Лимит", "Limit"), limit, clientText(lang, "Статус", "Status"), state, clientText(lang, "Назначено / резерв", "Assigned / reserved"), s.AssignedClients, s.ReservedClients, id, id)

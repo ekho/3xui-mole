@@ -20,16 +20,23 @@ import (
 )
 
 type PanelClient struct {
-	cfg     Config
-	http    *http.Client
-	loginMu sync.Mutex
-	csrf    string
+	cfg                    Config
+	http                   *http.Client
+	loginMu                sync.Mutex
+	csrf                   string
+	compatMu               sync.Mutex
+	panelVersion           string
+	beforeMutation         func(reset bool) bool
+	serverSnapshot         *Server
+	lastCompatibility      PanelCompatibility
+	compatibilityCheckedAt time.Time
 }
 
 var ErrPanel = errors.New("panel unavailable or unconfirmed response")
 var ErrIdentity = errors.New("panel identity mismatch")
 var ErrMembership = errors.New("unknown panel membership")
 var ErrTraffic = errors.New("invalid panel traffic")
+var errPanelWriteGuard = errors.Join(ErrPanel, errors.New("panel write guard failed"))
 
 func NewPanelClient(c Config) *PanelClient {
 	jar, _ := cookiejar.New(nil)
@@ -83,11 +90,18 @@ func (p *PanelClient) call(ctx context.Context, method, path string, body any) (
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return out, ErrPanel
+		reason := "unreachable"
+		if resp.StatusCode == 401 || resp.StatusCode == 403 {
+			reason = "auth_failed"
+		}
+		if resp.StatusCode == 404 {
+			reason = "invalid_response"
+		}
+		return out, &panelCallError{reason: reason}
 	}
 	raw, e := io.ReadAll(io.LimitReader(resp.Body, 1024*1024+1))
 	if e != nil || len(raw) > 1024*1024 || json.Unmarshal(raw, &out) != nil || out.Success == nil {
-		return out, ErrPanel
+		return out, &panelCallError{reason: "invalid_response"}
 	}
 	return out, nil
 }
@@ -296,8 +310,11 @@ func (p *PanelClient) AddClient(ctx context.Context, t ProvisionTarget) error {
 	if limit > 0 {
 		limit++
 	}
-	out, e := p.call(ctx, "POST", "panel/api/clients/add", map[string]any{"client": map[string]any{"email": t.PanelKey, "id": t.VPNID, "subId": t.SubID, "expiryTime": t.ExpiryTimeMS, "limitIp": limit, "totalGB": t.TrafficLimitBytes, "enable": true, "flow": "xtls-rprx-vision"}, "inboundIds": t.InboundIDs})
-	if e != nil || !*out.Success {
+	out, e := p.mutate(ctx, "panel/api/clients/add", map[string]any{"client": map[string]any{"email": t.PanelKey, "id": t.VPNID, "subId": t.SubID, "expiryTime": t.ExpiryTimeMS, "limitIp": limit, "totalGB": t.TrafficLimitBytes, "enable": true, "flow": "xtls-rprx-vision"}, "inboundIds": t.InboundIDs})
+	if e != nil {
+		return e
+	}
+	if !*out.Success {
 		return ErrPanel
 	}
 	return nil
@@ -306,8 +323,11 @@ func (p *PanelClient) Attach(ctx context.Context, key string, ids []int64) error
 	if p.auth(ctx) != nil {
 		return ErrPanel
 	}
-	out, e := p.call(ctx, "POST", "panel/api/clients/"+url.PathEscape(key)+"/attach", map[string]any{"inboundIds": ids})
-	if e != nil || !*out.Success {
+	out, e := p.mutate(ctx, "panel/api/clients/"+url.PathEscape(key)+"/attach", map[string]any{"inboundIds": ids})
+	if e != nil {
+		return e
+	}
+	if !*out.Success {
 		return ErrPanel
 	}
 	return nil
@@ -415,8 +435,11 @@ func (p *PanelClient) Detach(ctx context.Context, key string, ids []int64) error
 	if p.auth(ctx) != nil {
 		return ErrPanel
 	}
-	out, e := p.call(ctx, "POST", "panel/api/clients/"+url.PathEscape(key)+"/detach", map[string]any{"inboundIds": ids})
-	if e != nil || !*out.Success {
+	out, e := p.mutate(ctx, "panel/api/clients/"+url.PathEscape(key)+"/detach", map[string]any{"inboundIds": ids})
+	if e != nil {
+		return e
+	}
+	if !*out.Success {
 		return ErrPanel
 	}
 	return nil
@@ -478,8 +501,11 @@ func (p *PanelClient) UpdateAccess(ctx context.Context, v *PanelClientView, t Ac
 	} else if t.RestoreEnabled || t.Enable {
 		data["enable"] = json.RawMessage("true")
 	}
-	out, e := p.call(ctx, "POST", "panel/api/clients/update/"+url.PathEscape(t.PanelKey), data)
-	if e != nil || !*out.Success {
+	out, e := p.mutate(ctx, "panel/api/clients/update/"+url.PathEscape(t.PanelKey), data)
+	if e != nil {
+		return e
+	}
+	if !*out.Success {
 		return ErrPanel
 	}
 	return nil
@@ -489,8 +515,11 @@ func (p *PanelClient) ResetAccessTraffic(ctx context.Context, key string) error 
 	if p.auth(ctx) != nil {
 		return ErrPanel
 	}
-	out, e := p.call(ctx, "POST", "panel/api/clients/resetTraffic/"+url.PathEscape(key), map[string]any{})
-	if e != nil || !*out.Success {
+	out, e := p.mutate(ctx, "panel/api/clients/resetTraffic/"+url.PathEscape(key), map[string]any{})
+	if e != nil {
+		return e
+	}
+	if !*out.Success {
 		return ErrPanel
 	}
 	return nil
@@ -500,8 +529,11 @@ func (p *PanelClient) DisableAccess(ctx context.Context, key string) error {
 	if p.auth(ctx) != nil {
 		return ErrPanel
 	}
-	out, e := p.call(ctx, "POST", "panel/api/clients/bulkDisable", map[string]any{"emails": []string{key}})
-	if e != nil || !*out.Success {
+	out, e := p.mutate(ctx, "panel/api/clients/bulkDisable", map[string]any{"emails": []string{key}})
+	if e != nil {
+		return e
+	}
+	if !*out.Success {
 		return ErrPanel
 	}
 	return nil

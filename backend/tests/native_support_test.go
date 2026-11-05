@@ -103,7 +103,7 @@ func TestNativeTrialSupportInvalidConfiguration(t *testing.T) {
 }
 
 // The compiled server owns HTTP, SMTP, workers and support polling. Only the
-// Telegram provider is simulated; the owned Docker panel remains 3X-UI 3.7.0.
+// Telegram provider is simulated; the owned Docker panel remains supported 3X-UI.
 func TestNativeTrialSupportText(t *testing.T) {
 	f := openMode(t, true)
 	ctx := context.Background()

@@ -17,6 +17,7 @@ import (
 )
 
 type Server struct {
+	Compatibility                       PanelCompatibility
 	ID, Name, Host, SubscriptionBaseURL string
 	MaxClients                          *int64
 	Online, Retired                     bool
@@ -59,7 +60,7 @@ func (s *Service) ServersTx(ctx context.Context, tx pgx.Tx) ([]Server, error) {
 	}
 	out := make([]Server, 0, len(rows))
 	for _, row := range rows {
-		v := Server{ID: row.ID, Name: row.Name, Host: row.Host, SubscriptionBaseURL: row.SubscriptionBaseUrl, Online: row.Online, Retired: row.Retired, Revision: row.Revision, AssignedClients: loads[row.ID], ReservedClients: row.ReservedClients}
+		v := Server{Compatibility: PanelCompatibility{PanelVersion: row.PanelVersion, XrayVersion: row.XrayVersion, Status: row.PanelCompatibility, Reason: row.PanelCompatibilityReason}, ID: row.ID, Name: row.Name, Host: row.Host, SubscriptionBaseURL: row.SubscriptionBaseUrl, Online: row.Online, Retired: row.Retired, Revision: row.Revision, AssignedClients: loads[row.ID], ReservedClients: row.ReservedClients}
 		if row.MaxClients.Valid {
 			n := row.MaxClients.Int64
 			v.MaxClients = &n
@@ -136,10 +137,37 @@ func (s *Service) panelFor(ctx context.Context, id string, db serverDB) (*PanelC
 		if v.ID == id && !v.Retired {
 			cfg := s.config().Panel
 			cfg.PanelURL = v.Host
-			return NewPanelClient(cfg), nil
+			panel := NewPanelClient(cfg)
+			panel.serverSnapshot = &v
+			return panel, nil
 		}
 	}
 	return nil, ErrPanel
+}
+
+// Called after the owner's watchdog stops, before its physical connection is released.
+func (s *Service) recordPanelCompatibility(ctx context.Context, c *pgxpool.Conn, p *PanelClient) error {
+	if p == nil || p.serverSnapshot == nil || p.compatibilityCheckedAt.IsZero() {
+		return nil
+	}
+	v := *p.serverSnapshot
+	if v.Revision == 0 {
+		if err := s.seedPrimary(ctx, c); err != nil {
+			return err
+		}
+		rows, err := s.servers(ctx, c)
+		if err != nil {
+			return err
+		}
+		for _, row := range rows {
+			if row.ID == v.ID && row.Host == v.Host && !row.Retired {
+				v = row
+				break
+			}
+		}
+	}
+	observation := p.lastCompatibility
+	return store.New(c).ObservePoolServer(ctx, store.ObservePoolServerParams{ID: v.ID, Revision: v.Revision, ObservedAt: stamp(p.compatibilityCheckedAt), Online: v.Online, Base: v.SubscriptionBaseURL, PanelVersion: observation.PanelVersion, XrayVersion: observation.XrayVersion, Compatibility: observation.Status, CompatibilityReason: observation.Reason})
 }
 
 func (s *Service) SubscriptionBase(ctx context.Context, id string) (string, error) {
@@ -208,13 +236,13 @@ func (s *Service) syncServers(ctx context.Context, db serverDB) error {
 		cfg := s.config().Panel
 		cfg.PanelURL = v.Host
 		panel := NewPanelClient(cfg)
-		_, probeErr := panel.RegularInboundIDs(ctx)
+		compatibility, online := panel.probe(ctx)
 		base := ""
-		if probeErr == nil && v.SubscriptionBaseURL == "" {
+		if online && v.SubscriptionBaseURL == "" {
 			base, _ = panel.subscriptionBase(ctx)
 		}
 		panel.Close()
-		if err = store.New(db).ObservePoolServer(ctx, store.ObservePoolServerParams{ID: v.ID, Revision: v.Revision, ObservedAt: pgtype.Timestamptz{Time: started, Valid: true}, Online: probeErr == nil, Base: base}); err != nil {
+		if err = store.New(db).ObservePoolServer(ctx, store.ObservePoolServerParams{ID: v.ID, Revision: v.Revision, ObservedAt: pgtype.Timestamptz{Time: started, Valid: true}, Online: online, Base: base, PanelVersion: compatibility.PanelVersion, XrayVersion: compatibility.XrayVersion, Compatibility: compatibility.Status, CompatibilityReason: compatibility.Reason}); err != nil {
 			return unavailable()
 		}
 	}
@@ -224,7 +252,7 @@ func (s *Service) syncServers(ctx context.Context, db serverDB) error {
 func chooseServer(rows []Server) (Server, error) {
 	var best *Server
 	for _, v := range rows {
-		if !v.Online || v.Retired {
+		if _, ok := LookupPanelRelease(v.Compatibility.PanelVersion); !ok || v.Compatibility.Status != "supported" || !v.Online || v.Retired {
 			continue
 		}
 		if _, err := httpsURL(v.SubscriptionBaseURL, true); err != nil {
