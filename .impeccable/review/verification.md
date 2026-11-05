@@ -45,3 +45,11 @@ Desktop1440×900, mobile390×844 и375×812; RU/EN; светлая и тёмна
 Существующая проверка кабинета теперь дожидается загрузки notice перед измерением ширины и при ошибке выводит размеры вышедших за экран элементов. После исправления RU/EN на Linux прошли2/2, затем6/6 в трёх повторах. Снимки полного документа: [RU](linux-mobile-ru.png), [EN](linux-mobile-en.png), viewport375×812; детали подписки и аккаунта раскрыты тестом. Независимый узкий verdict: **ship**, исправление resolved; DESIGN.md сверён с окончательной раскладкой. Логи: `/tmp/mole-route-linux-repeat.log` (reproduction), `/tmp/mole-route-linux-green.log`, `/tmp/mole-route-linux-stability.log`.
 
 После последней CSS-правки production build/TypeScript, ESLint и bundle budgets прошли повторно. Связанные группы `cabinet`, `notices`, `operator-cabinet`, `mini-app`, `ui-ux`: **156/156 passed**,2.6мин, exit0 (`/tmp/mole-route-overflow-focused.log`).
+
+## Стабилизация существующего backend-теста
+
+[Run42028749571, attempt1](https://github.com/ekho/3xui-mole/actions/runs/42028749571/attempts/1) остановился до браузерного набора: `TestRuntimeOwnerWarmupLossAndCancel` обнаружил advisory lock сразу после закрытия клиентского соединения. Обе native-panel задачи прошли. Исходный тест воспроизвёл это падение в1 из20 локальных повторов на выделенной PostgreSQL с `-race`.
+
+`pgx.Close` отправляет Terminate и закрывает клиентский сокет; завершение серверной сессии наблюдается через другое соединение. Тест теперь опрашивает освобождение блокировки каждые10мс с пределом3с, как уже делает при ожидании её захвата. При сохранении блокировки или ошибке запроса тест по-прежнему падает. Рабочий код backend не изменён.
+
+Отмена warm-up и соседний сценарий contention/loss/restart прошли по20 раз: **40/40**,163.8с, с `-race`. Команда: `go -C backend test -race ./internal/modules/operations -run '^TestRuntimeOwner(WarmupLossAndCancel|ContentionLossAndRestart)$' -count=20 -timeout=5m -v`, с отдельными файлами URL PostgreSQL/Redis. Логи: `/tmp/mole-route-owner-repeat.log` и `/tmp/mole-route-owner-fixed.log`.
