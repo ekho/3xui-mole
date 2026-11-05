@@ -60,3 +60,12 @@ for(const lang of ['ru','en'] as const){
   await expect(page.getByRole('region',{name:lang==='ru'?'Предупреждения о подписке':'Subscription reminders'}).getByRole('listitem')).toBeVisible();
  });
 }
+
+for(const lang of ['ru','en'] as const)test('primary navigation retains customer locale '+lang,async({page})=>{
+ await fixture(page);await page.goto('/cabinet?lang='+lang);
+ const nav=page.getByRole('navigation',{name:lang==='ru'?'Основная навигация':'Primary navigation'});
+ await expect(nav.getByRole('link',{name:lang==='ru'?'Мой доступ':'My access',exact:true})).toHaveAttribute('aria-current','page');
+ await nav.getByRole('link',{name:lang==='ru'?'Каталог':'Catalogue',exact:true}).click();
+ await expect(page).toHaveURL('/catalogue'+(lang==='en'?'?lang=en':''));
+ await expect(nav.getByRole('link',{name:lang==='ru'?'Каталог':'Catalogue',exact:true})).toHaveAttribute('aria-current','page');
+});

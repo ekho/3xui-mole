@@ -1,0 +1,71 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "clipped-overflow-container",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/mineral.html"
+        ],
+        "createdAt": "2026-11-05T10:09:26.572Z",
+        "reason": "Assistant: intentional static comparison sketch; new-work requires a fixed 1440x900 frame with overflow hidden, the only positioned children are preview radios and the phone bottom bar, no popovers or menus."
+      },
+      {
+        "rule": "clipped-overflow-container",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/standard.html"
+        ],
+        "createdAt": "2026-11-05T10:09:26.712Z",
+        "reason": "Assistant: intentional static comparison sketch; fixed viewport and phone frame are required by new-work, no escaping overlays."
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/mineral.html"
+        ],
+        "createdAt": "2026-11-05T10:20:08.571Z",
+        "reason": "Assistant reviewed: static scene wrapper is edge-to-edge by design; text lives in workspace padding32px48px, operator32px40px, and separately padded panels. Wrapper itself has no text touching its edge."
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/north.html"
+        ],
+        "createdAt": "2026-11-05T10:20:08.605Z",
+        "reason": "Assistant reviewed: fixed preview frame and scene wrapper are deliberately edge-to-edge; workspace padding32px64px, preview8px24px, rail-item24px inline; first rail-item removes its border. No text abuts a visible boundary."
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/warm.html"
+        ],
+        "createdAt": "2026-11-05T10:20:08.632Z",
+        "reason": "Assistant reviewed: static scene wrapper is intentionally edge-to-edge; content padding46px56px26px, operator39px43px, mobile22px. Detector conflates the frame with its padded content."
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/boarding.html"
+        ],
+        "createdAt": "2026-11-05T10:20:08.660Z",
+        "reason": "Assistant reviewed: static scene wrapper is intentionally edge-to-edge; customer work area1248px centered inside1440px, admin padding35px36px, mobile22px20px. This is a comparison sketch, not an unpadded text container."
+      },
+      {
+        "rule": "cream-palette",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/mineral.html"
+        ],
+        "createdAt": "2026-11-05T10:20:08.684Z",
+        "reason": "Assistant intentionally authored the Mineral comparison option with chalk ground#F5F2ED, plum shell and pistachio selection, documented in redesign-options.json and direction-notes.md; this is an unchosen visual alternative, not a default shipping palette."
+      }
+    ]
+  }
+}
