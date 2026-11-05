@@ -45,7 +45,14 @@ for(const lang of ['ru','en'] as const){
   await expect(renewal).toHaveAttribute('href','/cabinet/renew'+(lang==='en'?'?lang=en':''));
   for(const label of lang==='ru'?['Действует до','Использовано','Осталось']:['Expires','Used','Remaining'])await expect(page.locator('dt').filter({hasText:new RegExp('^'+label+'$')}).locator('..')).toBeInViewport({ratio:1});
   await expect(page.getByRole('button',{name:lang==='ru'?'Показать ссылку':'Show subscription link',exact:true})).toBeInViewport({ratio:1});
-  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await expect(page.getByText('Scheduled maintenance notice',{exact:true})).toBeVisible();
+  const layout=await page.evaluate(()=>({
+   viewport:innerWidth,width:document.documentElement.scrollWidth,
+   overflow:[...document.querySelectorAll('body *')]
+    .filter(el=>el.getBoundingClientRect().right>innerWidth)
+    .map(el=>({tag:el.tagName,classes:el.className,text:el.textContent?.slice(0,80),right:el.getBoundingClientRect().right,width:el.getBoundingClientRect().width}))
+  }));
+  expect(layout.width,JSON.stringify(layout)).toBeLessThanOrEqual(layout.viewport);
   await connection.focus();await page.keyboard.press('Enter');
   await expect(page.getByRole('heading',{name:lang==='ru'?'Подключить устройство':'Connect a device'})).toBeInViewport({ratio:1});
   const details=page.locator('details').filter({has:page.locator('summary').filter({hasText:lang==='ru'?'Подробности подписки':'Subscription details'})});
@@ -56,7 +63,6 @@ for(const lang of ['ru','en'] as const){
   await expect(settings).not.toHaveAttribute('open','');
   await settings.locator('summary').focus();await page.keyboard.press('Enter');
   await expect(settings.locator('dd').filter({hasText:account.account.email!})).toBeVisible();
-  await expect(page.getByText('Scheduled maintenance notice',{exact:true})).toBeVisible();
   await expect(page.getByRole('region',{name:lang==='ru'?'Предупреждения о подписке':'Subscription reminders'}).getByRole('listitem')).toBeVisible();
  });
 }

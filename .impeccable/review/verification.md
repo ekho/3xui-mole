@@ -35,3 +35,13 @@ Desktop1440×900, mobile390×844 и375×812; RU/EN; светлая и тёмна
 Команда connected-проверки: `RUN_BROWSER_TESTS=1 go -C backend test -race ./tests -run '^(TestWebTrialFlowAndFailures|TestNativeTrialTelegramActivationBrowser|TestNativeMiniBrowserPayments|TestNativeTrialStarsBrowser|TestNativeStarsRecurringBrowser|TestNativePromoActivationBrowser|TestNativeReferralsBrowser|TestNativeMaintenanceBrowser|TestPromocodesBrowser)$' -count=1 -timeout=15m -v`, с отдельными `TEST_DATABASE_URL_FILE` и `TEST_REDIS_URL_FILE`. Итог:9/9, без skips. Лог текущей сессии: `/tmp/mole-route-connected.log`.
 
 Свежий полный браузерный прогон `E2E_PORT=4193 npm --prefix web run test:e2e`: **687/687 passed**,8мин, exit0. Сюда входят новые регрессионные проверки темы/контраста; прежние два падения не повторились. Лог текущей сессии: `/tmp/mole-delivery-e2e.log`. Временные контейнеры, сеть и данные проекта `mole-route-4516` удалены после проверки; остальные локальные сервисы не менялись.
+
+## Исправление переполнения, обнаруженного в CI
+
+Первый [Platform checks run42020939880](https://github.com/ekho/3xui-mole/actions/runs/42020939880) прошёл 686/687 браузерных сценариев: русская версия мобильного кабинета не уложилась в ширину375px. Обе native-panel проверки (3.10.2 и3.11.0) прошли. Успешный локальный macOS-прогон выше не заменяет этот результат CI.
+
+Ошибка воспроизведена локально в изолированном Linux-контейнере с тем же Chromium153.0.8010.12 (Playwright revision1243) и системным DejaVu Sans. Строка пагинации `ClientNotices` задавала минимальную ширину403.2px; правая граница доходила до419.2px при viewport375px. Удалено переопределение мобильной пагинации в горизонтальный ряд: до540px общий компонент снова располагает кнопки вертикально на всю ширину. Текст и действия сохранены, скрытие overflow не используется.
+
+Существующая проверка кабинета теперь дожидается загрузки notice перед измерением ширины и при ошибке выводит размеры вышедших за экран элементов. После исправления RU/EN на Linux прошли2/2, затем6/6 в трёх повторах. Снимки полного документа: [RU](linux-mobile-ru.png), [EN](linux-mobile-en.png), viewport375×812; детали подписки и аккаунта раскрыты тестом. Независимый узкий verdict: **ship**, исправление resolved; DESIGN.md сверён с окончательной раскладкой. Логи: `/tmp/mole-route-linux-repeat.log` (reproduction), `/tmp/mole-route-linux-green.log`, `/tmp/mole-route-linux-stability.log`.
+
+После последней CSS-правки production build/TypeScript, ESLint и bundle budgets прошли повторно. Связанные группы `cabinet`, `notices`, `operator-cabinet`, `mini-app`, `ui-ux`: **156/156 passed**,2.6мин, exit0 (`/tmp/mole-route-overflow-focused.log`).
