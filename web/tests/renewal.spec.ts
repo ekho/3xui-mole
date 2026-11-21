@@ -9,11 +9,19 @@ const order:Model<'PurchaseOrder'>={order_id:orderId,action:'renew',quote:{plan_
 const history:Model<'PurchaseOrder'>={...order,order_id:'80000000-0000-4000-8000-000000000002',action:'purchase',payment_status:'paid',fulfillment_status:'applied',can_pay:false,can_cancel:false,checkout:null};
 test.beforeEach(async({page})=>{await page.clock.install({time:new Date('2026-10-03T10:05:00Z')});});
 
+const paidSubscription:Model<'Subscription'>={
+ status:'active',expires_at:'2026-10-24T18:00:00Z',devices:2,traffic_limit_bytes:1024,traffic_used_bytes:0,
+ observed_at:'2026-10-03T10:05:00Z',data_stale:false,connection_available:true,access_profile:'regular',vpn_banned:false,
+ access_operation_id:null,access_operation_status:null,
+};
+
 async function routes(page:Page,extra?:(route:Route,path:string)=>Promise<boolean>){
  await page.route('https://yoomoney.ru/quickpay/confirm',route=>route.abort());
  await page.route('**/api/v1/**',async route=>{const path=new URL(route.request().url()).pathname;if(extra&&await extra(route,path))return;
   if(path.endsWith('/auth/session'))return route.fulfill({json:{csrf_token:'s'.repeat(43)}});
+  if(path.endsWith('/maintenance'))return route.fulfill({json:{enabled:false,revision:0,changed_at:null}});
   if(path.endsWith('/subscription/renewal'))return route.fulfill({json:plan});
+  if(path.endsWith('/subscription'))return route.fulfill({json:paidSubscription});
   if(path.endsWith('/payment-methods'))return route.fulfill({json:{methods:[{id:'manual',currency:'RUB'},{id:'yoomoney',currency:'RUB'},{id:'yookassa',currency:'RUB'},{id:'cryptomus',currency:'USD'},{id:'heleket',currency:'USD'}]}});
   if(path.endsWith('/orders/current'))return route.fulfill({json:{order:history}});
   if(path.endsWith('/orders/'+orderId))return route.fulfill({json:order});
@@ -21,6 +29,42 @@ async function routes(page:Page,extra?:(route:Route,path:string)=>Promise<boolea
   return route.fulfill({json:{}});
  });
 }
+
+test.describe('renewal dates',()=>{
+ test.use({timezoneId:'Europe/Moscow',viewport:{width:390,height:844}});
+ test('shows the existing expiry and the selected extension on direct entry and confirmation',async({page})=>{
+  await routes(page);
+  await page.goto('/cabinet/renew');
+  const times=page.locator('.renewal-term time');
+  await expect(times.nth(0)).toHaveAttribute('datetime','2026-10-24T18:00:00.000Z');
+  await expect(times.nth(0)).toContainText(/21:00\s+(GMT\+3|MSK|МСК)/);
+  await expect(times.nth(1)).toHaveAttribute('datetime','2026-11-23T18:00:00.000Z');
+  await expect(times.nth(1)).toBeInViewport({ratio:1});
+  await page.getByRole('combobox',{name:'Период',exact:true}).selectOption('90');
+  await expect(times.nth(1)).toHaveAttribute('datetime','2027-01-22T18:00:00.000Z');
+  await page.getByRole('button',{name:'Продлить подписку',exact:true}).click();
+  await expect(page.getByRole('group',{name:'Подтвердить продление'})).toBeFocused();
+  await expect(page.locator('.warning .renewal-term time').nth(1)).toHaveAttribute('datetime','2027-01-22T18:00:00.000Z');
+  await expect(times.nth(1)).toBeInViewport({ratio:1});
+  await expect(page.getByRole('button',{name:'Подтвердить продление'})).toBeEnabled();
+ });
+ test('refreshes unavailable dates and estimates expired access from activation',async({page})=>{
+  let stale=true;
+  await routes(page,async(route,path)=>{
+   if(!path.endsWith('/subscription'))return false;
+   await route.fulfill({json:{...paidSubscription,status:'expired',expires_at:'2026-09-01T18:00:00Z',data_stale:stale}});
+   return true;
+  });
+  await page.goto('/cabinet/renew?lang=en');
+  await expect(page.getByText('Could not determine the subscription expiry.')).toBeVisible();
+  await expect(page.locator('.renewal-term time')).toHaveCount(0);
+  stale=false;
+  await page.locator('.term-unavailable button').click();
+  await expect(page.getByText('Estimated expiry after renewal',{exact:true})).toBeVisible();
+  await expect(page.locator('.renewal-term time').nth(1)).toHaveAttribute('datetime',/^2026-11-02T10:05:/);
+  await expect(page.getByText(/new period starts when access is activated/)).toBeVisible();
+ });
+});
 
 test('renewal uses one own plan and a frozen retry',async({page})=>{
  const calls:{body:Model<'PurchaseOrderInput'>;key:string;csrf:string}[]=[];

@@ -22,6 +22,20 @@ async function fixture(page:Page){
  });
 }
 
+test('summary keeps the local expiry and updates the remaining days on an open page',async({page})=>{
+ await page.clock.install({time:new Date('2030-01-29T10:00:00Z')});
+ await fixture(page);
+ await page.goto('/cabinet');
+ const expiry=page.locator('.cabinet-summary time');
+ await expect(expiry).toHaveAttribute('datetime','2030-02-01T10:00:00.000Z');
+ await expect(expiry).not.toHaveText(/\d{2}:\d{2}:\d{2}/);
+ await expect(page.getByText('Ещё 3 дня',{exact:true})).toBeVisible();
+ await page.clock.fastForward(2*24*60*60*1000 + 60_000);
+ await expect(page.getByText('Меньше дня',{exact:true})).toBeVisible();
+ await page.clock.fastForward(24*60*60*1000);
+ await expect(page.getByText('Срок истёк',{exact:true})).toBeVisible();
+});
+
 for(const lang of ['ru','en'] as const){
  test('paid cabinet access does not claim to be a trial '+lang,async({page})=>{
   await fixture(page);await page.goto('/cabinet?lang='+lang);
@@ -30,7 +44,7 @@ for(const lang of ['ru','en'] as const){
  });
 
  test('mobile cabinet puts subscription actions and current limits in the first screen '+lang,async({page})=>{
-  await page.setViewportSize({width:375,height:812});await fixture(page);await page.goto('/cabinet?lang='+lang);
+  await page.setViewportSize({width:375,height:812});await fixture(page);await page.goto('/cabinet?lang='+lang+'&platform=android');
   const navigation=page.getByRole('navigation',{name:lang==='ru'?'Действия с подпиской':'Subscription actions'});
   const connection=navigation.getByRole('link',{name:lang==='ru'?'Подключить устройство':'Connect a device',exact:true});
   const plans=navigation.getByRole('link',{name:lang==='ru'?'Тарифы':'Plans',exact:true});
@@ -44,7 +58,6 @@ for(const lang of ['ru','en'] as const){
   await expect(plans).toHaveAttribute('href','/catalogue'+(lang==='en'?'?lang=en':''));
   await expect(renewal).toHaveAttribute('href','/cabinet/renew'+(lang==='en'?'?lang=en':''));
   for(const label of lang==='ru'?['Действует до','Использовано','Осталось']:['Expires','Used','Remaining'])await expect(page.locator('dt').filter({hasText:new RegExp('^'+label+'$')}).locator('..')).toBeInViewport({ratio:1});
-  await expect(page.getByRole('button',{name:lang==='ru'?'Показать ссылку':'Show subscription link',exact:true})).toBeInViewport({ratio:1});
   await expect(page.getByText('Scheduled maintenance notice',{exact:true})).toBeVisible();
   const layout=await page.evaluate(()=>({
    viewport:innerWidth,width:document.documentElement.scrollWidth,
@@ -55,6 +68,8 @@ for(const lang of ['ru','en'] as const){
   expect(layout.width,JSON.stringify(layout)).toBeLessThanOrEqual(layout.viewport);
   await connection.focus();await page.keyboard.press('Enter');
   await expect(page.getByRole('heading',{name:lang==='ru'?'Подключить устройство':'Connect a device'})).toBeInViewport({ratio:1});
+  await expect(page.getByRole('link',{name:lang==='ru'?'Установить Happ':'Install Happ',exact:true})).toBeInViewport({ratio:1});
+  await expect(page.getByRole('link',{name:lang==='ru'?'Уже установлен':'Already installed',exact:true})).toBeInViewport({ratio:1});
   const details=page.locator('details').filter({has:page.locator('summary').filter({hasText:lang==='ru'?'Подробности подписки':'Subscription details'})});
   await expect(details).not.toHaveAttribute('open','');
   await details.locator('summary').focus();await page.keyboard.press('Enter');

@@ -5,6 +5,7 @@ import * as api from './api/client';
 import {config} from './config';
 import {text,link,loginRedirect,errorText,type Lang} from './i18n';
 import {Connection} from './Connection';
+import {SubscriptionExpiry} from './SubscriptionTerm';
 import {isMiniApp} from './telegramSDK';
 import {StarsSubscription} from './StarsSubscription';
 import {ClientReminders} from './ClientReminders';
@@ -66,7 +67,7 @@ export function Cabinet({lang}:{lang:Lang}){
   {error?<div className="error" role="alert"><p>{error}</p><button onClick={retry} disabled={busy}>{t.retry}</button></div>:null}
   {!sub?<p role="status">{t.loading}</p>:<><p className="access-status" data-status={status} role="status">{descriptions[status]}</p>{sub.access_operation_status&&sub.access_operation_status!=='applied'?<p className={sub.access_operation_status==='needs_review'?'warning':'notice'} role="status">{t.accessOperations}: {{pending:t.operationPending,provisioning:t.operationProvisioning,needs_review:t.operationNeedsReview,skipped:t.operationSkipped}[sub.access_operation_status]}</p>:null}
    {request?.status==='pending'&&status!=='pending'?<p>{t.pending}</p>:null}
-   {detailStatuses.has(sub.status)?<dl className="stats-grid cabinet-summary"><div><dt>{t.expires}</dt><dd>{sub.expires_at?<time dateTime={sub.expires_at} title={date(sub.expires_at)}>{date(sub.expires_at)}</time>:['provisioning','needs_review'].includes(sub.status)?t.unknown:t.noExpiry}</dd></div><div><dt>{t.devices}</dt><dd>{unlimitedDevices?t.unlimited:sub.devices}</dd></div><div><dt>{t.used}</dt><dd>{bytes(sub.traffic_used_bytes)}</dd></div><div><dt>{t.remaining}</dt><dd>{unlimitedTraffic?t.unlimited:bytes(sub.traffic_remaining_bytes)}</dd></div></dl>:null}
+   {detailStatuses.has(sub.status)?<dl className="stats-grid cabinet-summary"><div><dt>{t.expires}</dt><dd>{sub.expires_at?<SubscriptionExpiry value={sub.expires_at} lang={lang}/>:sub.data_stale||sub.panel_error||['provisioning','needs_review'].includes(sub.status)?t.unknown:t.noExpiry}</dd></div><div><dt>{t.devices}</dt><dd>{unlimitedDevices?t.unlimited:sub.devices}</dd></div><div><dt>{t.used}</dt><dd>{bytes(sub.traffic_used_bytes)}</dd></div><div><dt>{t.remaining}</dt><dd>{unlimitedTraffic?t.unlimited:bytes(sub.traffic_remaining_bytes)}</dd></div></dl>:null}
   </>}
   {account?<nav className="cabinet-actions" aria-label={m.actions}>{canConnect?<a href="#connection-title">{t.connectDevice}</a>:null}<Link to={link('/catalogue',lang)}>{t.plans}</Link>{sub&&['regular','euru'].includes(sub.access_profile)&&!sub.vpn_banned&&['active','expired','exhausted'].includes(sub.status)?<><Link to={link('/cabinet/renew',lang)}>{t.renewalTitle}</Link><Link to={link('/cabinet/change-plan',lang)}>{t.changePlanTitle}</Link></>:null}{order?<Link to={link('/orders/'+order.order_id,lang)}>{t.currentOrder}</Link>:null}</nav>:null}
   <div className="cabinet-workspace"><div className="cabinet-main">

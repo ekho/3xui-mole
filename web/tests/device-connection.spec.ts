@@ -26,6 +26,47 @@ function qrAsset(){
  return '/'+manifest['node_modules/qrcode/lib/browser.js'].file;
 }
 
+for (const device of [
+ {name:'Android',ua:'Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 Chrome/131.0 Mobile Safari/537.36',width:390,height:844,store:'https://play.google.com/store/apps/details?id=com.happproxy'},
+ {name:'macOS',ua:'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/131.0 Safari/537.36',width:1440,height:900,store:'https://github.com/Happ-proxy/happ-desktop/releases/latest/download/Happ.macOS.universal.dmg'},
+]) test.describe(device.name+' connection',()=>{
+ test.use({userAgent:device.ua,viewport:{width:device.width,height:device.height}});
+ test('opens the matching store and can skip to a private import',async({page})=>{
+  let reads=0;
+  await mock(page,()=>active,()=>{reads++;return ownURL;});
+  await page.goto('/cabinet');
+  await expect(page.getByRole('link',{name:'Установить Happ'})).toHaveAttribute('href',device.store);
+  await expect(page.getByLabel('Регион App Store')).toHaveCount(0);
+  expect(reads).toBe(0);
+  await page.getByRole('link',{name:'Уже установлен'}).focus();
+  await page.keyboard.press('Enter');
+  const open=page.getByRole('link',{name:'Открыть в Happ'});
+  await expect(open).toBeFocused();
+  await expect(open).toHaveAttribute('href','happ://add/'+ownURL);
+  await expect(page.getByLabel('Ссылка подписки',{exact:true})).toHaveCount(0);
+  await page.getByRole('button',{name:'Показать ссылку'}).click();
+  await expect(page.getByLabel('Ссылка подписки',{exact:true})).toHaveValue(ownURL);
+  expect(reads).toBe(1);
+  await page.goto('/cabinet?platform=ios');
+  await expect(page.getByLabel('Регион App Store')).toBeVisible();
+  await expect(page.getByRole('link',{name:'Установить Happ'})).toHaveAttribute('href',/apps\.apple\.com/);
+ });
+});
+
+test.describe('unrecognised device',()=>{
+ test.use({userAgent:'Unknown browser'});
+ test('asks for a platform before offering an installer',async({page})=>{
+  await mock(page);
+  await page.goto('/cabinet?lang=en&platform=invalid');
+  const platform=page.getByLabel('Platform');
+  await expect(platform).toBeVisible();
+  await expect(platform).toHaveValue('');
+  await expect(page.getByRole('link',{name:'Install Happ'})).toHaveCount(0);
+  await platform.selectOption('windows');
+  await expect(page.getByRole('link',{name:'Install Happ'})).toHaveAttribute('href',/setup-Happ.x64.exe$/);
+ });
+});
+
 test('QR loads only on request and a hidden key is not rendered after the module arrives',async({page})=>{
  const asset=qrAsset(),requests:string[]=[];page.on('request',request=>requests.push(new URL(request.url()).pathname));
  let release!:()=>void;const held=new Promise<void>(resolve=>{release=resolve;});
@@ -48,16 +89,17 @@ test('QR module failure keeps the subscription link available for manual import'
 });
 
 test('five platforms, iOS region and install fallbacks work at mobile width',async({page})=>{
- await page.setViewportSize({width:375,height:812});await mock(page);await page.goto('/cabinet?lang=en');
+ await page.setViewportSize({width:375,height:812});await mock(page);await page.goto('/cabinet?lang=en&platform=ios');
+ await page.locator('.device-picker summary').click();
  await expect(page.getByRole('heading',{name:'Connect a device'})).toBeVisible();const platform=page.getByLabel('Platform');await expect(platform.locator('option')).toHaveText(['iOS','Android','macOS','Windows','Other']);
- await expect(page.getByRole('link',{name:'Install Happ'})).toHaveAttribute('href','https://apps.apple.com/us/app/happ-proxy-utility/id6504287215');await page.getByRole('button',{name:'RU',exact:true}).click();await expect(page.getByRole('heading',{name:'Подключить устройство'})).toBeVisible();await expect(page.getByLabel('Регион App Store')).toHaveValue('global');await page.getByRole('button',{name:'EN',exact:true}).click();await page.getByLabel('App Store region').selectOption('ru');await expect(page.getByRole('link',{name:'Install Happ'})).toHaveAttribute('href','https://apps.apple.com/ru/app/happ-lite/id6799917773');await expect(page.getByRole('link',{name:'Global App Store'})).toBeVisible();await expect(page.getByRole('link',{name:'Developer catalog'})).toBeVisible();
+ await expect(page.getByRole('link',{name:'Install Happ'})).toHaveAttribute('href','https://apps.apple.com/us/app/happ-proxy-utility/id6504287215');await page.getByRole('button',{name:'RU',exact:true}).click();await expect(page.getByRole('heading',{name:'Подключить устройство'})).toBeVisible();await expect(page.getByLabel('Регион App Store')).toHaveValue('global');await page.getByRole('button',{name:'EN',exact:true}).click();await page.getByLabel('App Store region').selectOption('ru');await expect(page.getByRole('link',{name:'Install Happ'})).toHaveAttribute('href','https://apps.apple.com/ru/app/happ-lite/id6799917773');await page.getByText('Other download sources',{exact:true}).click();await expect(page.getByRole('link',{name:'Global App Store'})).toBeVisible();await expect(page.getByRole('link',{name:'Developer catalog'})).toBeVisible();
  await platform.focus();await page.keyboard.press('a');await expect(platform).toHaveValue('android');await expect(page.getByRole('link',{name:'Install Happ'})).toHaveAttribute('href','https://play.google.com/store/apps/details?id=com.happproxy');
  await platform.selectOption('macos');await expect(page.getByRole('link',{name:'Install Happ'})).toHaveAttribute('href','https://github.com/Happ-proxy/happ-desktop/releases/latest/download/Happ.macOS.universal.dmg');await platform.selectOption('windows');await expect(page.getByRole('link',{name:'Install Happ'})).toHaveAttribute('href','https://github.com/Happ-proxy/happ-desktop/releases/latest/download/setup-Happ.x64.exe');await platform.selectOption('other');await expect(page.getByRole('link',{name:'Open developer catalog'})).toHaveAttribute('href','https://www.happ.su/main');await expect(page.getByText('Import the HTTPS subscription manually into a compatible client.')).toBeVisible();
  await expect(page.getByRole('list',{name:'Connection steps'}).getByRole('listitem')).toHaveCount(3);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
 
 test('copy, local QR and intercepted macOS deep link use the same own URL',async({page})=>{
- const requests:string[]=[];let keyReads=0;page.on('request',request=>requests.push(request.url()));await mock(page,()=>active,()=>{keyReads++;return ownURL});await page.goto('/cabinet?lang=en');await page.getByLabel('Platform').selectOption('macos');await page.getByRole('button',{name:'Show subscription link'}).click();expect(keyReads).toBe(1);
+ const requests:string[]=[];let keyReads=0;page.on('request',request=>requests.push(request.url()));await mock(page,()=>active,()=>{keyReads++;return ownURL});await page.goto('/cabinet?lang=en&platform=macos');await page.getByRole('button',{name:'Show subscription link'}).click();expect(keyReads).toBe(1);
  await expect(page.getByLabel('Subscription link')).toHaveValue(ownURL);const deep=page.getByRole('link',{name:'Open in Happ'});await expect(deep).toHaveAttribute('href','happ://add/'+ownURL);
  await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:(value:string)=>{(window as Window&{copied?:string}).copied=value;return Promise.resolve();}}}));await page.getByRole('button',{name:'Copy'}).click();expect(await page.evaluate(()=>(window as Window&{copied?:string}).copied)).toBe(ownURL);await page.getByRole('button',{name:'Show QR code'}).click();await expect(page.getByRole('img',{name:'Subscription QR code'})).toBeVisible();expect(requests.filter(url=>url.includes('private-fixture'))).toHaveLength(0);
  await page.evaluate(()=>document.addEventListener('click',event=>{const target=event.target;if(target instanceof Element&&target.closest('a[href^="happ:"]'))event.preventDefault();},{capture:true}));const before=page.url();await deep.click();await expect(page).toHaveURL(before);
